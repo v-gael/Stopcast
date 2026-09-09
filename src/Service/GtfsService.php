@@ -409,7 +409,7 @@ class GtfsService
         }
 
         while (false !== ($row = fgetcsv($handle, escape: ''))) {
-            if ([null] === $row || false === $row) {
+            if ([null] === $row) {
                 continue;
             }
 
