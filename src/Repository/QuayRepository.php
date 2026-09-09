@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Quay;
@@ -22,7 +24,7 @@ class QuayRepository extends ServiceEntityRepository
     }
 
     /**
-     * Tous les quais actifs d'un même arrêt physique
+     * Tous les quais actifs d'un même arrêt physique.
      *
      * @return Quay[]
      */
@@ -38,7 +40,7 @@ class QuayRepository extends ServiceEntityRepository
     }
 
     /**
-     * Distincts noms d'arrêts physiques actifs
+     * Distincts noms d'arrêts physiques actifs.
      *
      * @return array<int, array{parentStopId: string, name: string}>
      */

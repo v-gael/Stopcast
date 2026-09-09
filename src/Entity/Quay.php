@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\QuayRepository;
-use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -24,13 +25,13 @@ class Quay
 
     /**
      * Identifiant naturel du quai tel que fourni par le GTFS statique
-     * et référencé tel quel dans le flux GTFS-RT (ex: "0:GAR01")
+     * et référencé tel quel dans le flux GTFS-RT (ex: "0:GAR01").
      */
     #[ORM\Column(type: Types::STRING, length: 64)]
     private string $gtfsStopId;
 
     /**
-     * stop_name du GTFS (ex: "GARE CENTRALE")
+     * stop_name du GTFS (ex: "GARE CENTRALE").
      */
     #[ORM\Column(type: Types::STRING, length: 255)]
     private string $name;
@@ -43,13 +44,13 @@ class Quay
 
     /**
      * parent_station du GTFS (ex: "1:GARE"). Sert à regrouper les
-     * quais d'un même arrêt physique côté sélection utilisateur
+     * quais d'un même arrêt physique côté sélection utilisateur.
      */
     #[ORM\Column(type: Types::STRING, length: 64)]
     private string $parentStopId;
 
     /**
-     * Lignes desservant ce quai
+     * Lignes desservant ce quai.
      *
      * @var Collection<int, Route>
      */
@@ -58,25 +59,25 @@ class Quay
     private Collection $routes;
 
     /**
-     * Destinations distinctes (trip_headsign) desservies par ce quai
+     * Destinations distinctes (trip_headsign) desservies par ce quai.
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $destinationsServed = null;
 
     /**
-     * false si le quai a disparu d'un import GTFS ultérieur
+     * false si le quai a disparu d'un import GTFS ultérieur.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $active = true;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?DateTimeImmutable $deprecatedAt = null;
+    private ?\DateTimeImmutable $deprecatedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $updatedAt;
+    private \DateTimeImmutable $updatedAt;
 
     public function __construct(string $gtfsStopId, string $name, float $latitude, float $longitude, string $parentStopId)
     {
@@ -91,7 +92,7 @@ class Quay
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new DateTimeImmutable();
+        $now = new \DateTimeImmutable();
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
@@ -99,7 +100,7 @@ class Quay
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -204,7 +205,7 @@ class Quay
     public function markDeprecated(): static
     {
         $this->active = false;
-        $this->deprecatedAt = new DateTimeImmutable();
+        $this->deprecatedAt = new \DateTimeImmutable();
 
         return $this;
     }
@@ -217,17 +218,17 @@ class Quay
         return $this;
     }
 
-    public function getDeprecatedAt(): ?DateTimeImmutable
+    public function getDeprecatedAt(): ?\DateTimeImmutable
     {
         return $this->deprecatedAt;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): DateTimeImmutable
+    public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
     }

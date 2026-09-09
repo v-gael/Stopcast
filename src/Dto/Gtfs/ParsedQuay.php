@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Gtfs;
 
 /**
- * Représentation intermédiaire d'un quai (stops.txt, location_type=0)
+ * Représentation intermédiaire d'un quai (stops.txt, location_type=0).
  */
 final readonly class ParsedQuay
 {

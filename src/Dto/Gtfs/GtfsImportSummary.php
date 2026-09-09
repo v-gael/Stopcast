@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Dto\Gtfs;
 
 /**
- * Bilan chiffré d'un import
+ * Bilan chiffré d'un import.
  */
 final class GtfsImportSummary implements \Stringable
 {
@@ -14,7 +16,7 @@ final class GtfsImportSummary implements \Stringable
     ) {
     }
 
-    public function merge(GtfsImportSummary $other): self
+    public function merge(self $other): self
     {
         return new self(
             created: $this->created + $other->created,
@@ -25,7 +27,7 @@ final class GtfsImportSummary implements \Stringable
 
     public function __toString(): string
     {
-        return sprintf(
+        return \sprintf(
             '%d créé(s), %d mis à jour, %d désactivé(s)',
             $this->created,
             $this->updated,

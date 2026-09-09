@@ -33,11 +33,11 @@ class GtfsImportCommand extends Command
         try {
             $summary = $this->gtfsService->importStaticFeed();
         } catch (InvalidGtfsFeedException $exception) {
-            $io->error('Flux GTFS invalide : ' . $exception->getMessage());
+            $io->error('Flux GTFS invalide : '.$exception->getMessage());
 
             return Command::FAILURE;
         } catch (TransportExceptionInterface $exception) {
-            $io->error('Impossible de télécharger le flux GTFS : ' . $exception->getMessage());
+            $io->error('Impossible de télécharger le flux GTFS : '.$exception->getMessage());
 
             return Command::FAILURE;
         }
