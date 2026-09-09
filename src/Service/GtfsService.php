@@ -402,7 +402,7 @@ class GtfsService
             rewind($handle);
         }
 
-        $headers = fgetcsv($handle, escape: '\\');
+        $headers = fgetcsv($handle, escape: '');
 
         if (false === $headers) {
             fclose($handle);
@@ -410,7 +410,7 @@ class GtfsService
             return;
         }
 
-        while (false !== ($row = fgetcsv($handle, escape: '\\'))) {
+        while (false !== ($row = fgetcsv($handle, escape: ''))) {
             if ($row === [null] || $row === false) {
                 continue;
             }
