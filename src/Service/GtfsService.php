@@ -104,6 +104,7 @@ class GtfsService
 
         $zip->extractTo($extractPath);
         $zip->close();
+
         $this->filesystem->remove($tmpZipPath);
 
         return $extractPath;
@@ -401,7 +402,7 @@ class GtfsService
             rewind($handle);
         }
 
-        $headers = fgetcsv($handle);
+        $headers = fgetcsv($handle, escape: '\\');
 
         if (false === $headers) {
             fclose($handle);
@@ -409,7 +410,7 @@ class GtfsService
             return;
         }
 
-        while (false !== ($row = fgetcsv($handle))) {
+        while (false !== ($row = fgetcsv($handle, escape: '\\'))) {
             if ($row === [null] || $row === false) {
                 continue;
             }

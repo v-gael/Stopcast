@@ -5,7 +5,7 @@ namespace App\Dto\Gtfs;
 /**
  * Bilan chiffré d'un import
  */
-final class GtfsImportSummary
+final class GtfsImportSummary implements \Stringable
 {
     public function __construct(
         public int $created = 0,
