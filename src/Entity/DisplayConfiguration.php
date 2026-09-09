@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\DisplayConfigurationRepository;
-use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -23,35 +24,35 @@ class DisplayConfiguration
     private Device $device;
 
     /**
-     * Le quai dont ce dispositif doit afficher les prochains passages
+     * Le quai dont ce dispositif doit afficher les prochains passages.
      */
     #[ORM\ManyToOne(targetEntity: Quay::class)]
     #[ORM\JoinColumn(name: 'quay_id', referencedColumnName: 'id', nullable: false)]
     private Quay $quay;
 
     /**
-     * Nom libre donné par l'utilisateur à cette configuration
+     * Nom libre donné par l'utilisateur à cette configuration.
      */
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $label = null;
 
     /**
-     * Ordre d'affichage en cas de rotation entre plusieurs
+     * Ordre d'affichage en cas de rotation entre plusieurs.
      */
     #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
     private int $position = 0;
 
     /**
-     * Permet de désactiver temporairement une config sans la supprimer
+     * Permet de désactiver temporairement une config sans la supprimer.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $active = true;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $updatedAt;
+    private \DateTimeImmutable $updatedAt;
 
     public function __construct(Device $device, Quay $quay)
     {
@@ -62,7 +63,7 @@ class DisplayConfiguration
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new DateTimeImmutable();
+        $now = new \DateTimeImmutable();
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
@@ -70,7 +71,7 @@ class DisplayConfiguration
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -138,12 +139,12 @@ class DisplayConfiguration
         return $this;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): DateTimeImmutable
+    public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
     }

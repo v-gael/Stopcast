@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\RouteRepository;
-use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -21,19 +22,19 @@ class Route
     private ?int $id = null;
 
     /**
-     * route_id du GTFS, référencé tel quel dans le flux GTFS-RT
+     * route_id du GTFS, référencé tel quel dans le flux GTFS-RT.
      */
     #[ORM\Column(type: Types::STRING, length: 64)]
     private string $gtfsRouteId;
 
     /**
-     * route_short_name : le numéro/code affiché aux usagers
+     * route_short_name : le numéro/code affiché aux usagers.
      */
     #[ORM\Column(type: Types::STRING, length: 32)]
     private string $shortName;
 
     /**
-     * route_long_name : les deux terminaux de la ligne (ex: "CENTRE VILLE-GARE NORD")
+     * route_long_name : les deux terminaux de la ligne (ex: "CENTRE VILLE-GARE NORD").
      */
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $longName = null;
@@ -52,16 +53,16 @@ class Route
     private string $textColor;
 
     /**
-     * false si la ligne a disparu d'un import GTFS ultérieur
+     * false si la ligne a disparu d'un import GTFS ultérieur.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $active = true;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?DateTimeImmutable $deprecatedAt = null;
+    private ?\DateTimeImmutable $deprecatedAt = null;
 
     /**
-     * Quais desservis par cette ligne (relation inverse, portée par Quay)
+     * Quais desservis par cette ligne (relation inverse, portée par Quay).
      *
      * @var Collection<int, Quay>
      */
@@ -69,10 +70,10 @@ class Route
     private Collection $quays;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private DateTimeImmutable $updatedAt;
+    private \DateTimeImmutable $updatedAt;
 
     public function __construct(string $gtfsRouteId, string $shortName, string $color, string $textColor)
     {
@@ -86,7 +87,7 @@ class Route
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new DateTimeImmutable();
+        $now = new \DateTimeImmutable();
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
@@ -94,7 +95,7 @@ class Route
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -163,7 +164,7 @@ class Route
     public function markDeprecated(): static
     {
         $this->active = false;
-        $this->deprecatedAt = new DateTimeImmutable();
+        $this->deprecatedAt = new \DateTimeImmutable();
 
         return $this;
     }
@@ -176,7 +177,7 @@ class Route
         return $this;
     }
 
-    public function getDeprecatedAt(): ?DateTimeImmutable
+    public function getDeprecatedAt(): ?\DateTimeImmutable
     {
         return $this->deprecatedAt;
     }
@@ -189,12 +190,12 @@ class Route
         return $this->quays;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): DateTimeImmutable
+    public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
     }

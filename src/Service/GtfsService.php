@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Dto\Gtfs\GtfsImportSummary;
@@ -10,15 +12,12 @@ use App\Entity\Quay;
 use App\Entity\Route;
 use App\Exception\InvalidGtfsFeedException;
 use Doctrine\ORM\EntityManagerInterface;
-use Generator;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Throwable;
-use ZipArchive;
 
 class GtfsService
 {
@@ -29,14 +28,13 @@ class GtfsService
         private readonly EntityManagerInterface $entityManager,
         private readonly Filesystem $filesystem,
         private readonly string $gtfsStaticFeedUrl,
-    )
-    {
+    ) {
     }
 
     /**
-     * Orchestration complète : télécharge, valide, parse et persiste le GTFS statique dans une transaction unique
+     * Orchestration complète : télécharge, valide, parse et persiste le GTFS statique dans une transaction unique.
      *
-     * @throws Throwable
+     * @throws \Throwable
      */
     public function importStaticFeed(): GtfsImportSummary
     {
@@ -63,7 +61,7 @@ class GtfsService
 
                 $this->entityManager->flush();
                 $this->entityManager->commit();
-            } catch (Throwable $exception) {
+            } catch (\Throwable $exception) {
                 $this->entityManager->rollback();
                 throw $exception;
             }
@@ -77,9 +75,10 @@ class GtfsService
     }
 
     /**
-     * Télécharge l'archive GTFS statique et l'extrait dans un dossier temporaire
+     * Télécharge l'archive GTFS statique et l'extrait dans un dossier temporaire.
      *
      * @return string chemin d'extraction
+     *
      * @throws TransportExceptionInterface
      * @throws ClientExceptionInterface
      * @throws RedirectionExceptionInterface
@@ -89,14 +88,14 @@ class GtfsService
     {
         $response = $this->httpClient->request('GET', $this->gtfsStaticFeedUrl);
 
-        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_') . '.zip';
+        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_').'.zip';
         $this->filesystem->dumpFile($tmpZipPath, $response->getContent());
 
         $extractPath = tempnam(sys_get_temp_dir(), 'gtfs_extract_');
         $this->filesystem->remove($extractPath);
         $this->filesystem->mkdir($extractPath);
 
-        $zip = new ZipArchive();
+        $zip = new \ZipArchive();
         if (true !== $zip->open($tmpZipPath)) {
             $this->filesystem->remove($tmpZipPath);
             throw InvalidGtfsFeedException::corruptedArchive($this->gtfsStaticFeedUrl);
@@ -104,19 +103,19 @@ class GtfsService
 
         $zip->extractTo($extractPath);
         $zip->close();
+
         $this->filesystem->remove($tmpZipPath);
 
         return $extractPath;
     }
 
     /**
-     * Vérifie que les fichiers GTFS nécessaires sont présents et non vides
-     *
+     * Vérifie que les fichiers GTFS nécessaires sont présents et non vides.
      */
     public function validateFeedContents(string $extractPath): void
     {
         foreach (self::REQUIRED_FILES as $filename) {
-            $path = $extractPath . '/' . $filename;
+            $path = $extractPath.'/'.$filename;
 
             if (!$this->filesystem->exists($path)) {
                 throw InvalidGtfsFeedException::missingFile($filename);
@@ -129,7 +128,7 @@ class GtfsService
     }
 
     /**
-     * Parse routes.txt
+     * Parse routes.txt.
      *
      * @return ParsedRoute[]
      */
@@ -137,11 +136,11 @@ class GtfsService
     {
         $parsedRoutes = [];
 
-        foreach ($this->readCsv($extractPath . '/routes.txt') as $row) {
+        foreach ($this->readCsv($extractPath.'/routes.txt') as $row) {
             $parsedRoutes[] = new ParsedRoute(
                 gtfsRouteId: $row['route_id'],
                 shortName: $row['route_short_name'],
-                longName: $row['route_long_name'] !== '' ? $row['route_long_name'] : null,
+                longName: '' !== $row['route_long_name'] ? $row['route_long_name'] : null,
                 color: $row['route_color'],
                 textColor: $row['route_text_color'],
             );
@@ -153,7 +152,7 @@ class GtfsService
     /**
      * Parse stops.txt en ne retenant que les quais (location_type=0)
      * Les arrêts physiques (location_type=1) ne sont pas persistés en tant que tels,
-     * ils ne servent qu'à renseigner parentStopId
+     * ils ne servent qu'à renseigner parentStopId.
      *
      * @return ParsedQuay[]
      */
@@ -161,7 +160,7 @@ class GtfsService
     {
         $parsedQuays = [];
 
-        foreach ($this->readCsv($extractPath . '/stops.txt') as $row) {
+        foreach ($this->readCsv($extractPath.'/stops.txt') as $row) {
             if ('0' !== $row['location_type']) {
                 continue;
             }
@@ -180,7 +179,7 @@ class GtfsService
 
     /**
      * Croise trips.txt et stop_times.txt pour déduire, par quai, les
-     * lignes qui le desservent et les destinations réelles distinctes
+     * lignes qui le desservent et les destinations réelles distinctes.
      *
      * @return ParsedQuayRouteLink[]
      */
@@ -188,7 +187,7 @@ class GtfsService
     {
         // trip_id => ['route_id' => ..., 'headsign' => ...]
         $tripInfoByTripId = [];
-        foreach ($this->readCsv($extractPath . '/trips.txt') as $row) {
+        foreach ($this->readCsv($extractPath.'/trips.txt') as $row) {
             $tripInfoByTripId[$row['trip_id']] = [
                 'route_id' => $row['route_id'],
                 'headsign' => $row['trip_headsign'],
@@ -198,14 +197,14 @@ class GtfsService
         // "stopId|routeId" => Set des destinations distinctes
         $destinationsByStopAndRoute = [];
 
-        foreach ($this->readCsv($extractPath . '/stop_times.txt') as $row) {
+        foreach ($this->readCsv($extractPath.'/stop_times.txt') as $row) {
             $tripInfo = $tripInfoByTripId[$row['trip_id']] ?? null;
 
             if (null === $tripInfo) {
                 continue;
             }
 
-            $key = $row['stop_id'] . '|' . $tripInfo['route_id'];
+            $key = $row['stop_id'].'|'.$tripInfo['route_id'];
             $destinationsByStopAndRoute[$key][$tripInfo['headsign']] = true;
         }
 
@@ -224,7 +223,7 @@ class GtfsService
     }
 
     /**
-     * Upsert des Route à partir des DTO parsés
+     * Upsert des Route à partir des DTO parsés.
      *
      * @param ParsedRoute[] $parsedRoutes
      */
@@ -244,14 +243,14 @@ class GtfsService
                     $parsedRoute->textColor,
                 );
                 $this->entityManager->persist($route);
-                $summary->created++;
+                ++$summary->created;
             } else {
                 $route
                     ->setShortName($parsedRoute->shortName)
                     ->setColor($parsedRoute->color)
                     ->setTextColor($parsedRoute->textColor)
                     ->markActive();
-                $summary->updated++;
+                ++$summary->updated;
             }
 
             $route->setLongName($parsedRoute->longName);
@@ -261,7 +260,7 @@ class GtfsService
     }
 
     /**
-     * Upsert des Quay à partir des DTO parsés
+     * Upsert des Quay à partir des DTO parsés.
      *
      * @param ParsedQuay[] $parsedQuays
      */
@@ -282,7 +281,7 @@ class GtfsService
                     $parsedQuay->parentStopId,
                 );
                 $this->entityManager->persist($quay);
-                $summary->created++;
+                ++$summary->created;
             } else {
                 $quay
                     ->setName($parsedQuay->name)
@@ -290,7 +289,7 @@ class GtfsService
                     ->setLongitude($parsedQuay->longitude)
                     ->setParentStopId($parsedQuay->parentStopId)
                     ->markActive();
-                $summary->updated++;
+                ++$summary->updated;
             }
         }
 
@@ -300,7 +299,7 @@ class GtfsService
     /**
      * Associe les Route aux Quay (relation ManyToMany) et met à jour
      * Quay::$destinationsServed, à partir des liens déduits par
-     * parseQuayRouteLinks()
+     * parseQuayRouteLinks().
      *
      * @param ParsedQuayRouteLink[] $parsedQuayRouteLinks
      */
@@ -360,7 +359,7 @@ class GtfsService
 
         foreach ($missingRoutes as $route) {
             $route->markDeprecated();
-            $summary->deactivated++;
+            ++$summary->deactivated;
         }
 
         $missingQuays = $this->entityManager->getRepository(Quay::class)
@@ -373,7 +372,7 @@ class GtfsService
 
         foreach ($missingQuays as $quay) {
             $quay->markDeprecated();
-            $summary->deactivated++;
+            ++$summary->deactivated;
         }
 
         return $summary;
@@ -383,11 +382,11 @@ class GtfsService
      * Lit un fichier CSV GTFS ligne par ligne (streaming, pas de
      * chargement intégral en mémoire — nécessaire pour stop_times.txt
      * qui peut atteindre plusieurs centaines de milliers de lignes),
-     * en associant chaque ligne aux en-têtes
+     * en associant chaque ligne aux en-têtes.
      *
-     * @return Generator<array<string, string>>
+     * @return \Generator<array<string, string>>
      */
-    private function readCsv(string $path): Generator
+    private function readCsv(string $path): \Generator
     {
         $handle = fopen($path, 'r');
 
@@ -401,7 +400,7 @@ class GtfsService
             rewind($handle);
         }
 
-        $headers = fgetcsv($handle);
+        $headers = fgetcsv($handle, escape: '');
 
         if (false === $headers) {
             fclose($handle);
@@ -409,8 +408,8 @@ class GtfsService
             return;
         }
 
-        while (false !== ($row = fgetcsv($handle))) {
-            if ($row === [null] || $row === false) {
+        while (false !== ($row = fgetcsv($handle, escape: ''))) {
+            if ([null] === $row || false === $row) {
                 continue;
             }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\Device;
@@ -18,7 +20,7 @@ class DisplayConfigurationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Les configurations actives d'un dispositif dans l'ordre de rotation
+     * Les configurations actives d'un dispositif dans l'ordre de rotation.
      *
      * @return DisplayConfiguration[]
      */
