@@ -102,6 +102,7 @@
         }
     },
     "require-dev": {
+        "php-cs-fixer/shim": "^3.95",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.2",
         "phpstan/phpstan-doctrine": "^2.0",
