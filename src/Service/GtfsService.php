@@ -349,6 +349,7 @@ class GtfsService
     {
         $summary = new GtfsImportSummary();
 
+        /** @var Route[] $missingRoutes */
         $missingRoutes = $this->entityManager->getRepository(Route::class)
             ->createQueryBuilder('r')
             ->where('r.active = true')
@@ -362,6 +363,7 @@ class GtfsService
             ++$summary->deactivated;
         }
 
+        /** @var Quay[] $missingQuays */
         $missingQuays = $this->entityManager->getRepository(Quay::class)
             ->createQueryBuilder('q')
             ->where('q.active = true')
