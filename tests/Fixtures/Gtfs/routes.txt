@@ -1,0 +1,3 @@
+route_id,route_short_name,route_long_name,route_color,route_text_color
+R1,1,CENTRE VILLE-GARE NORD,FF5500,FFFFFF
+R2,2A,,0072BC,000000
