@@ -30,13 +30,16 @@ class QuayRepository extends ServiceEntityRepository
      */
     public function findActiveByParentStopId(string $parentStopId): array
     {
-        return $this->createQueryBuilder('q')
+        /** @var Quay[] $result */
+        $result = $this->createQueryBuilder('q')
             ->andWhere('q.parentStopId = :parentStopId')
             ->andWhere('q.active = true')
             ->setParameter('parentStopId', $parentStopId)
             ->orderBy('q.name', 'ASC')
             ->getQuery()
             ->getResult();
+
+        return $result;
     }
 
     /**
@@ -46,12 +49,15 @@ class QuayRepository extends ServiceEntityRepository
      */
     public function findActiveParentStops(): array
     {
-        return $this->createQueryBuilder('q')
+        /** @var array<int, array{parentStopId: string, name: string}> $result */
+        $result = $this->createQueryBuilder('q')
             ->select('DISTINCT q.parentStopId AS parentStopId', 'q.name AS name')
             ->andWhere('q.active = true')
             ->orderBy('q.name', 'ASC')
             ->getQuery()
             ->getArrayResult();
+
+        return $result;
     }
 
     /**

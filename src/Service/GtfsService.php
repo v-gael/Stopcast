@@ -349,6 +349,7 @@ class GtfsService
     {
         $summary = new GtfsImportSummary();
 
+        /** @var Route[] $missingRoutes */
         $missingRoutes = $this->entityManager->getRepository(Route::class)
             ->createQueryBuilder('r')
             ->where('r.active = true')
@@ -362,6 +363,7 @@ class GtfsService
             ++$summary->deactivated;
         }
 
+        /** @var Quay[] $missingQuays */
         $missingQuays = $this->entityManager->getRepository(Quay::class)
             ->createQueryBuilder('q')
             ->where('q.active = true')
@@ -408,10 +410,14 @@ class GtfsService
             return;
         }
 
+        $headers = array_map(static fn (?string $value): string => $value ?? '', $headers);
+
         while (false !== ($row = fgetcsv($handle, escape: ''))) {
-            if ([null] === $row || false === $row) {
+            if ([null] === $row) {
                 continue;
             }
+
+            $row = array_map(static fn (?string $value): string => $value ?? '', $row);
 
             yield array_combine($headers, $row);
         }

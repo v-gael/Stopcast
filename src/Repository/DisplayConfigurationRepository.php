@@ -26,12 +26,15 @@ class DisplayConfigurationRepository extends ServiceEntityRepository
      */
     public function findActiveByDeviceOrderedByPosition(Device $device): array
     {
-        return $this->createQueryBuilder('dc')
+        /** @var DisplayConfiguration[] $result */
+        $result = $this->createQueryBuilder('dc')
             ->andWhere('dc.device = :device')
             ->andWhere('dc.active = true')
             ->setParameter('device', $device)
             ->orderBy('dc.position', 'ASC')
             ->getQuery()
             ->getResult();
+
+        return $result;
     }
 }

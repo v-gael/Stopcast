@@ -60,6 +60,8 @@ class Quay
 
     /**
      * Destinations distinctes (trip_headsign) desservies par ce quai.
+     *
+     * @var string[]|null
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $destinationsServed = null;
@@ -185,11 +187,17 @@ class Quay
         return $this;
     }
 
+    /**
+     * @return string[]|null
+     */
     public function getDestinationsServed(): ?array
     {
         return $this->destinationsServed;
     }
 
+    /**
+     * @param string[]|null $destinationsServed
+     */
     public function setDestinationsServed(?array $destinationsServed): static
     {
         $this->destinationsServed = $destinationsServed;
