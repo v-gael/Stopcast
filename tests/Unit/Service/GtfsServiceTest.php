@@ -51,6 +51,26 @@ final class GtfsServiceTest extends TestCase
         self::assertNull($parsedRoutes[1]->longName);
     }
 
+    public function testParseQuaysFiltersOutParentStations(): void
+    {
+        $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath());
+
+        self::assertCount(2, $parsedQuays);
+    }
+
+    public function testParseQuaysMapsCsvColumnsCorrectly(): void
+    {
+        $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath());
+
+        $firstQuay = $parsedQuays[0];
+
+        self::assertSame('S1', $firstQuay->gtfsStopId);
+        self::assertSame('CENTRE VILLE', $firstQuay->name);
+        self::assertSame(38.5, $firstQuay->latitude);
+        self::assertSame(-28.6, $firstQuay->longitude);
+        self::assertSame('P1', $firstQuay->parentStopId);
+    }
+
     private function fixturesPath(): string
     {
         return \dirname(__DIR__, 2).'/Fixtures/Gtfs';
