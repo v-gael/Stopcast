@@ -1,0 +1,4 @@
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,location_type,parent_station,wheelchair_boarding,vehicle_type
+S1,CENTRE VILLE,,38.5,-28.6,,0,P1,,
+S2,GARE NORD,,38.6,-28.5,,0,P1,,
+P1,ARRET GARE NORD,,38.55,-28.55,,1,,,
