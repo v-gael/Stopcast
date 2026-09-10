@@ -71,6 +71,24 @@ final class GtfsServiceTest extends TestCase
         self::assertSame('P1', $firstQuay->parentStopId);
     }
 
+    public function testParseQuayRouteLinksAggregatesDistinctDestinationsForSameStopAndRoute(): void
+    {
+        $parsedLinks = $this->gtfsService->parseQuayRouteLinks($this->fixturesPath());
+
+        $s1R1Link = $parsedLinks[0];
+
+        self::assertSame('S1', $s1R1Link->gtfsStopId);
+        self::assertSame('R1', $s1R1Link->gtfsRouteId);
+        self::assertSame(['CENTRE VILLE', 'ZONE INDUSTRIELLE'], $s1R1Link->destinations);
+    }
+
+    public function testParseQuayRouteLinksSkipsStopTimesWithUnknownTripId(): void
+    {
+        $parsedLinks = $this->gtfsService->parseQuayRouteLinks($this->fixturesPath());
+
+        self::assertCount(2, $parsedLinks);
+    }
+
     private function fixturesPath(): string
     {
         return \dirname(__DIR__, 2).'/Fixtures/Gtfs';
