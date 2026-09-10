@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      target: prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  database:
+    restart: unless-stopped
+    volumes:
+      - database_data_prod:/var/lib/postgresql/data:rw
+
+volumes:
+  database_data_prod:

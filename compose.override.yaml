@@ -1,18 +1,34 @@
-
 services:
-###> doctrine/doctrine-bundle ###
+  ###> app ###
+  app:
+    build:
+      target: dev
+    environment:
+      APP_ENV: dev
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./:/app
+      # Le contenu de var/ ne doit pas venir du host (cache/logs propres au conteneur)
+      - app_var:/app/var
+  ###< app ###
+
+  ###> doctrine/doctrine-bundle ###
   database:
     ports:
-      - "5432"
+      - "5432:5432"
 ###< doctrine/doctrine-bundle ###
 
-###> symfony/mailer ###
-  mailer:
-    image: axllent/mailpit
-    ports:
-      - "1025"
-      - "8025"
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
-###< symfony/mailer ###
+# Pas de service mailer pour l'instant. Pour le réactiver un jour :
+#
+#   mailer:
+#     image: axllent/mailpit
+#     ports:
+#       - "1025"
+#       - "8025"
+#     environment:
+#       MP_SMTP_AUTH_ACCEPT_ANY: 1
+#       MP_SMTP_AUTH_ALLOW_INSECURE: 1
