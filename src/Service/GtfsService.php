@@ -408,10 +408,14 @@ class GtfsService
             return;
         }
 
+        $headers = array_map(static fn (?string $value): string => $value ?? '', $headers);
+
         while (false !== ($row = fgetcsv($handle, escape: ''))) {
             if ([null] === $row) {
                 continue;
             }
+
+            $row = array_map(static fn (?string $value): string => $value ?? '', $row);
 
             yield array_combine($headers, $row);
         }

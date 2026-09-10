@@ -197,8 +197,6 @@ class Quay
 
     /**
      * @param string[]|null $destinationsServed
-     *
-     * @return $this
      */
     public function setDestinationsServed(?array $destinationsServed): static
     {
