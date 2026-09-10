@@ -21,3 +21,8 @@ services:
 
   database:
     restart: unless-stopped
+    volumes:
+      - database_data_prod:/var/lib/postgresql/data:rw
+
+volumes:
+  database_data_prod:
