@@ -1,5 +1,5 @@
 parameters:
-    level: 9
+    level: 10
     paths:
         - bin/
         - config/
@@ -9,4 +9,5 @@ parameters:
     excludePaths:
         # Fichiers générés et maintenus par les recipes Symfony Flex : on laisse leur contenu tel que fourni, sans y appliquer nos propres règles de qualité
         - tests/bootstrap.php
+        - public/index.php
     tmpDir: var/cache/phpstan
