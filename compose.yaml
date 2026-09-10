@@ -1,6 +1,20 @@
-
 services:
-###> doctrine/doctrine-bundle ###
+  ###> app ###
+  app:
+    build:
+      context: .
+      target: prod
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - app_var:/app/var
+  ###< app ###
+
+  ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
@@ -19,7 +33,15 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+# ###> symfony/mailer ###
+# Pas de service mailer pour l'instant (voir compose.override.yaml pour le
+# réactiver facilement en dev si besoin un jour).
+# ###< symfony/mailer ###
+
 volumes:
-###> doctrine/doctrine-bundle ###
+  ###> app ###
+  app_var:
+  ###< app ###
+  ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###

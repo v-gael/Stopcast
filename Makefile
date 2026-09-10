@@ -1,0 +1,92 @@
+.DEFAULT_GOAL := help
+.PHONY: help up down build sh console test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan gtfs-import migrate migration db-reset logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+
+# Commande de base pour tout ce qui touche à l'environnement prod (local, pour tester)
+PROD := docker compose --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml
+
+## —— Docker ———————————————————————————————————————————————————————————————
+up: ## Démarre les conteneurs (dev)
+	docker compose up -d
+
+down: ## Arrête les conteneurs
+	docker compose down
+
+build: ## Rebuild les images
+	docker compose up -d --build
+
+sh: ## Ouvre un shell dans le conteneur app
+	docker compose exec app sh
+
+logs: ## Suit les logs du conteneur app
+	docker compose logs -f app
+
+## —— Prod (local, pour tester) ———————————————————————————————————————————
+prod-up: ## Build + démarre avec la stage prod et .env.prod.local
+	$(PROD) up -d --build
+
+prod-down: ## Arrête l'environnement prod
+	$(PROD) down
+
+prod-logs: ## Suit les logs de l'environnement prod
+	$(PROD) logs -f app
+
+prod-ps: ## État des conteneurs prod (vérifier healthy)
+	$(PROD) ps
+
+prod-reset: ## ⚠️ Supprime volumes + rebuild + remigre à zéro (reset complet du test prod)
+	$(PROD) down -v
+	$(PROD) up -d --build
+	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+
+## —— CI (local, pour tester) —————————————————————————————————————————————
+ci-run: ## Build + lance la suite de tests façon CI, retourne le code de sortie
+	docker compose -f compose.yaml -f compose.ci.yaml up --build --abort-on-container-exit --exit-code-from app
+
+ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
+	docker compose -f compose.yaml -f compose.ci.yaml down -v
+
+## —— Symfony ——————————————————————————————————————————————————————————————
+console: ## Lance bin/console avec les arguments passés (ex: make console c="make:entity")
+	docker compose exec app php bin/console $(c)
+
+## —— Qualité de code ——————————————————————————————————————————————————————
+test: ## Lance PHPUnit
+	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
+
+test-verbose: ## Lance PHPUnit avec plus de détails
+	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
+
+rector: ## Lance Rector en dry-run
+	docker compose exec app php vendor/bin/rector process --dry-run --debug
+
+rector-fix: ## Applique les corrections Rector
+	docker compose exec app php vendor/bin/rector process
+
+cs-fixer: ## Vérifie le style de code (dry-run)
+	docker compose exec app php vendor/bin/php-cs-fixer fix --dry-run --diff
+
+cs-fixer-fix: ## Corrige le style de code
+	docker compose exec app php vendor/bin/php-cs-fixer fix
+
+phpstan: ## Lance l'analyse statique PHPStan
+	docker compose exec app php vendor/bin/phpstan analyse
+
+## —— Métier ———————————————————————————————————————————————————————————————
+gtfs-import: ## Lance l'import GTFS
+	docker compose exec app php bin/console app:gtfs:import
+
+## —— Base de données ——————————————————————————————————————————————————————
+migrate: ## Applique les migrations en attente
+	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+
+migration: ## Génère une migration à partir des entités
+	docker compose exec app php bin/console make:migration
+
+db-reset: ## Supprime et recrée la base (⚠️ perte de données)
+	docker compose exec app php bin/console doctrine:database:drop --force --if-exists
+	docker compose exec app php bin/console doctrine:database:create
+	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+
+## —— Aide —————————————————————————————————————————————————————————————————
+help: ## Affiche cette aide
+	@grep -E '(^[a-zA-Z0-9_-]+:.*?## .*$$)|(^## )' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; /^## / {printf "\n\033[1m%s\033[0m\n", substr($$0, 4)} /^[a-zA-Z0-9_-]+:/ {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
