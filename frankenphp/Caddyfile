@@ -3,7 +3,7 @@
 	order php_server before file_server
 }
 
-:80 {
+localhost {
 	root * /app/public
 	encode zstd br gzip
 
