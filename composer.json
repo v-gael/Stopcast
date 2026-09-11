@@ -5,9 +5,10 @@
     "prefer-stable": true,
     "require": {
         "php": ">=8.4",
-        "ext-zip": "*",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "ext-zip": "*",
+        "api-platform/core": "^4.3",
         "doctrine/doctrine-bundle": "^3.3",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
