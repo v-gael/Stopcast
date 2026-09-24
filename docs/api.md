@@ -18,7 +18,7 @@ X-Device-Token: <token du device>
 
 Renvoie, pour chaque `DisplayConfiguration` active du dispositif (triées par `position`), les prochains passages du quai correspondant. Pas de flag "flux indisponible" : si le GTFS-RT échoue, l'erreur remonte telle quelle plutôt qu'une réponse partielle — le Pi garde alors son dernier affichage valide.
 
-Exemple de réponse : [`example/example.json`](../example/example.json).
+Exemple de réponse : voir le [README](../README.md#exemple-de-réponse).
 
 ## Variables d'environnement
 
