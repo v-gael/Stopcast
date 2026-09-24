@@ -8,6 +8,7 @@ services:
       APP_SECRET: ${APP_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
+      GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
     ports:
       - "80:80"
       - "443:443"
