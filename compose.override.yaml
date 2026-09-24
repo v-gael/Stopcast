@@ -25,7 +25,8 @@ services:
   ###> doctrine/doctrine-bundle ###
   database:
     ports:
-      - "5432:5432"
+      # Limité à la machine hôte (client BDD de l'IDE) : pas d'accès depuis le réseau local
+      - "127.0.0.1:5432:5432"
 ###< doctrine/doctrine-bundle ###
 
 # Pas de service mailer pour l'instant. Pour le réactiver un jour :
