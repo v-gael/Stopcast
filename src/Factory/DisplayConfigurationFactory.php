@@ -23,7 +23,7 @@ final class DisplayConfigurationFactory extends PersistentObjectFactory
         return DisplayConfiguration::class;
     }
 
-    protected function defaults(): array|callable
+    protected function defaults(): array
     {
         // On pioche parmi les VRAIS quais déjà importés via app:gtfs:import —
         // jamais de quai fictif généré ici.

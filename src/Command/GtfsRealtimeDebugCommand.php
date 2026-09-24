@@ -116,7 +116,7 @@ final class GtfsRealtimeDebugCommand extends Command
                 $io->text('Aucun stop_id ressemblant trouvé non plus — ce quai n\'est peut-être simplement pas desservi en ce moment.');
             }
         } else {
-            $io->table(array_keys($matches[0]), array_map('array_values', $matches));
+            $io->table(array_keys($matches[0]), array_map(array_values(...), $matches));
         }
 
         return Command::SUCCESS;
