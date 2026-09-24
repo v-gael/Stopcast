@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan gtfs-import migrate migration db-reset logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
 # Commande de base pour tout ce qui touche à l'environnement prod (local, pour tester)
 PROD := docker compose --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml
@@ -49,6 +49,11 @@ ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
 console: ## Lance bin/console avec les arguments passés (ex: make console c="make:entity")
 	docker compose exec app php bin/console $(c)
 
+cc: ## Vide le cache Symfony (cache:clear)
+	docker compose exec app php bin/console cache:clear
+
+composer: ## Lance composer avec les arguments passés (ex: make composer c="require --dev foo/bar")
+	docker compose exec app composer $(c)
 ## —— Qualité de code ——————————————————————————————————————————————————————
 test: ## Lance PHPUnit
 	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
@@ -72,8 +77,11 @@ phpstan: ## Lance l'analyse statique PHPStan
 	docker compose exec app php vendor/bin/phpstan analyse
 
 ## —— Métier ———————————————————————————————————————————————————————————————
-gtfs-import: ## Lance l'import GTFS
+import: ## Lance l'import GTFS
 	docker compose exec app php bin/console app:gtfs:import
+
+fixtures: ## Charge les fixtures Doctrine (--append : conserve les quais importés via gtfs-import)
+	docker compose exec app php bin/console doctrine:fixtures:load --append --no-interaction
 
 ## —— Base de données ——————————————————————————————————————————————————————
 migrate: ## Applique les migrations en attente
