@@ -1,6 +1,8 @@
 {
+    "name": "v-gael/abribus",
+    "description": "API Symfony qui reproduit un panneau d'abribus en temps réel (GTFS + GTFS-RT) pour un écran Raspberry Pi.",
     "type": "project",
-    "license": "proprietary",
+    "license": "MIT",
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
