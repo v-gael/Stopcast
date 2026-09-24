@@ -24,3 +24,12 @@ services:
     App\Service\GtfsService:
         arguments:
             $gtfsStaticFeedUrl: '%env(GTFS_STATIC_FEED_URL)%'
+
+    App\Service\GtfsRealtimeFetcher:
+        arguments:
+            $tripUpdatesUrl: '%env(GTFS_REALTIME_TRIP_UPDATES_URL)%'
+            $cacheTtl: '%env(int:GTFS_REALTIME_CACHE_TTL)%'
+
+    App\Service\NextPassageResolver:
+        arguments:
+            $limit: '%env(int:GTFS_REALTIME_NEXT_PASSAGES_LIMIT)%'

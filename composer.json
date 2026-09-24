@@ -5,9 +5,10 @@
     "prefer-stable": true,
     "require": {
         "php": ">=8.4",
-        "ext-zip": "*",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "ext-zip": "*",
+        "api-platform/core": "^4.3",
         "doctrine/doctrine-bundle": "^3.3",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
@@ -102,6 +103,7 @@
         }
     },
     "require-dev": {
+        "doctrine/doctrine-fixtures-bundle": "^4.3",
         "php-cs-fixer/shim": "^3.95",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.2",
@@ -114,6 +116,7 @@
         "symfony/debug-bundle": "8.1.*",
         "symfony/maker-bundle": "^1.0",
         "symfony/stopwatch": "8.1.*",
-        "symfony/web-profiler-bundle": "8.1.*"
+        "symfony/web-profiler-bundle": "8.1.*",
+        "zenstruck/foundry": "^2.12"
     }
 }

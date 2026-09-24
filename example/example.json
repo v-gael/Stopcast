@@ -1,0 +1,34 @@
+{
+    "@context": "/api/contexts/NextPassagesResponse",
+    "@id": "/api/next-passages",
+    "@type": "NextPassagesResponse",
+    "generatedAt": "2026-09-14T11:51:37+00:00",
+    "displays": [
+        {
+            "@type": "DisplayItem",
+            "@id": "/api/.well-known/genid/c0a153f21e347dbd678f",
+            "label": "Config test manuel",
+            "quayName": "MAIRIE",
+            "nextPassages": [
+                {
+                    "@type": "NextPassage",
+                    "@id": "/api/.well-known/genid/fb7fefd37b17d28cc134",
+                    "routeShortName": "4",
+                    "routeColor": "F29400",
+                    "routeTextColor": "000000",
+                    "headsign": "CENTRE VILLE - GARE NORD",
+                    "expectedAt": "2026-09-14T12:05:15+00:00"
+                },
+                {
+                    "@type": "NextPassage",
+                    "@id": "/api/.well-known/genid/0bbe514449415a404eff",
+                    "routeShortName": "4",
+                    "routeColor": "F29400",
+                    "routeTextColor": "000000",
+                    "headsign": "CENTRE VILLE - GARE NORD",
+                    "expectedAt": "2026-09-14T12:21:57+00:00"
+                }
+            ]
+        }
+    ]
+}

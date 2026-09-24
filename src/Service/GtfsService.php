@@ -52,6 +52,9 @@ class GtfsService
             try {
                 $routeSummary = $this->persistRoutes($parsedRoutes);
                 $quaySummary = $this->persistQuays($parsedQuays);
+
+                $this->entityManager->flush();
+
                 $this->linkQuaysToRoutes($parsedLinks);
 
                 $deactivationSummary = $this->deactivateMissingEntities(
