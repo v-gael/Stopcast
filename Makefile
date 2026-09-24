@@ -54,6 +54,7 @@ cc: ## Vide le cache Symfony (cache:clear)
 
 composer: ## Lance composer avec les arguments passés (ex: make composer c="require --dev foo/bar")
 	docker compose exec app composer $(c)
+
 ## —— Qualité de code ——————————————————————————————————————————————————————
 test: ## Lance PHPUnit
 	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
@@ -80,7 +81,7 @@ phpstan: ## Lance l'analyse statique PHPStan
 import: ## Lance l'import GTFS
 	docker compose exec app php bin/console app:gtfs:import
 
-fixtures: ## Charge les fixtures Doctrine (--append : conserve les quais importés via gtfs-import)
+fixtures: ## Charge les fixtures Doctrine (--append : conserve les quais importés via make import)
 	docker compose exec app php bin/console doctrine:fixtures:load --append --no-interaction
 
 ## —— Base de données ——————————————————————————————————————————————————————

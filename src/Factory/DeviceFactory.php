@@ -17,7 +17,7 @@ final class DeviceFactory extends PersistentObjectFactory
         return Device::class;
     }
 
-    protected function defaults(): array|callable
+    protected function defaults(): array
     {
         return [
             'label' => \sprintf('Écran %s', self::faker()->streetName()),
