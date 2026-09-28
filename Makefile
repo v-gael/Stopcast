@@ -1,8 +1,11 @@
 .DEFAULT_GOAL := help
 .PHONY: help up down build sh console cc composer test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
-# Commande de base pour tout ce qui touche à l'environnement prod (local, pour tester)
-PROD := docker compose --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml
+# Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
+# a son propre projet compose : sans -p, ils partageraient le projet du dev
+# (nom du dossier), donc ses conteneurs et sa base (un `down -v` la supprimerait).
+PROD := docker compose -p abribus-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml
+CI := docker compose -p abribus-ci -f compose.yaml -f compose.ci.yaml
 
 ## —— Docker ———————————————————————————————————————————————————————————————
 up: ## Démarre les conteneurs (dev)
@@ -21,7 +24,7 @@ logs: ## Suit les logs du conteneur app
 	docker compose logs -f app
 
 ## —— Prod (local, pour tester) ———————————————————————————————————————————
-prod-up: ## Build + démarre avec la stage prod et .env.prod.local
+prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : mêmes ports)
 	$(PROD) up -d --build
 
 prod-down: ## Arrête l'environnement prod
@@ -36,14 +39,15 @@ prod-ps: ## État des conteneurs prod (vérifier healthy)
 prod-reset: ## ⚠️ Supprime volumes + rebuild + remigre à zéro (reset complet du test prod)
 	$(PROD) down -v
 	$(PROD) up -d --build
-	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+	$(PROD) exec app php bin/console doctrine:migrations:migrate --no-interaction
 
 ## —— CI (local, pour tester) —————————————————————————————————————————————
-ci-run: ## Build + lance la suite de tests façon CI, retourne le code de sortie
-	docker compose -f compose.yaml -f compose.ci.yaml up --build --abort-on-container-exit --exit-code-from app
+ci-run: ## Build + lance la suite de tests façon CI sur une base vierge, retourne le code de sortie
+	$(CI) down -v
+	$(CI) up --build --abort-on-container-exit --exit-code-from app
 
 ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
-	docker compose -f compose.yaml -f compose.ci.yaml down -v
+	$(CI) down -v
 
 ## —— Symfony ——————————————————————————————————————————————————————————————
 console: ## Lance bin/console avec les arguments passés (ex: make console c="make:entity")

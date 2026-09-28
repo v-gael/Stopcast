@@ -44,8 +44,11 @@ Les mêmes vérifications tournent en CI (GitHub Actions) à chaque push et pull
 
 ```bash
 cp .env.prod.local.example .env.prod.local   # puis renseigner les valeurs
+make down                                    # libère les ports 80/443 du dev
 make prod-up
 ```
+
+Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`abribus`, `abribus-prod`, `abribus-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
 
 ## Conventions
 
