@@ -13,9 +13,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
 use Google\Transit\Realtime\FeedMessage;
 use Google\Transit\Realtime\TripDescriptor;
+use Google\Transit\Realtime\TripDescriptor\ScheduleRelationship as TripScheduleRelationship;
 use Google\Transit\Realtime\TripUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
+use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -81,6 +84,56 @@ final class NextPassageResolverTest extends KernelTestCase
         self::assertSame($queriesForOneTrip, $queriesForThreeTrips);
     }
 
+    public function testDepartureWithoutTimeFallsBackToTheArrival(): void
+    {
+        $arrivalAt = new \DateTimeImmutable('+5 minutes');
+        $stopTimeUpdate = new StopTimeUpdate()
+            ->setStopId('S1')
+            ->setArrival(new StopTimeEvent()->setTime($arrivalAt->getTimestamp()))
+            ->setDeparture(new StopTimeEvent()->setDelay(60));
+
+        $passages = $this->resolveEntities([$this->tripUpdate('T1', [$stopTimeUpdate])]);
+
+        self::assertCount(1, $passages);
+        self::assertSame($arrivalAt->getTimestamp(), $passages[0]->expectedAt->getTimestamp());
+    }
+
+    public function testSkippedStopIsNotShown(): void
+    {
+        $stopTimeUpdate = $this->departureAt('S1', '+5 minutes')
+            ->setScheduleRelationship(StopScheduleRelationship::SKIPPED);
+
+        $passages = $this->resolveEntities([
+            $this->tripUpdate('T1', [$stopTimeUpdate]),
+            $this->tripUpdate('T2', [$this->departureAt('S1', '+10 minutes')]),
+        ]);
+
+        self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($passages));
+    }
+
+    #[DataProvider('removedTripRelationships')]
+    public function testRemovedTripIsNotShown(int $scheduleRelationship): void
+    {
+        $removedTrip = $this->tripUpdate('T1', [$this->departureAt('S1', '+5 minutes')]);
+        $removedTrip->getTripUpdate()?->getTrip()?->setScheduleRelationship($scheduleRelationship);
+
+        $passages = $this->resolveEntities([
+            $removedTrip,
+            $this->tripUpdate('T2', [$this->departureAt('S1', '+10 minutes')]),
+        ]);
+
+        self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($passages));
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function removedTripRelationships(): iterable
+    {
+        yield 'canceled' => [TripScheduleRelationship::CANCELED];
+        yield 'deleted' => [TripScheduleRelationship::DELETED];
+    }
+
     private function countQueries(callable $callback): int
     {
         $debugDataHolder = self::getContainer()->get('doctrine.debug_data_holder');
@@ -104,22 +157,46 @@ final class NextPassageResolverTest extends KernelTestCase
     private function resolve(array $tripUpdates): array
     {
         $entities = [];
-        foreach ($tripUpdates as $i => [$tripId, $routeId, $stopId, $relativeTime]) {
-            $stopTimeUpdate = new StopTimeUpdate()
-                ->setStopId($stopId)
-                ->setDeparture(new StopTimeEvent()->setTime(new \DateTimeImmutable($relativeTime)->getTimestamp()));
+        foreach ($tripUpdates as [$tripId, $routeId, $stopId, $relativeTime]) {
+            $entities[] = $this->tripUpdate($tripId, [$this->departureAt($stopId, $relativeTime)], $routeId);
+        }
 
-            $entities[] = new FeedEntity()
-                ->setId((string) $i)
-                ->setTripUpdate(new TripUpdate()
-                    ->setTrip(new TripDescriptor()->setTripId($tripId)->setRouteId($routeId))
-                    ->setStopTimeUpdate([$stopTimeUpdate]));
+        return $this->resolveEntities($entities);
+    }
+
+    /**
+     * @param FeedEntity[] $entities
+     *
+     * @return NextPassage[]
+     */
+    private function resolveEntities(array $entities): array
+    {
+        foreach ($entities as $i => $entity) {
+            $entity->setId((string) $i);
         }
 
         $resolver = self::getContainer()->get(NextPassageResolver::class);
         self::assertInstanceOf(NextPassageResolver::class, $resolver);
 
         return $resolver->resolveForQuay(new FeedMessage()->setEntity($entities), $this->quay);
+    }
+
+    /**
+     * @param StopTimeUpdate[] $stopTimeUpdates
+     */
+    private function tripUpdate(string $tripId, array $stopTimeUpdates, string $routeId = 'R1'): FeedEntity
+    {
+        return new FeedEntity()
+            ->setTripUpdate(new TripUpdate()
+                ->setTrip(new TripDescriptor()->setTripId($tripId)->setRouteId($routeId))
+                ->setStopTimeUpdate($stopTimeUpdates));
+    }
+
+    private function departureAt(string $stopId, string $relativeTime): StopTimeUpdate
+    {
+        return new StopTimeUpdate()
+            ->setStopId($stopId)
+            ->setDeparture(new StopTimeEvent()->setTime(new \DateTimeImmutable($relativeTime)->getTimestamp()));
     }
 
     /**

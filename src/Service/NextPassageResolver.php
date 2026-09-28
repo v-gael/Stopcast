@@ -9,6 +9,9 @@ use App\Entity\Quay;
 use App\Repository\RouteRepository;
 use App\Repository\TripRepository;
 use Google\Transit\Realtime\FeedMessage;
+use Google\Transit\Realtime\TripDescriptor\ScheduleRelationship as TripScheduleRelationship;
+use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
+use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
 
 /**
  * Résout les prochains passages pour un quai à partir d'un flux GTFS-RT déjà téléchargé.
@@ -46,16 +49,24 @@ final readonly class NextPassageResolver
                 continue;
             }
 
+            // Trajet supprimé du service : aucun de ses passages n'est à afficher.
+            if (\in_array($tripUpdate->getTrip()?->getScheduleRelationship(), [TripScheduleRelationship::CANCELED, TripScheduleRelationship::DELETED], true)) {
+                continue;
+            }
+
             foreach ($tripUpdate->getStopTimeUpdate() as $stopTimeUpdate) {
                 if ($stopTimeUpdate->getStopId() !== $quay->getGtfsStopId()) {
                     continue;
                 }
 
-                $event = $stopTimeUpdate->hasDeparture()
-                    ? $stopTimeUpdate->getDeparture()
-                    : $stopTimeUpdate->getArrival();
+                // Arrêt sauté : le bus passe sans s'arrêter au quai.
+                if (StopScheduleRelationship::SKIPPED === $stopTimeUpdate->getScheduleRelationship()) {
+                    break;
+                }
 
-                $time = (int) ($event?->getTime() ?? 0);
+                // Le départ peut ne porter qu'un delay (heure à 0) : on se rabat
+                // alors sur l'arrivée.
+                $time = $this->timeOf($stopTimeUpdate->getDeparture()) ?: $this->timeOf($stopTimeUpdate->getArrival());
 
                 if (0 === $time) {
                     continue;
@@ -120,5 +131,10 @@ final readonly class NextPassageResolver
         usort($passages, static fn (NextPassage $a, NextPassage $b): int => $a->expectedAt <=> $b->expectedAt);
 
         return \array_slice($passages, 0, $this->limit);
+    }
+
+    private function timeOf(?StopTimeEvent $event): int
+    {
+        return (int) ($event?->getTime() ?? 0);
     }
 }
