@@ -18,6 +18,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: test
+    # Base des tests d'intégration et fonctionnels : mêmes identifiants que le
+    # DATABASE_URL par défaut de .env (l'environnement de test ajoute "_test").
+    services:
+      database:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: '!ChangeMe!'
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v5
         with:
