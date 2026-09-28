@@ -50,6 +50,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiFilter(BooleanFilter::class, properties: ['active'])]
 class Device
 {
+    public const int TOKEN_MAX_LENGTH = 64;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
@@ -69,7 +71,7 @@ class Device
      * Jeton d'authentification du Raspberry Pi auprès de l'API.
      * Exposé uniquement à la création (groupe device:read:created), jamais en lecture/écriture normale.
      */
-    #[ORM\Column(type: Types::STRING, length: 64)]
+    #[ORM\Column(type: Types::STRING, length: self::TOKEN_MAX_LENGTH)]
     #[Groups(['device:read:created'])]
     private string $token;
 
@@ -97,10 +99,18 @@ class Device
     #[Groups(['device:read'])]
     private \DateTimeImmutable $updatedAt;
 
-    public function __construct(string $label)
+    /**
+     * Jeton généré si aucun n'est fourni. En imposer un sert aux fixtures, pour
+     * un appareil de développement au jeton stable ; l'API ne l'expose pas.
+     */
+    public function __construct(string $label, ?string $token = null)
     {
+        if (null !== $token && ('' === $token || \strlen($token) > self::TOKEN_MAX_LENGTH)) {
+            throw new \InvalidArgumentException(\sprintf('Le jeton doit faire entre 1 et %d caractères, %d reçus.', self::TOKEN_MAX_LENGTH, \strlen($token)));
+        }
+
         $this->label = $label;
-        $this->token = Uuid::v4()->toRfc4122();
+        $this->token = $token ?? Uuid::v4()->toRfc4122();
         $this->displayConfigurations = new ArrayCollection();
     }
 
