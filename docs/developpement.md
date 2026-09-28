@@ -49,14 +49,6 @@ Vérifier que l'écran a des passages :
 curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 ```
 
-## Déboguer le flux temps réel
-
-```bash
-make console c="app:gtfs:rt-debug <gtfsStopId>"
-```
-
-Affiche ce que le flux GTFS-RT contient pour un quai donné, utile pour vérifier la correspondance des identifiants entre flux statique et temps réel.
-
 ## Qualité de code
 
 | Commande | Outil |

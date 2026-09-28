@@ -9,9 +9,10 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\NextPassagesResponse;
 use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\DisplayConfiguration;
+use App\Entity\Quay;
+use App\Gtfs\Realtime\NextPassageFinder;
 use App\Repository\DeviceRepository;
-use App\Service\GtfsRealtimeFetcher;
-use App\Service\NextPassageResolver;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -23,8 +24,8 @@ final readonly class NextPassagesProvider implements ProviderInterface
 {
     public function __construct(
         private DeviceRepository $deviceRepository,
-        private GtfsRealtimeFetcher $fetcher,
-        private NextPassageResolver $resolver,
+        private NextPassageFinder $nextPassageFinder,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -58,12 +59,13 @@ final readonly class NextPassagesProvider implements ProviderInterface
             static fn (DisplayConfiguration $a, DisplayConfiguration $b): int => $a->getPosition() <=> $b->getPosition(),
         );
 
-        // Un seul appel réseau/parsing pour tous les quais de ce device : le flux
-        // est déjà en mémoire (ou vient du cache partagé) et est réutilisé ci-dessous.
+        // Un seul appel pour tous les quais de ce device : le flux n'est lu qu'une fois.
         // Si le flux RT échoue (timeout, protobuf invalide...), l'exception remonte
         // telle quelle : le Pi ne récupère rien cette fois-ci et garde son data.json
         // précédent, plutôt que d'écraser avec une réponse partielle/vide.
-        $feed = $this->fetcher->fetchTripUpdates();
+        $passagesByStopId = $this->nextPassageFinder->forQuays(
+            array_map(static fn (DisplayConfiguration $configuration): Quay => $configuration->getQuay(), $configurations),
+        );
 
         $displays = [];
 
@@ -71,12 +73,12 @@ final readonly class NextPassagesProvider implements ProviderInterface
             $displays[] = new DisplayItem(
                 label: $configuration->getLabel(),
                 quayName: $configuration->getQuay()->getName(),
-                nextPassages: $this->resolver->resolveForQuay($feed, $configuration->getQuay()),
+                nextPassages: $passagesByStopId[$configuration->getQuay()->getGtfsStopId()],
             );
         }
 
         return new NextPassagesResponse(
-            generatedAt: new \DateTimeImmutable(),
+            generatedAt: $this->clock->now(),
             displays: $displays,
         );
     }

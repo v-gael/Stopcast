@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Exception;
+namespace App\Gtfs\Realtime;
 
 /**
- * Levée par GtfsRealtimeFetcher quand la réponse du flux GTFS-RT n'est pas un
- * FeedMessage valide (page d'erreur renvoyée avec un statut 200, corps vide
- * ou tronqué). Une telle réponse n'est jamais mise en cache.
+ * Levée quand la réponse du flux temps réel n'est pas un FeedMessage valide
+ * (page d'erreur renvoyée avec un statut 200, corps vide ou tronqué). Une
+ * telle réponse n'est jamais mise en cache.
  */
 class InvalidGtfsRealtimeFeedException extends \RuntimeException
 {

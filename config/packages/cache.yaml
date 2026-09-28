@@ -15,5 +15,14 @@ framework:
         #app: cache.adapter.apcu
 
         # Namespaced pools use the above "app" backend by default
-        #pools:
-            #my.dedicated.cache: null
+        pools:
+            # Flux temps réel, partagé entre tous les dispositifs (voir NextPassageFinder).
+            gtfs_realtime.cache: null
+
+when@test:
+    framework:
+        cache:
+            pools:
+                # En mémoire : rien ne survit d'un test à l'autre.
+                gtfs_realtime.cache:
+                    adapter: cache.adapter.array
