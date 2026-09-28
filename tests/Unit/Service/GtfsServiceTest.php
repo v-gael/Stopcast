@@ -51,6 +51,16 @@ final class GtfsServiceTest extends TestCase
         self::assertNull($parsedRoutes[1]->longName);
     }
 
+    public function testParseRoutesAppliesSpecDefaultsWhenOptionalColumnsAreMissing(): void
+    {
+        $parsedRoutes = $this->gtfsService->parseRoutes($this->fixturesPath('MissingOptionalColumns'));
+
+        self::assertCount(1, $parsedRoutes);
+        self::assertNull($parsedRoutes[0]->longName);
+        self::assertSame('FFFFFF', $parsedRoutes[0]->color);
+        self::assertSame('000000', $parsedRoutes[0]->textColor);
+    }
+
     public function testParseQuaysFiltersOutParentStations(): void
     {
         $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath());
@@ -71,6 +81,33 @@ final class GtfsServiceTest extends TestCase
         self::assertSame('P1', $firstQuay->parentStopId);
     }
 
+    public function testParseQuaysTreatsEmptyLocationTypeAsQuay(): void
+    {
+        $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath('EmptyLocationType'));
+
+        self::assertCount(1, $parsedQuays);
+        self::assertSame('S1', $parsedQuays[0]->gtfsStopId);
+    }
+
+    public function testParseQuaysTreatsStopsAsQuaysWhenOptionalColumnsAreMissing(): void
+    {
+        $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath('MissingOptionalColumns'));
+
+        self::assertCount(1, $parsedQuays);
+        self::assertSame('S1', $parsedQuays[0]->gtfsStopId);
+        self::assertSame('', $parsedQuays[0]->parentStopId);
+    }
+
+    public function testParseQuaysToleratesRowsWithTooManyOrTooFewFields(): void
+    {
+        $parsedQuays = $this->gtfsService->parseQuays($this->fixturesPath('MalformedRows'));
+
+        self::assertCount(2, $parsedQuays);
+        self::assertSame('P1', $parsedQuays[0]->parentStopId);
+        self::assertSame('S2', $parsedQuays[1]->gtfsStopId);
+        self::assertSame('', $parsedQuays[1]->parentStopId);
+    }
+
     public function testParseQuayRouteLinksAggregatesDistinctDestinationsForSameStopAndRoute(): void
     {
         $parsedLinks = $this->gtfsService->parseQuayRouteLinks($this->fixturesPath());
@@ -89,8 +126,8 @@ final class GtfsServiceTest extends TestCase
         self::assertCount(2, $parsedLinks);
     }
 
-    private function fixturesPath(): string
+    private function fixturesPath(?string $case = null): string
     {
-        return \dirname(__DIR__, 2).'/Fixtures/Gtfs';
+        return \dirname(__DIR__, 2).'/Fixtures/Gtfs'.(null !== $case ? '/'.$case : '');
     }
 }

@@ -143,9 +143,10 @@ class GtfsService
             $parsedRoutes[] = new ParsedRoute(
                 gtfsRouteId: $row['route_id'],
                 shortName: $row['route_short_name'],
-                longName: '' !== $row['route_long_name'] ? $row['route_long_name'] : null,
-                color: $row['route_color'],
-                textColor: $row['route_text_color'],
+                longName: '' !== ($row['route_long_name'] ?? '') ? $row['route_long_name'] : null,
+                // Valeurs par défaut de la spec GTFS quand la couleur est absente ou vide.
+                color: '' !== ($row['route_color'] ?? '') ? $row['route_color'] : 'FFFFFF',
+                textColor: '' !== ($row['route_text_color'] ?? '') ? $row['route_text_color'] : '000000',
             );
         }
 
@@ -164,7 +165,8 @@ class GtfsService
         $parsedQuays = [];
 
         foreach ($this->readCsv($extractPath.'/stops.txt') as $row) {
-            if ('0' !== $row['location_type']) {
+            // Un location_type vide vaut 0 (quai) selon la spec GTFS.
+            if (!\in_array($row['location_type'] ?? '', ['', '0'], true)) {
                 continue;
             }
 
@@ -173,7 +175,7 @@ class GtfsService
                 name: $row['stop_name'],
                 latitude: (float) $row['stop_lat'],
                 longitude: (float) $row['stop_lon'],
-                parentStopId: $row['parent_station'],
+                parentStopId: $row['parent_station'] ?? '',
             );
         }
 
@@ -421,6 +423,10 @@ class GtfsService
             }
 
             $row = array_map(static fn (?string $value): string => $value ?? '', $row);
+
+            // Aligne la ligne sur les en-têtes (virgule finale, ligne tronquée) :
+            // champs manquants complétés à vide, champs en trop ignorés.
+            $row = \array_slice(array_pad($row, \count($headers), ''), 0, \count($headers));
 
             yield array_combine($headers, $row);
         }
