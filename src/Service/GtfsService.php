@@ -89,10 +89,12 @@ class GtfsService
      */
     public function downloadAndExtractFeed(): string
     {
-        $response = $this->httpClient->request('GET', $this->gtfsStaticFeedUrl);
+        // Contenu récupéré avant de créer le fichier temporaire, pour ne rien
+        // laisser derrière soi si le téléchargement échoue.
+        $content = $this->httpClient->request('GET', $this->gtfsStaticFeedUrl)->getContent();
 
-        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_').'.zip';
-        $this->filesystem->dumpFile($tmpZipPath, $response->getContent());
+        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_');
+        $this->filesystem->dumpFile($tmpZipPath, $content);
 
         $extractPath = tempnam(sys_get_temp_dir(), 'gtfs_extract_');
         $this->filesystem->remove($extractPath);
@@ -100,7 +102,7 @@ class GtfsService
 
         $zip = new \ZipArchive();
         if (true !== $zip->open($tmpZipPath)) {
-            $this->filesystem->remove($tmpZipPath);
+            $this->filesystem->remove([$tmpZipPath, $extractPath]);
             throw InvalidGtfsFeedException::corruptedArchive($this->gtfsStaticFeedUrl);
         }
 
@@ -316,10 +318,29 @@ class GtfsService
         // Regroupe les destinations par quai avant assignation, un quai
         // pouvant apparaître dans plusieurs liens (un par ligne desservie).
         $destinationsByStopId = [];
+        $routeIdsByStopId = [];
         foreach ($parsedQuayRouteLinks as $link) {
             $destinationsByStopId[$link->gtfsStopId] ??= [];
             foreach ($link->destinations as $destination) {
                 $destinationsByStopId[$link->gtfsStopId][$destination] = true;
+            }
+
+            $routeIdsByStopId[$link->gtfsStopId][$link->gtfsRouteId] = true;
+        }
+
+        // Retire les liens et destinations que le flux courant ne contient
+        // plus (ligne qui ne dessert plus un quai, quai plus desservi).
+        foreach ($quayRepository->findAll() as $quay) {
+            $expectedRouteIds = $routeIdsByStopId[$quay->getGtfsStopId()] ?? [];
+
+            foreach ($quay->getRoutes()->toArray() as $route) {
+                if (!isset($expectedRouteIds[$route->getGtfsRouteId()])) {
+                    $quay->removeRoute($route);
+                }
+            }
+
+            if (!isset($destinationsByStopId[$quay->getGtfsStopId()])) {
+                $quay->setDestinationsServed(null);
             }
         }
 

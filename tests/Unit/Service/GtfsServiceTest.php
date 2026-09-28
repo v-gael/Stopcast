@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Exception\InvalidGtfsFeedException;
 use App\Service\GtfsService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpClient\Exception\ServerException;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class GtfsServiceTest extends TestCase
@@ -124,6 +128,87 @@ final class GtfsServiceTest extends TestCase
         $parsedLinks = $this->gtfsService->parseQuayRouteLinks($this->fixturesPath());
 
         self::assertCount(2, $parsedLinks);
+    }
+
+    public function testDownloadAndExtractFeedLeavesNoTemporaryFileBehind(): void
+    {
+        $filesystem = new Filesystem();
+        $gtfsService = new GtfsService(
+            httpClient: new MockHttpClient(new MockResponse($this->zipFixtures())),
+            entityManager: $this->createStub(EntityManagerInterface::class),
+            filesystem: $filesystem,
+            gtfsStaticFeedUrl: 'https://example.test/gtfs-static.zip',
+        );
+
+        $tempEntriesBefore = glob(sys_get_temp_dir().'/gtfs_*') ?: [];
+
+        $extractPath = $gtfsService->downloadAndExtractFeed();
+
+        try {
+            $tempEntriesAfter = glob(sys_get_temp_dir().'/gtfs_*') ?: [];
+
+            self::assertSame([$extractPath], array_values(array_diff($tempEntriesAfter, $tempEntriesBefore)));
+            self::assertFileExists($extractPath.'/stops.txt');
+        } finally {
+            $filesystem->remove($extractPath);
+        }
+    }
+
+    public function testDownloadAndExtractFeedLeavesNoTemporaryFileBehindWhenArchiveIsCorrupted(): void
+    {
+        $gtfsService = new GtfsService(
+            httpClient: new MockHttpClient(new MockResponse('not a zip archive')),
+            entityManager: $this->createStub(EntityManagerInterface::class),
+            filesystem: new Filesystem(),
+            gtfsStaticFeedUrl: 'https://example.test/gtfs-static.zip',
+        );
+
+        $tempEntriesBefore = glob(sys_get_temp_dir().'/gtfs_*') ?: [];
+
+        try {
+            $gtfsService->downloadAndExtractFeed();
+            self::fail('Une archive corrompue doit lever InvalidGtfsFeedException.');
+        } catch (InvalidGtfsFeedException) {
+        }
+
+        self::assertSame($tempEntriesBefore, glob(sys_get_temp_dir().'/gtfs_*') ?: []);
+    }
+
+    public function testDownloadAndExtractFeedLeavesNoTemporaryFileBehindWhenDownloadFails(): void
+    {
+        $gtfsService = new GtfsService(
+            httpClient: new MockHttpClient(new MockResponse('', ['http_code' => 500])),
+            entityManager: $this->createStub(EntityManagerInterface::class),
+            filesystem: new Filesystem(),
+            gtfsStaticFeedUrl: 'https://example.test/gtfs-static.zip',
+        );
+
+        $tempEntriesBefore = glob(sys_get_temp_dir().'/gtfs_*') ?: [];
+
+        try {
+            $gtfsService->downloadAndExtractFeed();
+            self::fail('Une erreur HTTP doit remonter.');
+        } catch (ServerException) {
+        }
+
+        self::assertSame($tempEntriesBefore, glob(sys_get_temp_dir().'/gtfs_*') ?: []);
+    }
+
+    private function zipFixtures(): string
+    {
+        $zipPath = tempnam(sys_get_temp_dir(), 'test_zip_');
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::OVERWRITE);
+        foreach (glob($this->fixturesPath().'/*.txt') ?: [] as $file) {
+            $zip->addFile($file, basename($file));
+        }
+
+        $zip->close();
+
+        $content = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        return $content;
     }
 
     private function fixturesPath(?string $case = null): string
