@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Integration\Service;
+namespace App\Tests\Integration\Gtfs\Static;
 
 use App\Entity\Quay;
 use App\Entity\Route;
+use App\Gtfs\Static\StaticFeedReader;
+use App\Gtfs\Static\StaticReferenceImporter;
 use App\Repository\TripRepository;
-use App\Service\GtfsService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Filesystem\Filesystem;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
-final class GtfsServiceImportTest extends KernelTestCase
+final class StaticReferenceImporterTest extends KernelTestCase
 {
     use ResetDatabase;
 
@@ -31,6 +32,15 @@ final class GtfsServiceImportTest extends KernelTestCase
         $s2 = $this->findQuay('S2');
         self::assertSame([], $this->gtfsRouteIdsOf($s2));
         self::assertNull($s2->getDestinationsServed());
+    }
+
+    public function testImportLinksRoutesServedOnlyByTripsWithoutHeadsign(): void
+    {
+        $this->importFeed($this->fixturesPath('MissingOptionalColumns'));
+
+        $s1 = $this->findQuay('S1');
+        self::assertSame(['R1'], $this->gtfsRouteIdsOf($s1));
+        self::assertNull($s1->getDestinationsServed());
     }
 
     public function testImportStoresTheHeadsignOfEachTrip(): void
@@ -89,14 +99,15 @@ final class GtfsServiceImportTest extends KernelTestCase
 
     private function importFeed(string $fixturesPath): void
     {
-        $gtfsService = new GtfsService(
+        $importer = new StaticReferenceImporter(
             httpClient: new MockHttpClient(new MockResponse($this->zip($fixturesPath))),
             entityManager: $this->entityManager(),
             filesystem: new Filesystem(),
-            gtfsStaticFeedUrl: 'https://example.test/gtfs-static.zip',
+            reader: new StaticFeedReader(),
+            feedUrl: 'https://example.test/gtfs-static.zip',
         );
 
-        $gtfsService->importStaticFeed();
+        $importer->import();
         $this->entityManager()->clear();
     }
 
@@ -146,6 +157,6 @@ final class GtfsServiceImportTest extends KernelTestCase
 
     private function fixturesPath(?string $case = null): string
     {
-        return \dirname(__DIR__, 2).'/Fixtures/Gtfs'.(null !== $case ? '/'.$case : '');
+        return \dirname(__DIR__, 3).'/Fixtures/Gtfs'.(null !== $case ? '/'.$case : '');
     }
 }

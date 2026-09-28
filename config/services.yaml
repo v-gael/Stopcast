@@ -21,10 +21,6 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
-    App\Service\GtfsService:
-        arguments:
-            $gtfsStaticFeedUrl: '%env(GTFS_STATIC_FEED_URL)%'
-
     App\Service\GtfsRealtimeFetcher:
         arguments:
             $tripUpdatesUrl: '%env(GTFS_REALTIME_TRIP_UPDATES_URL)%'

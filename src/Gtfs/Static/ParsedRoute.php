@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Dto\Gtfs;
+namespace App\Gtfs\Static;
 
 /**
  * Représentation intermédiaire d'une ligne de routes.txt, sert

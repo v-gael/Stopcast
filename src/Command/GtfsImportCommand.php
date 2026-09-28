@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Exception\InvalidGtfsFeedException;
-use App\Service\GtfsService;
+use App\Gtfs\Static\InvalidGtfsFeedException;
+use App\Gtfs\Static\StaticReferenceImporter;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,7 +20,7 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 class GtfsImportCommand extends Command
 {
     public function __construct(
-        private readonly GtfsService $gtfsService,
+        private readonly StaticReferenceImporter $importer,
     ) {
         parent::__construct();
     }
@@ -31,7 +31,7 @@ class GtfsImportCommand extends Command
         $io->title('Import du GTFS statique');
 
         try {
-            $summary = $this->gtfsService->importStaticFeed();
+            $summary = $this->importer->import();
         } catch (InvalidGtfsFeedException $exception) {
             $io->error('Flux GTFS invalide : '.$exception->getMessage());
 

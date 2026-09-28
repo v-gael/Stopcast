@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Dto\Gtfs;
+namespace App\Gtfs\Static;
 
 /**
  * Lien entre un quai et une ligne, déduit du croisement trips.txt /
