@@ -5,7 +5,7 @@
 - Docker et Docker Compose
 - `make`
 
-L'application tourne dans un conteneur FrankenPHP (PHP 8.4), avec une base PostgreSQL 16.
+L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base PostgreSQL 16.
 
 ## Démarrage
 

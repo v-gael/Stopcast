@@ -3,7 +3,7 @@
 # =============================================================================
 # base : dépendances système communes à toutes les stages
 # =============================================================================
-FROM dunglas/frankenphp:1-php8.4-alpine AS base
+FROM dunglas/frankenphp:1-php8.5-alpine AS base
 
 WORKDIR /app
 
@@ -22,7 +22,6 @@ RUN apk add --no-cache \
         ctype \
         iconv \
         intl \
-        opcache \
         pdo_pgsql \
         zip
 
