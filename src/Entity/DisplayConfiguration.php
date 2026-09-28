@@ -43,7 +43,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     order: ['position' => 'ASC'],
 )]
-// Permet de filtrer /api/display_configurations?device=/api/devices/1 (cas d'usage principal : le Pi récupère ses configs)
+// Permet de filtrer /api/display_configurations?device=/api/devices/1 (lister les configs d'un dispositif)
 #[ApiFilter(SearchFilter::class, properties: ['device' => 'exact', 'quay' => 'exact'])]
 #[ApiFilter(BooleanFilter::class, properties: ['active'])]
 class DisplayConfiguration

@@ -81,7 +81,7 @@ make up && make migrate && make import
 
 ## État du projet
 
-Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, endpoint `/api/next-passages`. Prochaines étapes : authentification des endpoints d'administration et finalisation du client d'affichage.
+Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, endpoint `/api/next-passages`. API d'administration protégée par clé. Prochaine étape : finalisation du client d'affichage.
 
 ## Licence
 
