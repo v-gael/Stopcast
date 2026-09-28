@@ -112,6 +112,32 @@ final class GtfsServiceTest extends TestCase
         self::assertSame('', $parsedQuays[1]->parentStopId);
     }
 
+    public function testParseTripsMapsEachTripToItsRouteAndHeadsign(): void
+    {
+        $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath());
+
+        self::assertCount(4, $parsedTrips);
+        self::assertSame('T2', $parsedTrips[1]->gtfsTripId);
+        self::assertSame('R1', $parsedTrips[1]->gtfsRouteId);
+        self::assertSame('ZONE INDUSTRIELLE', $parsedTrips[1]->headsign);
+    }
+
+    public function testParseTripsConvertsEmptyHeadsignToNull(): void
+    {
+        $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath());
+
+        self::assertSame('T5', $parsedTrips[3]->gtfsTripId);
+        self::assertNull($parsedTrips[3]->headsign);
+    }
+
+    public function testParseTripsToleratesMissingHeadsignColumn(): void
+    {
+        $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath('MissingOptionalColumns'));
+
+        self::assertCount(1, $parsedTrips);
+        self::assertNull($parsedTrips[0]->headsign);
+    }
+
     public function testParseQuayRouteLinksAggregatesDistinctDestinationsForSameStopAndRoute(): void
     {
         $parsedLinks = $this->gtfsService->parseQuayRouteLinks($this->fixturesPath());

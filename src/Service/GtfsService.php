@@ -8,8 +8,10 @@ use App\Dto\Gtfs\GtfsImportSummary;
 use App\Dto\Gtfs\ParsedQuay;
 use App\Dto\Gtfs\ParsedQuayRouteLink;
 use App\Dto\Gtfs\ParsedRoute;
+use App\Dto\Gtfs\ParsedTrip;
 use App\Entity\Quay;
 use App\Entity\Route;
+use App\Entity\Trip;
 use App\Exception\InvalidGtfsFeedException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -22,6 +24,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class GtfsService
 {
     private const array REQUIRED_FILES = ['routes.txt', 'stops.txt', 'trips.txt', 'stop_times.txt'];
+
+    private const int TRIP_BATCH_SIZE = 500;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -46,6 +50,7 @@ class GtfsService
             $parsedRoutes = $this->parseRoutes($extractPath);
             $parsedQuays = $this->parseQuays($extractPath);
             $parsedLinks = $this->parseQuayRouteLinks($extractPath);
+            $parsedTrips = $this->parseTrips($extractPath);
 
             $this->entityManager->beginTransaction();
 
@@ -63,6 +68,10 @@ class GtfsService
                 );
 
                 $this->entityManager->flush();
+
+                // En dernier : vide l'unit of work par lots, tout le reste doit déjà être flushé.
+                $this->replaceTrips($parsedTrips);
+
                 $this->entityManager->commit();
             } catch (\Throwable $exception) {
                 $this->entityManager->rollback();
@@ -182,6 +191,27 @@ class GtfsService
         }
 
         return $parsedQuays;
+    }
+
+    /**
+     * Parse trips.txt : la destination (trip_headsign) de chaque trajet,
+     * affichée pour les passages temps réel de ce trajet.
+     *
+     * @return ParsedTrip[]
+     */
+    public function parseTrips(string $extractPath): array
+    {
+        $parsedTrips = [];
+
+        foreach ($this->readCsv($extractPath.'/trips.txt') as $row) {
+            $parsedTrips[] = new ParsedTrip(
+                gtfsTripId: $row['trip_id'],
+                gtfsRouteId: $row['route_id'],
+                headsign: '' !== ($row['trip_headsign'] ?? '') ? $row['trip_headsign'] : null,
+            );
+        }
+
+        return $parsedTrips;
     }
 
     /**
@@ -362,6 +392,50 @@ class GtfsService
             $quay = $quayRepository->findOneBy(['gtfsStopId' => $gtfsStopId]);
             $quay?->setDestinationsServed(array_keys($destinations));
         }
+    }
+
+    /**
+     * Remplace tous les Trip par ceux du flux courant. Rien ne référence
+     * un Trip : pas de désactivation comme pour Route/Quay, on supprime.
+     * Insertion par lots (trips.txt peut compter des dizaines de milliers
+     * de lignes), avec des références vers les Route pour survivre au clear().
+     *
+     * @param ParsedTrip[] $parsedTrips
+     */
+    public function replaceTrips(array $parsedTrips): void
+    {
+        $this->entityManager->createQuery('DELETE FROM '.Trip::class)->execute();
+
+        /** @var list<array{id: int, gtfsRouteId: string}> $routeRows */
+        $routeRows = $this->entityManager->getRepository(Route::class)
+            ->createQueryBuilder('r')
+            ->select('r.id', 'r.gtfsRouteId')
+            ->getQuery()
+            ->getArrayResult();
+        $routeIdByGtfsRouteId = array_column($routeRows, 'id', 'gtfsRouteId');
+
+        $pending = 0;
+        foreach ($parsedTrips as $parsedTrip) {
+            $routeId = $routeIdByGtfsRouteId[$parsedTrip->gtfsRouteId] ?? null;
+
+            if (null === $routeId) {
+                // Trajet vers un route_id absent de routes.txt : ignoré.
+                continue;
+            }
+
+            $route = $this->entityManager->getReference(Route::class, $routeId);
+            \assert($route instanceof Route);
+
+            $this->entityManager->persist(new Trip($parsedTrip->gtfsTripId, $route, $parsedTrip->headsign));
+
+            if (0 === ++$pending % self::TRIP_BATCH_SIZE) {
+                $this->entityManager->flush();
+                $this->entityManager->clear();
+            }
+        }
+
+        $this->entityManager->flush();
+        $this->entityManager->clear();
     }
 
     /**
