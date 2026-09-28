@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Dto\Gtfs;
+namespace App\Gtfs\Static;
 
 /**
  * Bilan chiffré d'un import.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Dto\Gtfs;
+namespace App\Tests\Unit\Gtfs\Static;
 
-use App\Dto\Gtfs\GtfsImportSummary;
+use App\Gtfs\Static\GtfsImportSummary;
 use PHPUnit\Framework\TestCase;
 
 final class GtfsImportSummaryTest extends TestCase

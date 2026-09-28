@@ -14,5 +14,5 @@ Cela complète l'ADR 0001 : `stop_times.txt` sert désormais à connaître la **
 
 ## Conséquences
 
-- Un import GTFS lit `stop_times.txt` une seconde fois, en flux, pour trouver le dernier arrêt de chaque trajet.
+- Un import GTFS trouve le dernier arrêt de chaque trajet pendant son unique lecture en flux de `stop_times.txt`, déjà nécessaire aux liens quai ↔ ligne.
 - Un trajet dont le temps réel ajoute ou supprime des arrêts en fin de course (détournement, trajet raccourci) garde son terminus théorique.
