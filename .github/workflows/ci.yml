@@ -15,7 +15,7 @@ concurrency:
 jobs:
   quality:
     name: Qualité et tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       APP_ENV: test
     # Base des tests d'intégration et fonctionnels : mêmes identifiants que le
