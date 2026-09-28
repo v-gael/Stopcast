@@ -16,6 +16,20 @@ security:
             # Ensure dev tools and static assets are always allowed
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
+        # Le dispositif d'affichage s'authentifie par son propre jeton
+        # (X-Device-Token), à part de l'administration : la clé admin n'ouvre
+        # pas ce firewall, et le jeton d'un dispositif n'ouvre pas main.
+        device:
+            pattern: ^/api/next-passages$
+            stateless: true
+            # Chaque badge charge son DeviceUser : le provider "admin" n'est
+            # jamais appelé ici.
+            provider: admin
+            entry_point: App\Security\DeviceUnauthorizedHandler
+            access_token:
+                token_handler: App\Security\DeviceTokenHandler
+                token_extractors: App\Security\DeviceTokenExtractor
+                failure_handler: App\Security\DeviceUnauthorizedHandler
         main:
             stateless: true
             provider: admin
@@ -24,9 +38,7 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        # Le dispositif d'affichage s'authentifie par son propre jeton
-        # (X-Device-Token), vérifié par NextPassagesProvider.
-        - { path: ^/api/next-passages$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/next-passages$, roles: ROLE_DEVICE }
         # Tout le reste de l'API (administration, référentiel, documentation)
         # exige la clé d'API admin.
         - { path: ^/api, roles: ROLE_ADMIN }

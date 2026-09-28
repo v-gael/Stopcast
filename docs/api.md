@@ -27,6 +27,8 @@ X-Device-Token: <token du device>
 
 Renvoie, pour chaque `DisplayConfiguration` active du dispositif (triées par `position`), les prochains passages du quai correspondant. Pas de flag "flux indisponible" : si le GTFS-RT échoue, l'erreur remonte telle quelle plutôt qu'une réponse partielle — le Pi garde alors son dernier affichage valide.
 
+Un token absent, inconnu ou d'un dispositif désactivé renvoie `401` (`Token manquant.` ou `Token invalide ou dispositif désactivé.`), sans header `WWW-Authenticate`. Les deux accès sont cloisonnés : la clé d'administration n'ouvre pas cet endpoint, et le token d'un dispositif n'ouvre pas l'administration.
+
 Exemple de réponse : voir le [README](../README.md#exemple-de-réponse).
 
 ## Variables d'environnement
