@@ -19,27 +19,32 @@ class TripRepository extends ServiceEntityRepository
     }
 
     /**
-     * Destinations des trajets connus parmi ceux demandés, en une seule requête.
-     * Les trajets inconnus sont absents du résultat.
+     * Destination et terminus des trajets connus parmi ceux demandés, en une
+     * seule requête. Les trajets inconnus sont absents du résultat.
      *
      * @param string[] $gtfsTripIds
      *
-     * @return array<string, string|null> trip_id => trip_headsign
+     * @return array<string, array{headsign: string|null, terminusStopId: string|null}> indexé par trip_id
      */
-    public function findHeadsignsByGtfsTripIds(array $gtfsTripIds): array
+    public function findHeadsignsAndTerminiByGtfsTripIds(array $gtfsTripIds): array
     {
         if ([] === $gtfsTripIds) {
             return [];
         }
 
-        /** @var list<array{gtfsTripId: string, headsign: string|null}> $rows */
+        /** @var list<array{gtfsTripId: string, headsign: string|null, terminusStopId: string|null}> $rows */
         $rows = $this->createQueryBuilder('t')
-            ->select('t.gtfsTripId', 't.headsign')
+            ->select('t.gtfsTripId', 't.headsign', 't.terminusStopId')
             ->where('t.gtfsTripId IN (:gtfsTripIds)')
             ->setParameter('gtfsTripIds', array_values(array_unique($gtfsTripIds)))
             ->getQuery()
             ->getArrayResult();
 
-        return array_column($rows, 'headsign', 'gtfsTripId');
+        $trips = [];
+        foreach ($rows as $row) {
+            $trips[$row['gtfsTripId']] = ['headsign' => $row['headsign'], 'terminusStopId' => $row['terminusStopId']];
+        }
+
+        return $trips;
     }
 }

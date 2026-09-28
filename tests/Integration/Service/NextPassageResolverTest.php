@@ -8,6 +8,8 @@ use App\Dto\GtfsRt\NextPassage;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
+use App\Repository\RouteRepository;
+use App\Repository\TripRepository;
 use App\Service\NextPassageResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
@@ -40,8 +42,9 @@ final class NextPassageResolverTest extends KernelTestCase
 
         $entityManager->persist($route);
         $entityManager->persist($this->quay);
-        $entityManager->persist(new Trip('T1', $route, 'CENTRE VILLE'));
-        $entityManager->persist(new Trip('T2', $route, 'ZONE INDUSTRIELLE'));
+        $entityManager->persist(new Trip('T1', $route, 'CENTRE VILLE', 'S9'));
+        $entityManager->persist(new Trip('T2', $route, 'ZONE INDUSTRIELLE', 'S9'));
+        $entityManager->persist(new Trip('T3', $route, 'CENTRE VILLE', 'S1'));
         $entityManager->persist(new Trip('T5', $route, null));
         $entityManager->flush();
     }
@@ -132,6 +135,44 @@ final class NextPassageResolverTest extends KernelTestCase
     {
         yield 'canceled' => [TripScheduleRelationship::CANCELED];
         yield 'deleted' => [TripScheduleRelationship::DELETED];
+    }
+
+    public function testTripEndingAtTheQuayIsNotShown(): void
+    {
+        $passages = $this->resolve([
+            ['T3', 'R1', 'S1', '+5 minutes'],
+            ['T1', 'R1', 'S1', '+10 minutes'],
+        ]);
+
+        self::assertSame(['CENTRE VILLE'], $this->headsignsOf($passages));
+        self::assertCount(1, $passages);
+    }
+
+    public function testTripWithoutKnownTerminusIsShown(): void
+    {
+        $passages = $this->resolve([
+            ['T5', 'R1', 'S1', '+5 minutes'],
+            ['TX', 'R1', 'S1', '+10 minutes'],
+        ]);
+
+        self::assertCount(2, $passages);
+    }
+
+    public function testHiddenPassageDoesNotTakeASlotUnderTheLimit(): void
+    {
+        $container = self::getContainer();
+        $routeRepository = $container->get(RouteRepository::class);
+        $tripRepository = $container->get(TripRepository::class);
+        self::assertInstanceOf(RouteRepository::class, $routeRepository);
+        self::assertInstanceOf(TripRepository::class, $tripRepository);
+
+        $resolver = new NextPassageResolver($routeRepository, $tripRepository, limit: 1);
+        $feed = new FeedMessage()->setEntity([
+            $this->tripUpdate('T3', [$this->departureAt('S1', '+5 minutes')])->setId('0'),
+            $this->tripUpdate('T2', [$this->departureAt('S1', '+10 minutes')])->setId('1'),
+        ]);
+
+        self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($resolver->resolveForQuay($feed, $this->quay)));
     }
 
     private function countQueries(callable $callback): int

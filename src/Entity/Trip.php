@@ -10,7 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * Trajet du GTFS statique (trips.txt), conservé uniquement pour sa
- * destination : voir docs/adr/0001-destination-par-trajet.md.
+ * destination et son terminus : voir docs/adr/0001-destination-par-trajet.md
+ * et docs/adr/0002-terminus-par-trajet.md.
  * Remplacé intégralement à chaque import, jamais exposé par l'API.
  */
 #[ORM\Entity(repositoryClass: TripRepository::class)]
@@ -39,11 +40,19 @@ class Trip
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $headsign;
 
-    public function __construct(string $gtfsTripId, Route $route, ?string $headsign)
+    /**
+     * stop_id GTFS du dernier arrêt du trajet (stop_times.txt). Pas de relation
+     * vers Quay : cet arrêt n'est pas forcément importé comme quai.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $terminusStopId;
+
+    public function __construct(string $gtfsTripId, Route $route, ?string $headsign, ?string $terminusStopId = null)
     {
         $this->gtfsTripId = $gtfsTripId;
         $this->route = $route;
         $this->headsign = $headsign;
+        $this->terminusStopId = $terminusStopId;
     }
 
     public function getId(): ?int
@@ -64,5 +73,10 @@ class Trip
     public function getHeadsign(): ?string
     {
         return $this->headsign;
+    }
+
+    public function getTerminusStopId(): ?string
+    {
+        return $this->terminusStopId;
     }
 }

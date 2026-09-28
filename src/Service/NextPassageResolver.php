@@ -21,9 +21,11 @@ use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as St
  * tel que fourni par le flux RT, même si celui-ci peut parfois désigner une ligne "sœur"
  * (ex: variante de service) plutôt que la ligne exacte — accepté comme compromis.
  *
- * Seule exception : la destination de chaque passage vient du trajet statique
- * (trips.txt), retrouvé par son trip_id, avec repli sur le nom long de la ligne
- * (voir docs/adr/0001-destination-par-trajet.md).
+ * Seule exception : le trajet statique, retrouvé par son trip_id, donne la
+ * destination de chaque passage, avec repli sur le nom long de la ligne
+ * (voir docs/adr/0001-destination-par-trajet.md), et son terminus : un passage
+ * au quai où son trajet se termine n'est pas affiché, personne ne pouvant y
+ * monter (voir docs/adr/0002-terminus-par-trajet.md).
  */
 final readonly class NextPassageResolver
 {
@@ -99,14 +101,14 @@ final readonly class NextPassageResolver
             return [];
         }
 
-        // Une requête pour les lignes et une pour les destinations, quel que
+        // Une requête pour les lignes et une pour les trajets, quel que
         // soit le nombre de passages retenus.
         $routesByGtfsRouteId = [];
         foreach ($this->routeRepository->findBy(['gtfsRouteId' => array_values(array_unique(array_column($candidates, 'routeId')))]) as $route) {
             $routesByGtfsRouteId[$route->getGtfsRouteId()] = $route;
         }
 
-        $headsignsByTripId = $this->tripRepository->findHeadsignsByGtfsTripIds(
+        $tripsByTripId = $this->tripRepository->findHeadsignsAndTerminiByGtfsTripIds(
             array_filter(array_column($candidates, 'tripId'), static fn (string $tripId): bool => '' !== $tripId),
         );
 
@@ -118,12 +120,20 @@ final readonly class NextPassageResolver
                 continue;
             }
 
+            $trip = $tripsByTripId[$candidate['tripId']] ?? null;
+
+            // Filtré avant la limite, pour ne pas prendre la place d'un passage
+            // affichable. Trajet ou terminus inconnu : le passage reste affiché.
+            if ($quay->getGtfsStopId() === ($trip['terminusStopId'] ?? null)) {
+                continue;
+            }
+
             $passages[] = new NextPassage(
                 routeShortName: $route->getShortName(),
                 routeColor: $route->getColor(),
                 routeTextColor: $route->getTextColor(),
                 // Repli sur le nom de la ligne si le trajet est inconnu ou sans destination.
-                headsign: $headsignsByTripId[$candidate['tripId']] ?? $route->getLongName(),
+                headsign: $trip['headsign'] ?? $route->getLongName(),
                 expectedAt: $candidate['expectedAt'],
             );
         }

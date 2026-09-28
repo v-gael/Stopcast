@@ -43,6 +43,16 @@ final class GtfsServiceImportTest extends KernelTestCase
         );
     }
 
+    public function testImportStoresTheTerminusOfEachTrip(): void
+    {
+        $this->importFeed($this->fixturesPath());
+
+        self::assertSame(
+            ['T1' => 'S1', 'T3' => 'S2', 'T5' => null],
+            array_map(static fn (array $trip): ?string => $trip['terminusStopId'], $this->tripsOf(['T1', 'T3', 'T5', 'UNKNOWN'])),
+        );
+    }
+
     public function testReimportRemovesTripsMissingFromTheNewFeed(): void
     {
         $this->importFeed($this->fixturesPath());
@@ -58,13 +68,23 @@ final class GtfsServiceImportTest extends KernelTestCase
      */
     private function headsignsOf(array $gtfsTripIds): array
     {
+        return array_map(static fn (array $trip): ?string => $trip['headsign'], $this->tripsOf($gtfsTripIds));
+    }
+
+    /**
+     * @param string[] $gtfsTripIds
+     *
+     * @return array<string, array{headsign: string|null, terminusStopId: string|null}>
+     */
+    private function tripsOf(array $gtfsTripIds): array
+    {
         $tripRepository = self::getContainer()->get(TripRepository::class);
         self::assertInstanceOf(TripRepository::class, $tripRepository);
 
-        $headsigns = $tripRepository->findHeadsignsByGtfsTripIds($gtfsTripIds);
-        ksort($headsigns);
+        $trips = $tripRepository->findHeadsignsAndTerminiByGtfsTripIds($gtfsTripIds);
+        ksort($trips);
 
-        return $headsigns;
+        return $trips;
     }
 
     private function importFeed(string $fixturesPath): void
