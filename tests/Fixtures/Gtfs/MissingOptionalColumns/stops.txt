@@ -1,0 +1,2 @@
+stop_id,stop_name,stop_lat,stop_lon
+S1,CENTRE VILLE,38.5,-28.6

@@ -57,10 +57,10 @@ composer: ## Lance composer avec les arguments passés (ex: make composer c="req
 
 ## —— Qualité de code ——————————————————————————————————————————————————————
 test: ## Lance PHPUnit
-	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
 
 test-verbose: ## Lance PHPUnit avec plus de détails
-	docker compose exec app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
 
 rector: ## Lance Rector en dry-run
 	docker compose exec app php vendor/bin/rector process --dry-run --debug

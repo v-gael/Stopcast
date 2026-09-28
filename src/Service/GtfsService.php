@@ -89,10 +89,12 @@ class GtfsService
      */
     public function downloadAndExtractFeed(): string
     {
-        $response = $this->httpClient->request('GET', $this->gtfsStaticFeedUrl);
+        // Contenu récupéré avant de créer le fichier temporaire, pour ne rien
+        // laisser derrière soi si le téléchargement échoue.
+        $content = $this->httpClient->request('GET', $this->gtfsStaticFeedUrl)->getContent();
 
-        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_').'.zip';
-        $this->filesystem->dumpFile($tmpZipPath, $response->getContent());
+        $tmpZipPath = tempnam(sys_get_temp_dir(), 'gtfs_');
+        $this->filesystem->dumpFile($tmpZipPath, $content);
 
         $extractPath = tempnam(sys_get_temp_dir(), 'gtfs_extract_');
         $this->filesystem->remove($extractPath);
@@ -100,7 +102,7 @@ class GtfsService
 
         $zip = new \ZipArchive();
         if (true !== $zip->open($tmpZipPath)) {
-            $this->filesystem->remove($tmpZipPath);
+            $this->filesystem->remove([$tmpZipPath, $extractPath]);
             throw InvalidGtfsFeedException::corruptedArchive($this->gtfsStaticFeedUrl);
         }
 
@@ -143,9 +145,10 @@ class GtfsService
             $parsedRoutes[] = new ParsedRoute(
                 gtfsRouteId: $row['route_id'],
                 shortName: $row['route_short_name'],
-                longName: '' !== $row['route_long_name'] ? $row['route_long_name'] : null,
-                color: $row['route_color'],
-                textColor: $row['route_text_color'],
+                longName: '' !== ($row['route_long_name'] ?? '') ? $row['route_long_name'] : null,
+                // Valeurs par défaut de la spec GTFS quand la couleur est absente ou vide.
+                color: '' !== ($row['route_color'] ?? '') ? $row['route_color'] : 'FFFFFF',
+                textColor: '' !== ($row['route_text_color'] ?? '') ? $row['route_text_color'] : '000000',
             );
         }
 
@@ -164,7 +167,8 @@ class GtfsService
         $parsedQuays = [];
 
         foreach ($this->readCsv($extractPath.'/stops.txt') as $row) {
-            if ('0' !== $row['location_type']) {
+            // Un location_type vide vaut 0 (quai) selon la spec GTFS.
+            if (!\in_array($row['location_type'] ?? '', ['', '0'], true)) {
                 continue;
             }
 
@@ -173,7 +177,7 @@ class GtfsService
                 name: $row['stop_name'],
                 latitude: (float) $row['stop_lat'],
                 longitude: (float) $row['stop_lon'],
-                parentStopId: $row['parent_station'],
+                parentStopId: $row['parent_station'] ?? '',
             );
         }
 
@@ -314,10 +318,29 @@ class GtfsService
         // Regroupe les destinations par quai avant assignation, un quai
         // pouvant apparaître dans plusieurs liens (un par ligne desservie).
         $destinationsByStopId = [];
+        $routeIdsByStopId = [];
         foreach ($parsedQuayRouteLinks as $link) {
             $destinationsByStopId[$link->gtfsStopId] ??= [];
             foreach ($link->destinations as $destination) {
                 $destinationsByStopId[$link->gtfsStopId][$destination] = true;
+            }
+
+            $routeIdsByStopId[$link->gtfsStopId][$link->gtfsRouteId] = true;
+        }
+
+        // Retire les liens et destinations que le flux courant ne contient
+        // plus (ligne qui ne dessert plus un quai, quai plus desservi).
+        foreach ($quayRepository->findAll() as $quay) {
+            $expectedRouteIds = $routeIdsByStopId[$quay->getGtfsStopId()] ?? [];
+
+            foreach ($quay->getRoutes()->toArray() as $route) {
+                if (!isset($expectedRouteIds[$route->getGtfsRouteId()])) {
+                    $quay->removeRoute($route);
+                }
+            }
+
+            if (!isset($destinationsByStopId[$quay->getGtfsStopId()])) {
+                $quay->setDestinationsServed(null);
             }
         }
 
@@ -421,6 +444,10 @@ class GtfsService
             }
 
             $row = array_map(static fn (?string $value): string => $value ?? '', $row);
+
+            // Aligne la ligne sur les en-têtes (virgule finale, ligne tronquée) :
+            // champs manquants complétés à vide, champs en trop ignorés.
+            $row = \array_slice(array_pad($row, \count($headers), ''), 0, \count($headers));
 
             yield array_combine($headers, $row);
         }
