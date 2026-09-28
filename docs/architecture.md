@@ -41,5 +41,6 @@ Au-delà de l'affichage lui-même (relativement simple), l'essentiel du travail 
 |---|---|
 | `Quay` | Un quai GTFS (un sens de circulation précis à un arrêt physique) — import brut du référentiel statique |
 | `Route` | Une ligne (numéro, couleurs d'affichage officielles du réseau) |
+| `Trip` | Un trajet du référentiel statique, conservé uniquement pour sa destination (`trip_headsign`), retrouvée par le `trip_id` du flux temps réel — voir [ADR 0001](adr/0001-destination-par-trajet.md) |
 | `Device` | Un dispositif Raspberry Pi, identifié par un jeton d'authentification (`X-Device-Token`), activable/désactivable |
 | `DisplayConfiguration` | La configuration d'affichage d'un `Device` : quel `Quay` afficher, sous quel libellé, dans quel ordre (`position`) en cas de rotation |

@@ -6,6 +6,7 @@ namespace App\Tests\Integration\Service;
 
 use App\Entity\Quay;
 use App\Entity\Route;
+use App\Repository\TripRepository;
 use App\Service\GtfsService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,6 +31,40 @@ final class GtfsServiceImportTest extends KernelTestCase
         $s2 = $this->findQuay('S2');
         self::assertSame([], $this->gtfsRouteIdsOf($s2));
         self::assertNull($s2->getDestinationsServed());
+    }
+
+    public function testImportStoresTheHeadsignOfEachTrip(): void
+    {
+        $this->importFeed($this->fixturesPath());
+
+        self::assertSame(
+            ['T1' => 'CENTRE VILLE', 'T3' => 'GARE SUD', 'T5' => null],
+            $this->headsignsOf(['T1', 'T3', 'T5', 'UNKNOWN']),
+        );
+    }
+
+    public function testReimportRemovesTripsMissingFromTheNewFeed(): void
+    {
+        $this->importFeed($this->fixturesPath());
+        $this->importFeed($this->fixturesPath('ServiceChanged'));
+
+        self::assertSame(['T3' => 'GARE SUD'], $this->headsignsOf(['T1', 'T2', 'T3', 'T5']));
+    }
+
+    /**
+     * @param string[] $gtfsTripIds
+     *
+     * @return array<string, string|null>
+     */
+    private function headsignsOf(array $gtfsTripIds): array
+    {
+        $tripRepository = self::getContainer()->get(TripRepository::class);
+        self::assertInstanceOf(TripRepository::class, $tripRepository);
+
+        $headsigns = $tripRepository->findHeadsignsByGtfsTripIds($gtfsTripIds);
+        ksort($headsigns);
+
+        return $headsigns;
     }
 
     private function importFeed(string $fixturesPath): void
