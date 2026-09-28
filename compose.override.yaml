@@ -18,7 +18,8 @@ services:
       - "443:443/udp"
     volumes:
       - ./:/app
-      # Le contenu de var/ ne doit pas venir du host (cache/logs propres au conteneur)
+      # Le contenu de var/ ne doit pas venir du host (cache/logs propres au
+      # conteneur). Volume réservé au dev : la prod et la CI n'en ont pas.
       - app_var:/app/var
   ###< app ###
 
@@ -39,3 +40,9 @@ services:
 #     environment:
 #       MP_SMTP_AUTH_ACCEPT_ANY: 1
 #       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  ###> app ###
+  # Garde son nom historique pour réutiliser le volume de dev existant.
+  app_var:
+  ###< app ###
