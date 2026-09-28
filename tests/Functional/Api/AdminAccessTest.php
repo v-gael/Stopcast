@@ -128,6 +128,17 @@ final class AdminAccessTest extends WebTestCase
         self::assertResponseStatusCodeSame(201);
     }
 
+    public function testTokenCannotBeChosenWhenCreatingADevice(): void
+    {
+        $this->request('POST', '/api/devices', $this->adminHeaders(), ['label' => 'Nouvel écran', 'token' => 'jeton-choisi']);
+
+        self::assertResponseStatusCodeSame(201);
+        $device = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($device);
+        self::assertIsString($device['token'] ?? null);
+        self::assertNotSame('jeton-choisi', $device['token']);
+    }
+
     public function testAdminCanDeleteDisplayConfiguration(): void
     {
         $this->request('DELETE', '/api/display_configurations/{configuration}', $this->adminHeaders());

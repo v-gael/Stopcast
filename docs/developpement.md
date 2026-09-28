@@ -14,12 +14,40 @@ cp .env .env.local           # puis renseigner les URLs GTFS et ADMIN_API_KEY (v
 make up                      # démarre les conteneurs de dev
 make migrate                 # applique les migrations
 make import                  # importe le référentiel GTFS statique
-make fixtures                # (optionnel) crée des dispositifs de démo sur les quais importés
+make fixtures                # (optionnel) crée des dispositifs de démo sur les quais importés (voir plus bas)
 ```
 
 L'API est ensuite disponible sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.
+
+## Fixtures et écran de développement
+
+`make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) n'est pas modifié. Il crée :
+
+- 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
+- si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage AbribusDisplay.
+
+Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les renvoie `/api/next-passages`. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
+
+Pour brancher AbribusDisplay, sur la machine de développement comme sur le Raspberry Pi :
+
+1. Générer un jeton (64 caractères max) et le définir dans `.env.local` :
+
+   ```bash
+   php -r 'echo bin2hex(random_bytes(16)), PHP_EOL;'
+   # .env.local
+   FIXTURES_DEVICE_TOKEN=<jeton>
+   ```
+
+2. Lancer `make fixtures`. Le jeton reste le même d'un chargement à l'autre.
+3. Dans AbribusDisplay, recopier ce jeton dans `TOKEN`, dans `.env.local` sur la machine et dans `.env.pi.local` sur le Pi. `API_URL` pointe sur l'IP de la machine de développement sur le réseau local (par ex. `http://192.168.1.20`), le Pi ne pouvant pas joindre `localhost`.
+
+Vérifier que l'écran a des passages :
+
+```bash
+curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
+```
 
 ## Déboguer le flux temps réel
 

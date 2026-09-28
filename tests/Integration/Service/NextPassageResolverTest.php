@@ -175,6 +175,34 @@ final class NextPassageResolverTest extends KernelTestCase
         self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($resolver->resolveForQuay($feed, $this->quay)));
     }
 
+    public function testCountByStopIdCountsPassagesAsTheyWouldBeShown(): void
+    {
+        $skipped = $this->departureAt('S2', '+5 minutes')
+            ->setScheduleRelationship(StopScheduleRelationship::SKIPPED);
+        $canceled = $this->tripUpdate('T2', [$this->departureAt('S2', '+5 minutes')]);
+        $canceled->getTripUpdate()?->getTrip()?->setScheduleRelationship(TripScheduleRelationship::CANCELED);
+
+        $entities = [
+            // T3 se termine à S1 : seul son passage à S2 compte.
+            $this->tripUpdate('T3', [$this->departureAt('S2', '+2 minutes'), $this->departureAt('S1', '+6 minutes')]),
+            $this->tripUpdate('T1', [$this->departureAt('S1', '+5 minutes'), $skipped, $this->departureAt('S3', '-5 minutes')]),
+            $this->tripUpdate('T5', [$this->departureAt('S1', '+8 minutes'), $this->departureAt('S2', '+9 minutes')]),
+            $this->tripUpdate('TX', [$this->departureAt('S1', '+7 minutes')], 'RX'),
+            $canceled,
+        ];
+        foreach ($entities as $i => $entity) {
+            $entity->setId((string) $i);
+        }
+
+        $resolver = self::getContainer()->get(NextPassageResolver::class);
+        self::assertInstanceOf(NextPassageResolver::class, $resolver);
+
+        $counts = $resolver->countByStopId(new FeedMessage()->setEntity($entities));
+        ksort($counts);
+
+        self::assertSame(['S1' => 2, 'S2' => 2], $counts);
+    }
+
     private function countQueries(callable $callback): int
     {
         $debugDataHolder = self::getContainer()->get('doctrine.debug_data_holder');

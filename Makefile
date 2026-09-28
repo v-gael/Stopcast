@@ -85,7 +85,7 @@ phpstan: ## Lance l'analyse statique PHPStan
 import: ## Lance l'import GTFS
 	docker compose exec app php bin/console app:gtfs:import
 
-fixtures: ## Charge les fixtures Doctrine (--append : conserve les quais importés via make import)
+fixtures: ## Remplace les dispositifs de démo (--append : conserve le référentiel importé via make import)
 	docker compose exec app php bin/console doctrine:fixtures:load --append --no-interaction
 
 ## —— Base de données ——————————————————————————————————————————————————————

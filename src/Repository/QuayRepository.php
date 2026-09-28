@@ -67,4 +67,47 @@ class QuayRepository extends ServiceEntityRepository
     {
         return $this->findBy(['active' => true]);
     }
+
+    /**
+     * @param string[] $gtfsStopIds
+     *
+     * @return Quay[]
+     */
+    public function findActiveByGtfsStopIds(array $gtfsStopIds): array
+    {
+        if ([] === $gtfsStopIds) {
+            return [];
+        }
+
+        return $this->findBy(['gtfsStopId' => array_values($gtfsStopIds), 'active' => true]);
+    }
+
+    /**
+     * Quais actifs desservis par le plus de lignes, départagés par stop_id.
+     *
+     * @param string[] $excludedGtfsStopIds
+     *
+     * @return Quay[]
+     */
+    public function findActiveMostServed(int $limit, array $excludedGtfsStopIds = []): array
+    {
+        $queryBuilder = $this->createQueryBuilder('q')
+            ->leftJoin('q.routes', 'r')
+            ->andWhere('q.active = true')
+            ->groupBy('q.id')
+            ->orderBy('COUNT(r.id)', 'DESC')
+            ->addOrderBy('q.gtfsStopId', 'ASC')
+            ->setMaxResults($limit);
+
+        if ([] !== $excludedGtfsStopIds) {
+            $queryBuilder
+                ->andWhere('q.gtfsStopId NOT IN (:excludedGtfsStopIds)')
+                ->setParameter('excludedGtfsStopIds', array_values($excludedGtfsStopIds));
+        }
+
+        /** @var Quay[] $result */
+        $result = $queryBuilder->getQuery()->getResult();
+
+        return $result;
+    }
 }

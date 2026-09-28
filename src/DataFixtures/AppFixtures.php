@@ -4,18 +4,48 @@ declare(strict_types=1);
 
 namespace App\DataFixtures;
 
+use App\Entity\Device;
+use App\Entity\DisplayConfiguration;
 use App\Factory\DeviceFactory;
 use App\Factory\DisplayConfigurationFactory;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectManager;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Chargées avec --append (make fixtures) pour garder le référentiel importé :
+ * seuls les appareils et leurs configurations sont remplacés.
+ */
 final class AppFixtures extends Fixture
 {
+    public const string FIXED_DEVICE_LABEL = 'Écran de développement';
+
+    private const int FIXED_DEVICE_QUAY_COUNT = 3;
+
+    public function __construct(
+        private readonly DevelopmentQuaySelector $quaySelector,
+        private readonly LoggerInterface $logger,
+        #[Autowire(env: 'FIXTURES_DEVICE_TOKEN')]
+        private readonly string $fixedDeviceToken,
+    ) {
+    }
+
     public function load(ObjectManager $manager): void
     {
-        DeviceFactory::createMany(5);
+        // Construit avant la purge : un jeton invalide arrête tout sans rien supprimer.
+        $fixedDevice = '' !== $this->fixedDeviceToken ? new Device(self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;
 
-        foreach (DeviceFactory::all() as $device) {
+        $this->removeDevices($manager);
+
+        if ($fixedDevice instanceof Device) {
+            $this->loadFixedDevice($manager, $fixedDevice);
+        } else {
+            $this->logger->warning('FIXTURES_DEVICE_TOKEN vide : pas d\'appareil de développement. Le définir dans .env.local (voir docs/developpement.md).');
+        }
+
+        foreach (DeviceFactory::createMany(5) as $device) {
             $configCount = random_int(2, 4);
 
             for ($position = 0; $position < $configCount; ++$position) {
@@ -25,5 +55,41 @@ final class AppFixtures extends Fixture
                 ]);
             }
         }
+    }
+
+    private function removeDevices(ObjectManager $manager): void
+    {
+        if (!$manager instanceof EntityManagerInterface) {
+            throw new \LogicException('Les fixtures nécessitent l\'ORM Doctrine.');
+        }
+
+        $manager->createQuery(\sprintf('DELETE FROM %s', DisplayConfiguration::class))->execute();
+        $manager->createQuery(\sprintf('DELETE FROM %s', Device::class))->execute();
+        $manager->clear();
+    }
+
+    private function loadFixedDevice(ObjectManager $manager, Device $device): void
+    {
+        $selection = $this->quaySelector->select(self::FIXED_DEVICE_QUAY_COUNT);
+
+        if (null !== $selection->fallbackReason) {
+            $this->logger->warning(\sprintf('Quais de l\'appareil de développement : %s, complété par les quais desservis par le plus de lignes.', $selection->fallbackReason));
+        }
+
+        $manager->persist($device);
+
+        foreach ($selection->quays as $position => $quay) {
+            $configuration = new DisplayConfiguration($device, $quay)->setPosition($position);
+            $device->addDisplayConfiguration($configuration);
+            $manager->persist($configuration);
+        }
+
+        $manager->flush();
+
+        $this->logger->notice(\sprintf(
+            'Appareil de développement « %s » créé sur %s.',
+            self::FIXED_DEVICE_LABEL,
+            implode(', ', array_map(static fn (DisplayConfiguration $configuration): string => \sprintf('%s (%s)', $configuration->getQuay()->getName(), $configuration->getQuay()->getGtfsStopId()), $device->getDisplayConfigurations()->toArray())),
+        ));
     }
 }
