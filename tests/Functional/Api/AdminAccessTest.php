@@ -8,17 +8,23 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\Route;
+use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
-use Google\Transit\Realtime\FeedHeader;
-use Google\Transit\Realtime\FeedMessage;
+use Google\Transit\Realtime\FeedEntity;
+use Google\Transit\Realtime\TripDescriptor;
+use Google\Transit\Realtime\TripUpdate;
+use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
+use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class AdminAccessTest extends WebTestCase
 {
+    use RealtimeFeedTrait;
     use ResetDatabase;
 
     private const string ADMIN_API_KEY = 'test-admin-api-key';
@@ -148,11 +154,23 @@ final class AdminAccessTest extends WebTestCase
 
     public function testDeviceReadsItsNextPassagesWithoutAdminKey(): void
     {
-        $this->warmRealtimeFeedCache();
+        $this->serveRealtimeFeed([
+            new FeedEntity()->setTripUpdate(new TripUpdate()
+                ->setTrip(new TripDescriptor()->setTripId('T1')->setRouteId('R1'))
+                ->setStopTimeUpdate([new StopTimeUpdate()->setStopId('S1')->setDeparture(new StopTimeEvent()->setTime(self::at(5)))])),
+        ]);
 
         $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $this->device->getToken()]);
 
         self::assertResponseIsSuccessful();
+        $response = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($response);
+        $displays = $response['displays'] ?? null;
+        self::assertIsArray($displays);
+        self::assertIsArray($displays[0] ?? null);
+        $passages = $displays[0]['nextPassages'] ?? null;
+        self::assertIsArray($passages);
+        self::assertSame(['1'], array_column($passages, 'routeShortName'));
     }
 
     public function testNextPassagesStillRequiresADeviceToken(): void
@@ -187,14 +205,14 @@ final class AdminAccessTest extends WebTestCase
     }
 
     /**
-     * Évite tout appel réseau : le fetcher lit le flux depuis le cache partagé.
+     * Le flux temps réel amont renvoie ces entités, à l'heure fixée.
+     *
+     * @param FeedEntity[] $entities
      */
-    private function warmRealtimeFeedCache(): void
+    private function serveRealtimeFeed(array $entities): void
     {
-        $cache = self::getContainer()->get('cache.app');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $cache);
-
-        $feed = new FeedMessage()->setHeader(new FeedHeader()->setGtfsRealtimeVersion('2.0'));
-        $cache->save($cache->getItem('gtfs_rt.trip_updates')->set($feed->serializeToString()));
+        $container = self::getContainer();
+        $container->set('http_client', new MockHttpClient(self::feedResponse($entities)));
+        $container->set('clock', new MockClock(self::NOW));
     }
 }

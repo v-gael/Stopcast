@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\DataFixtures;
 
 use App\Entity\Quay;
-use App\Exception\InvalidGtfsRealtimeFeedException;
+use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
+use App\Gtfs\Realtime\NextPassageFinder;
 use App\Repository\QuayRepository;
-use App\Service\GtfsRealtimeFetcher;
-use App\Service\NextPassageResolver;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
@@ -21,8 +20,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
 final readonly class DevelopmentQuaySelector
 {
     public function __construct(
-        private GtfsRealtimeFetcher $fetcher,
-        private NextPassageResolver $resolver,
+        private NextPassageFinder $nextPassageFinder,
         private QuayRepository $quayRepository,
     ) {
     }
@@ -30,7 +28,7 @@ final readonly class DevelopmentQuaySelector
     public function select(int $count): DevelopmentQuaySelection
     {
         try {
-            $passageCounts = $this->resolver->countByStopId($this->fetcher->fetchTripUpdates());
+            $passageCounts = $this->nextPassageFinder->countByStopId();
         } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $exception) {
             return new DevelopmentQuaySelection(
                 $this->mostServed($count, []),
