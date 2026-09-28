@@ -10,7 +10,7 @@ L'application tourne dans un conteneur FrankenPHP (PHP 8.4), avec une base Postg
 ## Démarrage
 
 ```bash
-cp .env .env.local           # puis renseigner les URLs GTFS (voir docs/api.md)
+cp .env .env.local           # puis renseigner les URLs GTFS et ADMIN_API_KEY (voir docs/api.md)
 make up                      # démarre les conteneurs de dev
 make migrate                 # applique les migrations
 make import                  # importe le référentiel GTFS statique
