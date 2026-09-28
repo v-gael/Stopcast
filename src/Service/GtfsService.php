@@ -195,12 +195,24 @@ class GtfsService
 
     /**
      * Parse trips.txt : la destination (trip_headsign) de chaque trajet,
-     * affichée pour les passages temps réel de ce trajet.
+     * affichée pour les passages temps réel de ce trajet, et son terminus
+     * (dernier arrêt dans stop_times.txt), où ses passages ne sont pas affichés.
      *
      * @return ParsedTrip[]
      */
     public function parseTrips(string $extractPath): array
     {
+        // trip_id => [stop_sequence, stop_id] du plus grand stop_sequence vu.
+        // stop_times.txt n'est pas forcément trié : comparaison numérique.
+        $lastStopByTripId = [];
+        foreach ($this->readCsv($extractPath.'/stop_times.txt') as $row) {
+            $sequence = (int) $row['stop_sequence'];
+
+            if ($sequence >= ($lastStopByTripId[$row['trip_id']][0] ?? \PHP_INT_MIN)) {
+                $lastStopByTripId[$row['trip_id']] = [$sequence, $row['stop_id']];
+            }
+        }
+
         $parsedTrips = [];
 
         foreach ($this->readCsv($extractPath.'/trips.txt') as $row) {
@@ -208,6 +220,7 @@ class GtfsService
                 gtfsTripId: $row['trip_id'],
                 gtfsRouteId: $row['route_id'],
                 headsign: '' !== ($row['trip_headsign'] ?? '') ? $row['trip_headsign'] : null,
+                terminusStopId: $lastStopByTripId[$row['trip_id']][1] ?? null,
             );
         }
 
@@ -426,7 +439,7 @@ class GtfsService
             $route = $this->entityManager->getReference(Route::class, $routeId);
             \assert($route instanceof Route);
 
-            $this->entityManager->persist(new Trip($parsedTrip->gtfsTripId, $route, $parsedTrip->headsign));
+            $this->entityManager->persist(new Trip($parsedTrip->gtfsTripId, $route, $parsedTrip->headsign, $parsedTrip->terminusStopId));
 
             if (0 === ++$pending % self::TRIP_BATCH_SIZE) {
                 $this->entityManager->flush();

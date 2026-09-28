@@ -13,6 +13,8 @@ final readonly class ParsedTrip
         public string $gtfsTripId,
         public string $gtfsRouteId,
         public ?string $headsign,
+        // stop_id du dernier arrêt du trajet, null si le trajet n'a aucun horaire.
+        public ?string $terminusStopId,
     ) {
     }
 }

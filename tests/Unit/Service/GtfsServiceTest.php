@@ -130,6 +130,21 @@ final class GtfsServiceTest extends TestCase
         self::assertNull($parsedTrips[3]->headsign);
     }
 
+    public function testParseTripsFindsTheLastStopOfEachTripByNumericStopSequence(): void
+    {
+        $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath('UnorderedStopSequences'));
+
+        self::assertSame('S3', $parsedTrips[0]->terminusStopId);
+    }
+
+    public function testParseTripsLeavesTerminusNullWhenTripHasNoStopTimes(): void
+    {
+        $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath());
+
+        self::assertSame('T5', $parsedTrips[3]->gtfsTripId);
+        self::assertNull($parsedTrips[3]->terminusStopId);
+    }
+
     public function testParseTripsToleratesMissingHeadsignColumn(): void
     {
         $parsedTrips = $this->gtfsService->parseTrips($this->fixturesPath('MissingOptionalColumns'));
