@@ -11,19 +11,19 @@ use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Gtfs\Realtime\NextPassageFinder;
-use App\Repository\DeviceRepository;
+use App\Security\DeviceUser;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
+ * Assemble les écrans du dispositif authentifié par le firewall "device".
+ *
  * @implements ProviderInterface<NextPassagesResponse>
  */
 final readonly class NextPassagesProvider implements ProviderInterface
 {
     public function __construct(
-        private DeviceRepository $deviceRepository,
+        private Security $security,
         private NextPassageFinder $nextPassageFinder,
         private ClockInterface $clock,
     ) {
@@ -31,33 +31,14 @@ final readonly class NextPassagesProvider implements ProviderInterface
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): NextPassagesResponse
     {
-        /** @var Request|null $request */
-        $request = $context['request'] ?? null;
-        $token = $request?->headers->get('X-Device-Token');
+        $user = $this->security->getUser();
 
-        if (null === $token) {
-            // Pas de UnauthorizedHttpException ici : elle force un header
-            // WWW-Authenticate: Bearer, trompeur puisqu'on utilise un header
-            // custom (X-Device-Token), pas un schéma Bearer standard.
-            throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Token manquant.');
+        // access_control exige ROLE_DEVICE sur cette route : seul un DeviceUser arrive ici.
+        if (!$user instanceof DeviceUser) {
+            throw new \LogicException(\sprintf('Un %s est attendu, %s reçu.', DeviceUser::class, get_debug_type($user)));
         }
 
-        $device = $this->deviceRepository->findOneActiveByToken($token);
-
-        if (!$device instanceof \App\Entity\Device) {
-            throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Token invalide ou dispositif désactivé.');
-        }
-
-        $configurations = array_values(
-            $device->getDisplayConfigurations()
-                ->filter(static fn (DisplayConfiguration $configuration): bool => $configuration->isActive())
-                ->toArray(),
-        );
-
-        usort(
-            $configurations,
-            static fn (DisplayConfiguration $a, DisplayConfiguration $b): int => $a->getPosition() <=> $b->getPosition(),
-        );
+        $configurations = $user->device->getActiveDisplayConfigurations();
 
         // Un seul appel pour tous les quais de ce device : le flux n'est lu qu'une fois.
         // Si le flux RT échoue (timeout, protobuf invalide...), l'exception remonte

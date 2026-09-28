@@ -177,6 +177,27 @@ class Device
         return $this->displayConfigurations;
     }
 
+    /**
+     * Configurations à afficher, dans l'ordre de rotation (position croissante).
+     *
+     * @return list<DisplayConfiguration>
+     */
+    public function getActiveDisplayConfigurations(): array
+    {
+        $configurations = array_values(
+            $this->displayConfigurations
+                ->filter(static fn (DisplayConfiguration $configuration): bool => $configuration->isActive())
+                ->toArray(),
+        );
+
+        usort(
+            $configurations,
+            static fn (DisplayConfiguration $a, DisplayConfiguration $b): int => $a->getPosition() <=> $b->getPosition(),
+        );
+
+        return $configurations;
+    }
+
     public function addDisplayConfiguration(DisplayConfiguration $configuration): static
     {
         if (!$this->displayConfigurations->contains($configuration)) {
