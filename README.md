@@ -13,7 +13,7 @@ Réplique en temps réel l'affichage d'un panneau d'abribus sur un petit écran 
 
 Abribus croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport :
 
-- le **GTFS statique** (lignes, arrêts, quais), importé en base ;
+- le **GTFS statique** (lignes, arrêts, quais, destinations des trajets), importé en base ;
 - le **GTFS-RT** (horaires en temps réel), interrogé et mis en cache à la volée.
 
 Ce dépôt contient l'**API Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et la sert à un écran Raspberry Pi authentifié par token. Le client d'affichage (Python) vit dans un dépôt séparé : [AbribusDisplay](https://github.com/v-gael/AbribusDisplay).
@@ -43,7 +43,7 @@ L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de
                     "routeShortName": "4",
                     "routeColor": "F29400",
                     "routeTextColor": "000000",
-                    "headsign": "CENTRE VILLE - GARE NORD",
+                    "headsign": "CENTRE VILLE",
                     "expectedAt": "2026-09-14T12:05:15+00:00"
                 },
                 {
@@ -52,7 +52,7 @@ L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de
                     "routeShortName": "4",
                     "routeColor": "F29400",
                     "routeTextColor": "000000",
-                    "headsign": "CENTRE VILLE - GARE NORD",
+                    "headsign": "HÔTEL DE VILLE",
                     "expectedAt": "2026-09-14T12:21:57+00:00"
                 }
             ]
