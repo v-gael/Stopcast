@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\ExistsFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
@@ -21,7 +21,6 @@ use Symfony\Component\Serializer\Attribute\Groups;
 #[ORM\Table(name: 'quay')]
 #[ORM\UniqueConstraint(name: 'uniq_quay_gtfs_stop_id', columns: ['gtfs_stop_id'])]
 #[ORM\Index(name: 'idx_quay_parent_stop_id', columns: ['parent_stop_id'])]
-#[ORM\Index(name: 'idx_quay_active', columns: ['active'])]
 #[ORM\HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
@@ -35,7 +34,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
     order: ['name' => 'ASC'],
 )]
 #[ApiFilter(SearchFilter::class, properties: ['name' => 'partial', 'gtfsStopId' => 'exact', 'parentStopId' => 'exact'])]
-#[ApiFilter(BooleanFilter::class, properties: ['active'])]
+#[ApiFilter(ExistsFilter::class, properties: ['deprecatedAt'])]
 class Quay
 {
     #[ORM\Id]
@@ -95,12 +94,8 @@ class Quay
     private ?array $destinationsServed = null;
 
     /**
-     * false si le quai a disparu d'un import GTFS ultérieur.
+     * Date à laquelle le quai a disparu d'un import GTFS ultérieur, null tant qu'il est actif.
      */
-    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
-    #[Groups(['quay:read'])]
-    private bool $active = true;
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Groups(['quay:read'])]
     private ?\DateTimeImmutable $deprecatedAt = null;
@@ -239,12 +234,11 @@ class Quay
 
     public function isActive(): bool
     {
-        return $this->active;
+        return !$this->deprecatedAt instanceof \DateTimeImmutable;
     }
 
     public function markDeprecated(): static
     {
-        $this->active = false;
         $this->deprecatedAt = new \DateTimeImmutable();
 
         return $this;
@@ -252,7 +246,6 @@ class Quay
 
     public function markActive(): static
     {
-        $this->active = true;
         $this->deprecatedAt = null;
 
         return $this;

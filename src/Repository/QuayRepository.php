@@ -24,48 +24,11 @@ class QuayRepository extends ServiceEntityRepository
     }
 
     /**
-     * Tous les quais actifs d'un même arrêt physique.
-     *
-     * @return Quay[]
-     */
-    public function findActiveByParentStopId(string $parentStopId): array
-    {
-        /** @var Quay[] $result */
-        $result = $this->createQueryBuilder('q')
-            ->andWhere('q.parentStopId = :parentStopId')
-            ->andWhere('q.active = true')
-            ->setParameter('parentStopId', $parentStopId)
-            ->orderBy('q.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $result;
-    }
-
-    /**
-     * Distincts noms d'arrêts physiques actifs.
-     *
-     * @return array<int, array{parentStopId: string, name: string}>
-     */
-    public function findActiveParentStops(): array
-    {
-        /** @var array<int, array{parentStopId: string, name: string}> $result */
-        $result = $this->createQueryBuilder('q')
-            ->select('DISTINCT q.parentStopId AS parentStopId', 'q.name AS name')
-            ->andWhere('q.active = true')
-            ->orderBy('q.name', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        return $result;
-    }
-
-    /**
      * @return Quay[]
      */
     public function findAllActive(): array
     {
-        return $this->findBy(['active' => true]);
+        return $this->findBy(['deprecatedAt' => null]);
     }
 
     /**
@@ -79,7 +42,7 @@ class QuayRepository extends ServiceEntityRepository
             return [];
         }
 
-        return $this->findBy(['gtfsStopId' => array_values($gtfsStopIds), 'active' => true]);
+        return $this->findBy(['gtfsStopId' => array_values($gtfsStopIds), 'deprecatedAt' => null]);
     }
 
     /**
@@ -93,7 +56,7 @@ class QuayRepository extends ServiceEntityRepository
     {
         $queryBuilder = $this->createQueryBuilder('q')
             ->leftJoin('q.routes', 'r')
-            ->andWhere('q.active = true')
+            ->andWhere('q.deprecatedAt IS NULL')
             ->groupBy('q.id')
             ->orderBy('COUNT(r.id)', 'DESC')
             ->addOrderBy('q.gtfsStopId', 'ASC')

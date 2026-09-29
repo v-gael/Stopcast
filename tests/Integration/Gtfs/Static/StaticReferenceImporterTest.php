@@ -71,6 +71,38 @@ final class StaticReferenceImporterTest extends KernelTestCase
         self::assertSame(['T3' => 'GARE SUD'], $this->headsignsOf(['T1', 'T2', 'T3', 'T5']));
     }
 
+    public function testReimportDeprecatesQuaysAndRoutesMissingFromTheNewFeed(): void
+    {
+        $this->importFeed($this->fixturesPath());
+        $this->importFeed($this->fixturesPath('QuayAndRouteRemoved'));
+
+        self::assertTrue($this->findQuay('S1')->isActive());
+        self::assertTrue($this->findRoute('R1')->isActive());
+
+        $s2 = $this->findQuay('S2');
+        self::assertFalse($s2->isActive());
+        self::assertNotNull($s2->getDeprecatedAt());
+
+        $r2 = $this->findRoute('R2');
+        self::assertFalse($r2->isActive());
+        self::assertNotNull($r2->getDeprecatedAt());
+    }
+
+    public function testReimportReactivatesQuaysAndRoutesBackInTheFeed(): void
+    {
+        $this->importFeed($this->fixturesPath());
+        $this->importFeed($this->fixturesPath('QuayAndRouteRemoved'));
+        $this->importFeed($this->fixturesPath());
+
+        $s2 = $this->findQuay('S2');
+        self::assertTrue($s2->isActive());
+        self::assertNull($s2->getDeprecatedAt());
+
+        $r2 = $this->findRoute('R2');
+        self::assertTrue($r2->isActive());
+        self::assertNull($r2->getDeprecatedAt());
+    }
+
     /**
      * @param string[] $gtfsTripIds
      *
@@ -117,6 +149,14 @@ final class StaticReferenceImporterTest extends KernelTestCase
         self::assertInstanceOf(Quay::class, $quay);
 
         return $quay;
+    }
+
+    private function findRoute(string $gtfsRouteId): Route
+    {
+        $route = $this->entityManager()->getRepository(Route::class)->findOneBy(['gtfsRouteId' => $gtfsRouteId]);
+        self::assertInstanceOf(Route::class, $route);
+
+        return $route;
     }
 
     /**
