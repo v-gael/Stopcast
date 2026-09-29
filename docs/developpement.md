@@ -10,16 +10,28 @@ L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base Postg
 ## Démarrage
 
 ```bash
-cp .env .env.local           # puis renseigner les URLs GTFS et ADMIN_API_KEY (voir docs/api.md)
+cp .env .env.local           # puis renseigner les URLs GTFS (voir docs/api.md)
 make up                      # démarre les conteneurs de dev
 make migrate                 # applique les migrations
 make import                  # importe le référentiel GTFS statique
-make fixtures                # (optionnel) crée des dispositifs de démo sur les quais importés (voir plus bas)
+make fixtures                # (optionnel) crée un compte admin et des dispositifs de démo (voir plus bas)
 ```
 
-La vitrine est ensuite disponible sur `http://localhost/`, et l'API sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
+La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`, et la documentation de l'API sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.
+
+## Comptes utilisateurs
+
+L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
+
+```bash
+make console c="app:user:create lea@example.com --role=ROLE_ADMIN"
+```
+
+Le mot de passe (12 caractères minimum) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
+
+La connexion se fait depuis la vitrine. « Se souvenir de moi » garde la session 30 jours, et les tentatives échouées sont limitées (5 par minute pour un même email et une même IP).
 
 ## Front : Twig et Tailwind
 
@@ -42,8 +54,9 @@ L'image de prod compile la CSS minifiée (`tailwind:build --minify`) puis les as
 
 ## Fixtures et écran de développement
 
-`make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) n'est pas modifié. Il crée :
+`make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) et les comptes créés par `app:user:create` ne sont pas modifiés. Il crée :
 
+- un compte administrateur de développement, recréé à chaque chargement : `admin@abribus.local`, mot de passe `abribus-admin` ;
 - 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
 - si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage AbribusDisplay.
 

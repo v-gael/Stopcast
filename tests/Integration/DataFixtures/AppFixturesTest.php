@@ -10,9 +10,12 @@ use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
+use App\Entity\User;
+use App\Factory\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\AbstractLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -75,6 +78,29 @@ final class AppFixturesTest extends KernelTestCase
         self::assertSame(4, $entityManager->getRepository(Quay::class)->count());
         self::assertSame(1, $entityManager->getRepository(Route::class)->count());
         self::assertSame(1, $entityManager->getRepository(Trip::class)->count());
+    }
+
+    public function testDevAdministratorCanLogInWithTheDocumentedCredentials(): void
+    {
+        $this->load(self::TOKEN);
+        $this->load(self::TOKEN);
+
+        $users = $this->entityManager()->getRepository(User::class)->findBy(['email' => AppFixtures::DEV_USER_EMAIL]);
+        self::assertCount(1, $users);
+        self::assertTrue($users[0]->isAdmin());
+
+        $passwordHasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $passwordHasher);
+        self::assertTrue($passwordHasher->isPasswordValid($users[0], AppFixtures::DEV_USER_PASSWORD));
+    }
+
+    public function testReloadingKeepsTheOtherAccounts(): void
+    {
+        UserFactory::createOne(['email' => 'lea@example.com']);
+
+        $this->load(self::TOKEN);
+
+        self::assertSame(2, $this->entityManager()->getRepository(User::class)->count());
     }
 
     public function testEmptyTokenCreatesOnlyRandomDevicesAndSaysSo(): void

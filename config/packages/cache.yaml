@@ -26,3 +26,7 @@ when@test:
                 # En mémoire : rien ne survit d'un test à l'autre.
                 gtfs_realtime.cache:
                     adapter: cache.adapter.array
+                # Tentatives de connexion (login_throttling) : sans quoi les
+                # échecs s'additionnent d'un test et d'un lancement à l'autre.
+                cache.rate_limiter:
+                    adapter: cache.adapter.array

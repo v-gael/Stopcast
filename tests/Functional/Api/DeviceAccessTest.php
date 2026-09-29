@@ -8,6 +8,8 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\Route;
+use App\Entity\User;
+use App\Factory\UserFactory;
 use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
@@ -19,14 +21,14 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class DeviceAccessTest extends WebTestCase
 {
+    use Factories;
     use RealtimeFeedTrait;
     use ResetDatabase;
-
-    private const string ADMIN_API_KEY = 'test-admin-api-key';
 
     private KernelBrowser $client;
 
@@ -53,7 +55,7 @@ final class DeviceAccessTest extends WebTestCase
         $entityManager->flush();
     }
 
-    public function testDeviceReadsItsNextPassagesWithoutAdminKey(): void
+    public function testDeviceReadsItsNextPassages(): void
     {
         $this->configure('Centre', position: 0);
         $this->serveRealtimeFeed([
@@ -107,18 +109,27 @@ final class DeviceAccessTest extends WebTestCase
         $this->assertDeviceRejected('Token invalide ou dispositif désactivé.');
     }
 
-    public function testAdminKeyDoesNotOpenNextPassages(): void
+    public function testUserSessionDoesNotOpenNextPassages(): void
     {
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_AUTHORIZATION' => 'Bearer '.self::ADMIN_API_KEY]);
+        // Vraie connexion par le formulaire : loginUser() injecterait le jeton quel que soit le firewall.
+        $user = UserFactory::createOne(['role' => User::ROLE_ADMIN]);
+        $crawler = $this->client->request('GET', '/');
+        $this->client->submit($crawler->selectButton('Se connecter')->form([
+            '_username' => $user->getEmail(),
+            '_password' => UserFactory::DEFAULT_PASSWORD,
+        ]));
+        self::assertResponseRedirects('/account');
+
+        $this->client->request('GET', '/api/next-passages');
 
         $this->assertDeviceRejected('Token manquant.');
     }
 
-    public function testDeviceTokenDoesNotOpenAdministration(): void
+    public function testDeviceTokenDoesNotOpenTheUserSpace(): void
     {
-        $this->client->request('GET', '/api/devices', server: ['HTTP_X_DEVICE_TOKEN' => $this->device->getToken()]);
+        $this->client->request('GET', '/account', server: ['HTTP_X_DEVICE_TOKEN' => $this->device->getToken()]);
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseRedirects('/');
     }
 
     private function configure(string $label, int $position, bool $active = true): void

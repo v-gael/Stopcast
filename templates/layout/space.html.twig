@@ -1,4 +1,4 @@
-{# Pages connectées (« espace ») : la navigation est remplie par les écrans de gestion. #}
+{# Pages connectées (« espace ») : les écrans de gestion remplissent la navigation, le compte est à droite. #}
 {% extends 'base.html.twig' %}
 
 {% block body %}
@@ -10,6 +10,10 @@
                 </a>
                 <nav class="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium" aria-label="Navigation principale">
                     {% block navigation %}{% endblock %}
+                    <span class="ml-auto flex items-center gap-x-6">
+                        <a href="{{ path('app_account') }}" class="hover:text-amber-400"{% if app.current_route starts with 'app_account' %} aria-current="page"{% endif %}>Mon compte</a>
+                        <a href="{{ path('app_logout') }}" class="hover:text-amber-400">Se déconnecter</a>
+                    </span>
                 </nav>
             </div>
         </header>
