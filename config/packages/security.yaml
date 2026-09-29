@@ -40,7 +40,7 @@ security:
                 login_path: app_home
                 check_path: app_login
                 enable_csrf: true
-                default_target_path: app_account
+                default_target_path: app_device_index
             remember_me:
                 secret: '%kernel.secret%'
                 lifetime: 2592000 # 30 jours

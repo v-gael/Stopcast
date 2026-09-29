@@ -47,7 +47,7 @@ final class DeviceAccessTest extends WebTestCase
         $this->entityManager = $entityManager;
 
         $this->quay = new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1');
-        $this->device = new Device('Écran test');
+        $this->device = new Device(UserFactory::createOne(), 'Écran test');
 
         $entityManager->persist(new Route('R1', '1', 'FF5500', 'FFFFFF'));
         $entityManager->persist($this->quay);
@@ -118,7 +118,7 @@ final class DeviceAccessTest extends WebTestCase
             '_username' => $user->getEmail(),
             '_password' => UserFactory::DEFAULT_PASSWORD,
         ]));
-        self::assertResponseRedirects('/account');
+        self::assertResponseRedirects('/devices');
 
         $this->client->request('GET', '/api/next-passages');
 

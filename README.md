@@ -97,7 +97,7 @@ make up && make migrate && make import
 
 ## État du projet
 
-Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, endpoint `/api/next-passages`. Comptes utilisateurs et connexion à l'espace web en place ; l'API d'administration protégée par clé a été retirée, les écrans de gestion des dispositifs sont en cours. Prochaine étape : finalisation du client d'affichage.
+Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, endpoint `/api/next-passages`. Comptes utilisateurs, connexion et gestion de ses dispositifs dans l'espace web en place ; les écrans de configuration de l'affichage (choix des quais) sont en cours. Prochaine étape : finalisation du client d'affichage.
 
 ## Licence
 

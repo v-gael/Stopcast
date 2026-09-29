@@ -1,0 +1,18 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Ajouter un dispositif · Abribus{% endblock %}
+
+{% block content %}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Ajouter un dispositif</h1>
+
+    <twig:Card class="max-w-md">
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+
+            <div class="flex flex-wrap gap-3">
+                <twig:Button type="submit">Créer</twig:Button>
+                <twig:Button href="{{ path('app_device_index') }}" variant="secondary">Annuler</twig:Button>
+            </div>
+        {{ form_end(form) }}
+    </twig:Card>
+{% endblock %}

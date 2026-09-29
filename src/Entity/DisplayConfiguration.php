@@ -21,7 +21,7 @@ class DisplayConfiguration
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Device::class, inversedBy: 'displayConfigurations')]
-    #[ORM\JoinColumn(name: 'device_id', referencedColumnName: 'id', nullable: false)]
+    #[ORM\JoinColumn(name: 'device_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private Device $device;
 
     /**

@@ -31,13 +31,29 @@ make console c="app:user:create lea@example.com --role=ROLE_ADMIN"
 
 Le mot de passe (12 caractères minimum) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
 
-La connexion se fait depuis la vitrine. « Se souvenir de moi » garde la session 30 jours, et les tentatives échouées sont limitées (5 par minute pour un même email et une même IP).
+La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. « Se souvenir de moi » garde la session 30 jours, et les tentatives échouées sont limitées (5 par minute pour un même email et une même IP).
+
+## Dispositifs
+
+Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. Supprimer un compte supprime ses dispositifs et leurs configurations.
+
+Le jeton d'un dispositif (à recopier dans la configuration d'AbribusDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
+
+Une base qui contient des dispositifs d'avant l'introduction des propriétaires ne peut pas être migrée (la migration `Version20260929175027` échoue). En dev, supprimer les dispositifs de démo, migrer, puis recharger les fixtures :
+
+```bash
+make console c="dbal:run-sql 'DELETE FROM display_configuration; DELETE FROM device'"
+make migrate
+make fixtures
+```
+
+Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 
 ## Front : Twig et Tailwind
 
 Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylées avec Tailwind CSS v4 via `symfonycasts/tailwind-bundle`, sans Node : le bundle télécharge le binaire autonome de Tailwind dans `var/tailwind/`.
 
-- `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (bloc `navigation`, messages flash en haut du contenu).
+- `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (navigation de l'espace, messages flash en haut du contenu).
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
@@ -56,7 +72,7 @@ L'image de prod compile la CSS minifiée (`tailwind:build --minify`) puis les as
 
 `make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) et les comptes créés par `app:user:create` ne sont pas modifiés. Il crée :
 
-- un compte administrateur de développement, recréé à chaque chargement : `admin@abribus.local`, mot de passe `abribus-admin` ;
+- un compte administrateur de développement, recréé à chaque chargement : `admin@abribus.local`, mot de passe `abribus-admin`. Il possède tous les dispositifs de démo ;
 - 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
 - si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage AbribusDisplay.
 

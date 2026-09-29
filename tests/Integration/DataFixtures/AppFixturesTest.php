@@ -94,6 +94,18 @@ final class AppFixturesTest extends KernelTestCase
         self::assertTrue($passwordHasher->isPasswordValid($users[0], AppFixtures::DEV_USER_PASSWORD));
     }
 
+    public function testDevAdministratorOwnsEveryDevice(): void
+    {
+        $this->load(self::TOKEN);
+
+        $owners = array_map(
+            static fn (Device $device): string => $device->getOwner()->getEmail(),
+            $this->entityManager()->getRepository(Device::class)->findAll(),
+        );
+
+        self::assertSame([AppFixtures::DEV_USER_EMAIL], array_values(array_unique($owners)));
+    }
+
     public function testReloadingKeepsTheOtherAccounts(): void
     {
         UserFactory::createOne(['email' => 'lea@example.com']);

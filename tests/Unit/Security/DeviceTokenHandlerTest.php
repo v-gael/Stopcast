@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Security;
 
 use App\Entity\Device;
+use App\Entity\User;
 use App\Repository\DeviceRepository;
 use App\Security\DeviceTokenHandler;
 use App\Security\DeviceUser;
@@ -15,7 +16,7 @@ final class DeviceTokenHandlerTest extends TestCase
 {
     public function testActiveDeviceTokenAuthenticatesTheDevice(): void
     {
-        $device = new Device('Écran', 'jeton-actif');
+        $device = new Device(new User('lea@example.com'), 'Écran', 'jeton-actif');
         $repository = $this->createStub(DeviceRepository::class);
         $repository->method('findOneActiveByToken')->willReturnMap([['jeton-actif', $device]]);
 
@@ -29,7 +30,7 @@ final class DeviceTokenHandlerTest extends TestCase
     public function testTokenIsNotUsedAsUserIdentifier(): void
     {
         $repository = $this->createStub(DeviceRepository::class);
-        $repository->method('findOneActiveByToken')->willReturn(new Device('Écran', 'jeton-actif'));
+        $repository->method('findOneActiveByToken')->willReturn(new Device(new User('lea@example.com'), 'Écran', 'jeton-actif'));
 
         $badge = new DeviceTokenHandler($repository)->getUserBadgeFrom('jeton-actif');
 

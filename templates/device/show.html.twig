@@ -1,0 +1,68 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}{{ device.label }} · Abribus{% endblock %}
+
+{% block content %}
+    <div class="mb-6 flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">{{ device.label }}</h1>
+        {{ include('device/_state.html.twig') }}
+    </div>
+
+    {% if new_token %}
+        <div class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-6" data-new-token>
+            <h2 class="text-lg font-semibold text-slate-900">Jeton du dispositif</h2>
+            <p class="mt-1 text-sm text-slate-700">Copiez-le maintenant dans la configuration de l'afficheur : il ne sera plus jamais affiché. En cas de perte, régénérez-en un.</p>
+            <code class="mt-4 block select-all break-all rounded-md border border-amber-200 bg-white px-4 py-3 font-mono text-sm text-slate-900">{{ new_token }}</code>
+        </div>
+    {% endif %}
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <twig:Card title="Configurations d'affichage" class="lg:col-span-2">
+            {% set configurations = device.displayConfigurations|sort((a, b) => a.position <=> b.position) %}
+            {% if configurations is empty %}
+                <p class="text-slate-600">Aucune configuration : le dispositif n'a rien à afficher.</p>
+            {% else %}
+                <ol class="divide-y divide-slate-200">
+                    {% for configuration in configurations %}
+                        <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                            <div>
+                                <p class="font-medium text-slate-900">{{ configuration.label ?: configuration.quay.name }}</p>
+                                <p class="text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
+                            </div>
+                            {% if configuration.active %}
+                                <twig:Badge variant="success">Affichée</twig:Badge>
+                            {% else %}
+                                <twig:Badge variant="warning">Masquée</twig:Badge>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+        </twig:Card>
+
+        <twig:Card title="Dispositif">
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="font-medium text-slate-500">Créé le</dt>
+                    <dd class="mt-1 text-slate-900">{{ device.createdAt|date('d/m/Y à H:i') }}</dd>
+                </div>
+            </dl>
+
+            <div class="mt-6 flex flex-col gap-3">
+                <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
+
+                <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}"
+                      data-turbo-confirm="Générer un nouveau jeton ? L'ancien cessera immédiatement de fonctionner : l'afficheur devra être reconfiguré.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('regenerate-device-token-' ~ device.id) }}">
+                    <twig:Button type="submit" variant="secondary" class="w-full">Régénérer le jeton</twig:Button>
+                </form>
+
+                <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
+                      data-turbo-confirm="Supprimer « {{ device.label }} » et ses configurations d'affichage ? Cette action est définitive.">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete-device-' ~ device.id) }}">
+                    <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
+                </form>
+            </div>
+        </twig:Card>
+    </div>
+{% endblock %}

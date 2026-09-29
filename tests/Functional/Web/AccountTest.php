@@ -39,6 +39,7 @@ final class AccountTest extends WebTestCase
         self::assertSelectorTextContains('main dd', self::EMAIL);
         self::assertSame('/account/password', $crawler->selectLink('Modifier mon mot de passe')->attr('href'));
         self::assertSame('/account', $crawler->filter('header nav')->selectLink('Mon compte')->attr('href'));
+        self::assertSame('/devices', $crawler->filter('header nav')->selectLink('Dispositifs')->attr('href'));
         self::assertSame('/logout', $crawler->filter('header nav')->selectLink('Se déconnecter')->attr('href'));
     }
 
@@ -103,6 +104,6 @@ final class AccountTest extends WebTestCase
             '_password' => $password,
         ]));
 
-        self::assertResponseRedirects('/account');
+        self::assertResponseRedirects('/devices');
     }
 }
