@@ -37,8 +37,9 @@ services:
 ###< doctrine/doctrine-bundle ###
 
 # ###> symfony/mailer ###
-# Pas de service mailer pour l'instant (voir compose.override.yaml pour le
-# réactiver facilement en dev si besoin un jour).
+# Mailpit et le worker qui envoie les emails ne sont déclarés qu'en dev
+# (compose.override.yaml) et en prod (compose.prod.yaml) : en CI, un worker
+# tournerait sans fin et bloquerait --abort-on-container-exit.
 # ###< symfony/mailer ###
 
 volumes:

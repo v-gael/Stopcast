@@ -13,6 +13,7 @@ services:
       # SERVER_NAME=localhost dans .env.local pour revenir au HTTPS local
       # auto-signé si besoin.
       SERVER_NAME: ${SERVER_NAME:-:80}
+      MAILER_DSN: smtp://mailer:1025
     ports:
       - "80:80"
       - "443:443"
@@ -44,6 +45,33 @@ services:
       - ./:/app
       - app_var:/app/var
 
+  # Consomme la file async (envoi des emails). Même image et mêmes montages
+  # que app : après un changement de code, `make worker-restart`.
+  worker:
+    image: abribus-dev
+    build:
+      context: .
+      target: dev
+    environment:
+      APP_ENV: dev
+      # Déclaré seulement ici : ne reçoit pas celle de app (compose.yaml).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      MAILER_DSN: smtp://mailer:1025
+    # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
+    healthcheck:
+      disable: true
+    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=128M"]
+    restart: unless-stopped
+    depends_on:
+      # Laisse app faire le composer install du premier démarrage.
+      app:
+        condition: service_started
+      database:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - app_var:/app/var
+
   ###> doctrine/doctrine-bundle ###
   database:
     ports:
@@ -51,16 +79,18 @@ services:
       - "127.0.0.1:5432:5432"
 ###< doctrine/doctrine-bundle ###
 
-# Pas de service mailer pour l'instant. Pour le réactiver un jour :
-#
-#   mailer:
-#     image: axllent/mailpit
-#     ports:
-#       - "1025"
-#       - "8025"
-#     environment:
-#       MP_SMTP_AUTH_ACCEPT_ANY: 1
-#       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+###> symfony/mailer ###
+  # Capture les emails envoyés en dev : interface web sur http://localhost:8025.
+  # Le SMTP (mailer:1025) n'est joignable que depuis le réseau Docker.
+  mailer:
+    image: axllent/mailpit
+    ports:
+      # Limité à la machine hôte, comme la base.
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+###< symfony/mailer ###
 
 volumes:
   ###> app ###

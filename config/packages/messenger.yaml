@@ -24,3 +24,11 @@ framework:
 
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                # Les emails restent en file : les tests les lisent avec
+                # assertQueuedEmailCount() et getMailerMessage().
+                async: 'in-memory://'
