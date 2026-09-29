@@ -1,3 +1,11 @@
-body {
-    background-color: skyblue;
-}
+/*
+ * Sources explicites plutôt que la détection automatique de Tailwind : elle
+ * s'appuie sur .gitignore, absent de l'image de prod (.dockerignore), et
+ * parcourrait alors vendor/ et var/.
+ */
+@import "tailwindcss" source(none);
+@source "../../templates";
+@source "../../assets";
+@source "../../vendor/symfony/twig-bridge/Resources/views/Form/tailwind_2_layout.html.twig";
+
+@plugin "@tailwindcss/forms";

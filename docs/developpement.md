@@ -17,9 +17,28 @@ make import                  # importe le référentiel GTFS statique
 make fixtures                # (optionnel) crée des dispositifs de démo sur les quais importés (voir plus bas)
 ```
 
-L'API est ensuite disponible sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
+La vitrine est ensuite disponible sur `http://localhost/`, et l'API sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.
+
+## Front : Twig et Tailwind
+
+Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylées avec Tailwind CSS v4 via `symfonycasts/tailwind-bundle`, sans Node : le bundle télécharge le binaire autonome de Tailwind dans `var/tailwind/`.
+
+- `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (bloc `navigation`, messages flash en haut du contenu).
+- `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
+- `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
+- `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
+
+En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `tailwind:build --watch` : modifier une classe dans un template recompile la CSS, il suffit de recharger la page. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
+
+```bash
+docker compose logs -f tailwind
+```
+
+Si une modification n'est pas prise en compte, vérifier d'abord ces logs (une ligne `Done in …` par recompilation), puis relancer le service avec `docker compose restart tailwind`. L'option `--poll` du bundle n'existe plus avec Tailwind v4 : les événements de fichiers du bind mount de Docker Desktop suffisent sur macOS.
+
+L'image de prod compile la CSS minifiée (`tailwind:build --minify`) puis les assets (`asset-map:compile`) au build : aucun watcher en prod.
 
 ## Fixtures et écran de développement
 
@@ -67,6 +86,8 @@ cp .env.prod.local.example .env.prod.local   # puis renseigner les valeurs
 make down                                    # libère les ports 80/443 du dev
 make prod-up
 ```
+
+La prod locale redirige `http://localhost/` vers HTTPS par une redirection permanente (308), que le navigateur garde en cache. De retour en dev (HTTP seul), vider le cache du navigateur pour `localhost`, ou passer par `http://127.0.0.1/`.
 
 Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`abribus`, `abribus-prod`, `abribus-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
 
