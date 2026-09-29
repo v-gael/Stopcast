@@ -79,7 +79,7 @@ flowchart LR
 
 ## Stack
 
-PHP 8.5 · Symfony 8.1 · API Platform 4 · Doctrine ORM · PostgreSQL 16 · FrankenPHP · Docker  
+PHP 8.5 · Symfony 8.1 · API Platform 4 · Doctrine ORM · Twig · Tailwind CSS · PostgreSQL 16 · FrankenPHP · Docker  
 Qualité : PHPUnit, PHPStan niveau 10, PHP CS Fixer, Rector, CI GitHub Actions.
 
 ## Démarrage rapide
