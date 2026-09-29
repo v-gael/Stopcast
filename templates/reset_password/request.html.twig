@@ -1,0 +1,20 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Mot de passe oublié · Abribus{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Mot de passe oublié" class="max-w-md">
+            <p class="mb-6 text-slate-600">Saisissez l'email de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
+
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+
+                <div class="flex flex-wrap gap-3">
+                    <twig:Button type="submit">Envoyer le lien</twig:Button>
+                    <twig:Button href="{{ path('app_home') }}" variant="secondary">Annuler</twig:Button>
+                </div>
+            {{ form_end(form) }}
+        </twig:Card>
+    </section>
+{% endblock %}

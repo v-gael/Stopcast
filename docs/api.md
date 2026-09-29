@@ -27,3 +27,5 @@ Exemple de réponse : voir le [README](../README.md#exemple-de-réponse).
 | `GTFS_REALTIME_TRIP_UPDATES_URL` | URL du flux GTFS-RT TripUpdates |
 | `GTFS_REALTIME_CACHE_TTL` | Durée (s) de mise en cache partagée du flux RT téléchargé (une réponse illisible n'est jamais mise en cache : l'appel suivant retente le téléchargement) |
 | `GTFS_REALTIME_NEXT_PASSAGES_LIMIT` | Nombre max de prochains passages renvoyés par quai |
+| `MAILER_DSN` | Transport des emails. `null://null` par défaut (rien ne part) ; en dev, `smtp://mailer:1025` (Mailpit) ; en prod, le prestataire choisi au déploiement (`smtp://utilisateur:motdepasse@hôte:587` fonctionne sans paquet supplémentaire) |
+| `MAILER_FROM` | Expéditeur de tous les emails, par défaut `Abribus <no-reply@abribus.local>` |
