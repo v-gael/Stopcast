@@ -3,13 +3,15 @@ security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
+    role_hierarchy:
+        ROLE_ADMIN: ROLE_USER
+
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        # Un seul administrateur, authentifié par clé d'API (AdminApiKeyHandler).
-        admin:
-            memory:
-                users:
-                    admin: { roles: [ROLE_ADMIN] }
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
 
     firewalls:
         dev:
@@ -17,31 +19,42 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
         # Le dispositif d'affichage s'authentifie par son propre jeton
-        # (X-Device-Token), à part de l'administration : la clé admin n'ouvre
-        # pas ce firewall, et le jeton d'un dispositif n'ouvre pas main.
+        # (X-Device-Token), à part des comptes utilisateurs : une session
+        # n'ouvre pas ce firewall, et le jeton d'un dispositif n'ouvre pas main.
         device:
             pattern: ^/api/next-passages$
             stateless: true
-            # Chaque badge charge son DeviceUser : le provider "admin" n'est
+            # Chaque badge charge son DeviceUser : le provider des comptes n'est
             # jamais appelé ici.
-            provider: admin
+            provider: app_user_provider
             entry_point: App\Security\DeviceUnauthorizedHandler
             access_token:
                 token_handler: App\Security\DeviceTokenHandler
                 token_extractors: App\Security\DeviceTokenExtractor
                 failure_handler: App\Security\DeviceUnauthorizedHandler
         main:
-            stateless: true
-            provider: admin
-            access_token:
-                token_handler: App\Security\AdminApiKeyHandler
+            lazy: true
+            provider: app_user_provider
+            form_login:
+                # Le formulaire de connexion est sur la vitrine.
+                login_path: app_home
+                check_path: app_login
+                enable_csrf: true
+                default_target_path: app_account
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 2592000 # 30 jours
+            login_throttling: ~
+            logout:
+                path: app_logout
+                target: app_home
 
     # Note: Only the *first* matching rule is applied
     access_control:
         - { path: ^/api/next-passages$, roles: ROLE_DEVICE }
-        # Tout le reste de l'API (administration, référentiel, documentation)
-        # exige la clé d'API admin.
-        - { path: ^/api, roles: ROLE_ADMIN }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/(account|devices|display-configurations), roles: ROLE_USER }
+        # Le reste est public, dont /api et sa documentation.
 
 when@test:
     security:

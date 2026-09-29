@@ -6,8 +6,10 @@ namespace App\DataFixtures;
 
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
+use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\DisplayConfigurationFactory;
+use App\Factory\UserFactory;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -16,11 +18,17 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Chargées avec --append (make fixtures) pour garder le référentiel importé :
- * seuls les appareils et leurs configurations sont remplacés.
+ * seuls les appareils, leurs configurations et le compte de développement
+ * sont remplacés.
  */
 final class AppFixtures extends Fixture
 {
     public const string FIXED_DEVICE_LABEL = 'Écran de développement';
+
+    /** Identifiants documentés dans docs/developpement.md. */
+    public const string DEV_USER_EMAIL = 'admin@abribus.local';
+
+    public const string DEV_USER_PASSWORD = 'abribus-admin';
 
     private const int FIXED_DEVICE_QUAY_COUNT = 3;
 
@@ -38,6 +46,7 @@ final class AppFixtures extends Fixture
         $fixedDevice = '' !== $this->fixedDeviceToken ? new Device(self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;
 
         $this->removeDevices($manager);
+        $this->loadDevUser($manager);
 
         if ($fixedDevice instanceof Device) {
             $this->loadFixedDevice($manager, $fixedDevice);
@@ -66,6 +75,27 @@ final class AppFixtures extends Fixture
         $manager->createQuery(\sprintf('DELETE FROM %s', DisplayConfiguration::class))->execute();
         $manager->createQuery(\sprintf('DELETE FROM %s', Device::class))->execute();
         $manager->clear();
+    }
+
+    /**
+     * Recréé à chaque chargement : ses identifiants restent ceux de la documentation.
+     * Les autres comptes (app:user:create) sont conservés.
+     */
+    private function loadDevUser(ObjectManager $manager): void
+    {
+        if (!$manager instanceof EntityManagerInterface) {
+            throw new \LogicException('Les fixtures nécessitent l\'ORM Doctrine.');
+        }
+
+        $manager->createQuery(\sprintf('DELETE FROM %s u WHERE u.email = :email', User::class))
+            ->setParameter('email', self::DEV_USER_EMAIL)
+            ->execute();
+
+        UserFactory::createOne([
+            'email' => self::DEV_USER_EMAIL,
+            'role' => User::ROLE_ADMIN,
+            'password' => self::DEV_USER_PASSWORD,
+        ]);
     }
 
     private function loadFixedDevice(ObjectManager $manager, Device $device): void

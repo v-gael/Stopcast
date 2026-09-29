@@ -4,43 +4,22 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\ExistsFilter;
-use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
-use ApiPlatform\Metadata\ApiFilter;
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
 use App\Repository\QuayRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: QuayRepository::class)]
 #[ORM\Table(name: 'quay')]
 #[ORM\UniqueConstraint(name: 'uniq_quay_gtfs_stop_id', columns: ['gtfs_stop_id'])]
 #[ORM\Index(name: 'idx_quay_parent_stop_id', columns: ['parent_stop_id'])]
 #[ORM\HasLifecycleCallbacks]
-#[ApiResource(
-    operations: [
-        new GetCollection(
-            normalizationContext: ['groups' => ['quay:read']]
-        ),
-        new Get(
-            normalizationContext: ['groups' => ['quay:read']]
-        ),
-    ],
-    order: ['name' => 'ASC'],
-)]
-#[ApiFilter(SearchFilter::class, properties: ['name' => 'partial', 'gtfsStopId' => 'exact', 'parentStopId' => 'exact'])]
-#[ApiFilter(ExistsFilter::class, properties: ['deprecatedAt'])]
 class Quay
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
-    #[Groups(['quay:read'])]
     private ?int $id = null;
 
     /**
@@ -48,22 +27,18 @@ class Quay
      * et référencé tel quel dans le flux GTFS-RT (ex: "0:GAR01").
      */
     #[ORM\Column(type: Types::STRING, length: 64)]
-    #[Groups(['quay:read'])]
     private string $gtfsStopId;
 
     /**
      * stop_name du GTFS (ex: "GARE CENTRALE").
      */
     #[ORM\Column(type: Types::STRING, length: 255)]
-    #[Groups(['quay:read'])]
     private string $name;
 
     #[ORM\Column(type: Types::FLOAT)]
-    #[Groups(['quay:read'])]
     private float $latitude;
 
     #[ORM\Column(type: Types::FLOAT)]
-    #[Groups(['quay:read'])]
     private float $longitude;
 
     /**
@@ -71,7 +46,6 @@ class Quay
      * quais d'un même arrêt physique côté sélection utilisateur.
      */
     #[ORM\Column(type: Types::STRING, length: 64)]
-    #[Groups(['quay:read'])]
     private string $parentStopId;
 
     /**
@@ -81,7 +55,6 @@ class Quay
      */
     #[ORM\ManyToMany(targetEntity: Route::class, inversedBy: 'quays')]
     #[ORM\JoinTable(name: 'quay_route')]
-    #[Groups(['quay:read'])]
     private Collection $routes;
 
     /**
@@ -90,22 +63,18 @@ class Quay
      * @var string[]|null
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
-    #[Groups(['quay:read'])]
     private ?array $destinationsServed = null;
 
     /**
      * Date à laquelle le quai a disparu d'un import GTFS ultérieur, null tant qu'il est actif.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    #[Groups(['quay:read'])]
     private ?\DateTimeImmutable $deprecatedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    #[Groups(['quay:read'])]
     private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    #[Groups(['quay:read'])]
     private \DateTimeImmutable $updatedAt;
 
     public function __construct(string $gtfsStopId, string $name, float $latitude, float $longitude, string $parentStopId)

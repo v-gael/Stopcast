@@ -4,59 +4,24 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
-use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
-use ApiPlatform\Metadata\ApiFilter;
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Delete;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\Patch;
-use ApiPlatform\Metadata\Post;
 use App\Repository\DisplayConfigurationRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: DisplayConfigurationRepository::class)]
 #[ORM\Table(name: 'display_configuration')]
 #[ORM\Index(name: 'idx_display_configuration_device', columns: ['device_id'])]
 #[ORM\HasLifecycleCallbacks]
-#[ApiResource(
-    operations: [
-        new GetCollection(
-            normalizationContext: ['groups' => ['display_config:read']]
-        ),
-        new Get(
-            normalizationContext: ['groups' => ['display_config:read']]
-        ),
-        new Post(
-            normalizationContext: ['groups' => ['display_config:read']],
-            denormalizationContext: ['groups' => ['display_config:write']],
-        ),
-        new Patch(
-            normalizationContext: ['groups' => ['display_config:read']],
-            denormalizationContext: ['groups' => ['display_config:update']],
-        ),
-        new Delete(),
-    ],
-    order: ['position' => 'ASC'],
-)]
-// Permet de filtrer /api/display_configurations?device=/api/devices/1 (lister les configs d'un dispositif)
-#[ApiFilter(SearchFilter::class, properties: ['device' => 'exact', 'quay' => 'exact'])]
-#[ApiFilter(BooleanFilter::class, properties: ['active'])]
 class DisplayConfiguration
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
-    #[Groups(['display_config:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Device::class, inversedBy: 'displayConfigurations')]
     #[ORM\JoinColumn(name: 'device_id', referencedColumnName: 'id', nullable: false)]
-    #[Groups(['display_config:read', 'display_config:write'])]
     private Device $device;
 
     /**
@@ -64,7 +29,6 @@ class DisplayConfiguration
      */
     #[ORM\ManyToOne(targetEntity: Quay::class)]
     #[ORM\JoinColumn(name: 'quay_id', referencedColumnName: 'id', nullable: false)]
-    #[Groups(['display_config:read', 'display_config:write', 'display_config:update'])]
     private Quay $quay;
 
     /**
@@ -72,7 +36,6 @@ class DisplayConfiguration
      */
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     #[Assert\Length(max: 255)]
-    #[Groups(['display_config:read', 'display_config:write', 'display_config:update'])]
     private ?string $label = null;
 
     /**
@@ -80,22 +43,18 @@ class DisplayConfiguration
      */
     #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
     #[Assert\PositiveOrZero]
-    #[Groups(['display_config:read', 'display_config:write', 'display_config:update'])]
     private int $position = 0;
 
     /**
      * Permet de désactiver temporairement une config sans la supprimer.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
-    #[Groups(['display_config:read', 'display_config:write', 'display_config:update'])]
     private bool $active = true;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    #[Groups(['display_config:read'])]
     private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    #[Groups(['display_config:read'])]
     private \DateTimeImmutable $updatedAt;
 
     public function __construct(Device $device, Quay $quay)
