@@ -1,0 +1,62 @@
+{% extends 'tailwind_2_layout.html.twig' %}
+
+{%- block form_row -%}
+    {%- set row_class = row_class|default('mb-5') -%}
+    {{- parent() -}}
+{%- endblock form_row -%}
+
+{%- block checkbox_row -%}
+    {%- set row_class = row_class|default('mb-5') -%}
+    {{- parent() -}}
+{%- endblock checkbox_row -%}
+
+{%- block widget_attributes -%}
+    {%- set widget_class = widget_class|default('mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm') -%}
+    {%- set widget_disabled_class = widget_disabled_class|default('bg-slate-100 text-slate-500') -%}
+    {%- set widget_errors_class = widget_errors_class|default('border-red-600 focus:border-red-600 focus:ring-red-600') -%}
+    {%- if errors|length > 0 -%}
+        {%- set attr = attr|merge({'aria-invalid': 'true', 'aria-describedby': (attr['aria-describedby'] is defined ? attr['aria-describedby'] ~ ' ' : '') ~ id ~ '_error1'}) -%}
+    {%- endif -%}
+    {{- parent() -}}
+{%- endblock widget_attributes -%}
+
+{%- block checkbox_widget -%}
+    {%- set widget_class = widget_class|default('mr-2 rounded border-slate-300 text-amber-600 focus:ring-amber-500') -%}
+    {{- parent() -}}
+{%- endblock checkbox_widget -%}
+
+{%- block radio_widget -%}
+    {%- set widget_class = widget_class|default('mr-2 border-slate-300 text-amber-600 focus:ring-amber-500') -%}
+    {{- parent() -}}
+{%- endblock radio_widget -%}
+
+{%- block form_label -%}
+    {%- set label_class = label_class|default('block text-sm font-medium text-slate-800') -%}
+    {{- parent() -}}
+{%- endblock form_label -%}
+
+{%- block form_help -%}
+    {%- set help_class = help_class|default('mt-1 text-sm text-slate-500') -%}
+    {{- parent() -}}
+{%- endblock form_help -%}
+
+{# Erreurs d'un champ sous son libellé, erreurs globales du formulaire dans un encadré. #}
+{%- block form_errors -%}
+    {%- if errors|length > 0 -%}
+        {%- if compound and form.parent is null -%}
+            <div class="mb-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+                <ul class="space-y-1">
+                    {%- for error in errors -%}
+                        <li>{{ error.message }}</li>
+                    {%- endfor -%}
+                </ul>
+            </div>
+        {%- else -%}
+            <ul class="mt-1 space-y-1">
+                {%- for error in errors -%}
+                    <li class="text-sm font-medium text-red-700" id="{{ id ~ '_error' ~ loop.index }}">{{ error.message }}</li>
+                {%- endfor -%}
+            </ul>
+        {%- endif -%}
+    {%- endif -%}
+{%- endblock form_errors -%}

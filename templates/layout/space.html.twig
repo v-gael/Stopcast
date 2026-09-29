@@ -1,0 +1,22 @@
+{# Pages connectées (« espace ») : la navigation est remplie par les écrans de gestion. #}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="flex min-h-screen flex-col">
+        <header class="bg-slate-900 text-white">
+            <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-4 py-4 sm:px-6">
+                <a href="{{ path('app_home') }}" class="flex items-center gap-2 text-lg font-bold">
+                    <span aria-hidden="true">🚏</span> Abribus
+                </a>
+                <nav class="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium" aria-label="Navigation principale">
+                    {% block navigation %}{% endblock %}
+                </nav>
+            </div>
+        </header>
+
+        <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+            <twig:Flash class="mb-6 space-y-2" />
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+{% endblock %}

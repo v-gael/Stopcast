@@ -1,0 +1,67 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Abribus · Le panneau de votre arrêt de bus, chez vous{% endblock %}
+
+{% block content %}
+    <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-16">
+        <div>
+            <div class="mb-4 flex flex-wrap gap-2">
+                <twig:Badge variant="success">Temps réel</twig:Badge>
+                <twig:Badge>Données ouvertes GTFS</twig:Badge>
+                <twig:Badge>Open source</twig:Badge>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Le panneau de votre arrêt de bus, sur un petit écran chez vous
+            </h1>
+            <p class="mt-4 text-lg text-slate-600">
+                Abribus réplique en temps réel l'affichage d'un panneau d'abribus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-3">
+                <twig:Button href="https://github.com/v-gael/Abribus">Dépôt Abribus (API)</twig:Button>
+                <twig:Button href="https://github.com/v-gael/AbribusDisplay" variant="secondary">Dépôt AbribusDisplay (afficheur)</twig:Button>
+            </div>
+        </div>
+
+        <figure class="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:justify-center">
+            <img src="{{ asset('images/demo.gif') }}" width="480" height="320" class="w-full max-w-sm rounded-lg shadow-lg"
+                 alt="Aperçu du panneau : deux arrêts avec leurs prochains passages, puis un arrêt sans passage prévu">
+            <img src="{{ asset('images/afficheur-en-situation.jpg') }}" width="600" height="800" loading="lazy" class="w-40 rounded-lg shadow-lg sm:w-44"
+                 alt="Photo de l'afficheur en situation : le panneau sur l'écran 3,5 pouces du Raspberry Pi">
+            <figcaption class="sr-only">À gauche, le rendu du client d'affichage. À droite, l'afficheur en situation.</figcaption>
+        </figure>
+    </section>
+
+    <section class="border-y border-slate-200 bg-white">
+        <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+            <h2 class="text-2xl font-bold text-slate-900">Comment ça marche</h2>
+            <p class="mt-2 max-w-3xl text-slate-600">
+                Abribus croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport, et reconstitue pour un quai donné ce qu'affiche le vrai panneau.
+            </p>
+            <ol class="mt-8 grid gap-6 md:grid-cols-3">
+                <li>
+                    <twig:Card title="1. Référentiel statique" class="h-full">
+                        <p class="text-slate-600">Le jeu GTFS du réseau (lignes, arrêts, quais, destinations des trajets) est importé en base à chaque changement d'horaires.</p>
+                    </twig:Card>
+                </li>
+                <li>
+                    <twig:Card title="2. Flux temps réel" class="h-full">
+                        <p class="text-slate-600">Le flux GTFS-RT donne l'heure attendue de chaque passage. Il est interrogé à la demande et mis en cache quelques secondes.</p>
+                    </twig:Card>
+                </li>
+                <li>
+                    <twig:Card title="3. Afficheur" class="h-full">
+                        <p class="text-slate-600">Un Raspberry Pi équipé d'un petit écran demande chaque minute ses prochains passages, authentifié par son propre jeton.</p>
+                    </twig:Card>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section id="connexion" class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Espace de gestion" class="max-w-md">
+            {% block login %}
+                <p class="text-slate-600">La gestion des dispositifs et de leurs quais se fait depuis un espace réservé aux comptes invités.</p>
+            {% endblock %}
+        </twig:Card>
+    </section>
+{% endblock %}

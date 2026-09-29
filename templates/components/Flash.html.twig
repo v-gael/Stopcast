@@ -1,0 +1,18 @@
+{# Messages flash de la session : success, error, warning. #}
+{% set styles = {
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    error: 'border-red-200 bg-red-50 text-red-800',
+    warning: 'border-amber-200 bg-amber-50 text-amber-800',
+} %}
+
+{# Sans session existante, rien à lire : ne pas en démarrer une (pages publiques sans cookie). #}
+{% set flashes = app.request.hasPreviousSession ? app.flashes(styles|keys)|filter(messages => messages is not empty) : [] %}
+{% if flashes is not empty %}
+    <div {{ attributes.defaults({class: 'space-y-2'}) }}>
+        {% for type, messages in flashes %}
+            {% for message in messages %}
+                <div class="rounded-md border px-4 py-3 text-sm {{ styles[type] }}" role="{{ type == 'success' ? 'status' : 'alert' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endif %}

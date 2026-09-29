@@ -1,0 +1,15 @@
+{# Bouton, ou lien stylé en bouton quand « href » est fourni. #}
+{% props variant = 'primary', href = null, type = 'button' %}
+
+{% set variants = {
+    primary: 'bg-amber-500 text-slate-900 hover:bg-amber-400 focus-visible:outline-amber-500',
+    secondary: 'bg-white text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-500',
+    danger: 'bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600',
+} %}
+{% set classes = 'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ' ~ variants[variant] %}
+
+{% if href %}
+    <a href="{{ href }}" {{ attributes.defaults({class: classes}) }}>{% block content %}{% endblock %}</a>
+{% else %}
+    <button type="{{ type }}" {{ attributes.defaults({class: classes}) }}>{{ block('content') }}</button>
+{% endif %}

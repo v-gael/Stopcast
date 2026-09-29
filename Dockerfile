@@ -77,6 +77,8 @@ COPY . .
 RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --optimize-autoloader \
     && composer dump-autoload --classmap-authoritative --no-dev \
     && php bin/console cache:clear --env=prod --no-warmup \
+    && php bin/console tailwind:build --minify --env=prod \
+    && php bin/console asset-map:compile --env=prod \
     && php bin/console cache:warmup --env=prod \
     && setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var \
     && setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var

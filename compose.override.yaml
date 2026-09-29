@@ -1,6 +1,7 @@
 services:
   ###> app ###
   app:
+    image: abribus-dev
     build:
       target: dev
     environment:
@@ -22,6 +23,26 @@ services:
       # conteneur). Volume réservé au dev : la prod et la CI n'en ont pas.
       - app_var:/app/var
   ###< app ###
+
+  # Recompile la CSS Tailwind à chaque modification d'un template ou d'un
+  # asset. Même image et mêmes montages que app, pour partager var/tailwind/
+  # (binaire et CSS compilée) : app sert directement la CSS recompilée.
+  tailwind:
+    image: abribus-dev
+    build:
+      context: .
+      target: dev
+    environment:
+      APP_ENV: dev
+    # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
+    healthcheck:
+      disable: true
+    command: ["php", "bin/console", "tailwind:build", "--watch"]
+    depends_on:
+      - app
+    volumes:
+      - ./:/app
+      - app_var:/app/var
 
   ###> doctrine/doctrine-bundle ###
   database:
