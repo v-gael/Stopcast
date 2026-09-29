@@ -20,6 +20,22 @@ Ce dépôt contient l'**API Symfony** qui reconstitue, pour un quai donné, ce q
 
 L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de plusieurs quais (un par sens), une ligne peut avoir plusieurs terminus, et les identifiants des flux statique et temps réel doivent concorder. Détails dans [docs/architecture.md](docs/architecture.md).
 
+## Fonctionnement
+
+```mermaid
+flowchart LR
+    ST["Référentiel statique<br/>(GTFS du réseau)"]
+    RT["Flux temps réel<br/>(GTFS-RT du réseau)"]
+    subgraph Back["Backend Symfony · Docker"]
+        I["Import<br/>app:gtfs:import"] --> DB[("PostgreSQL<br/>Quay · Route · Trip")]
+        DB --> A["GET /api/next-passages"]
+        C[("Cache partagé<br/>20 s")] --> A
+    end
+    ST -- "à chaque changement d'horaires" --> I
+    RT -- "à la demande" --> C
+    A -- "JSON, 1×/min<br/>(X-Device-Token)" --> D["Dispositif<br/>(AbribusDisplay sur Raspberry Pi)"]
+```
+
 ## Exemple de réponse
 
 `GET /api/next-passages`, avec le token du dispositif dans le header `X-Device-Token` :
