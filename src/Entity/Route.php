@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\ExistsFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
@@ -33,7 +33,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
     order: ['shortName' => 'ASC'],
 )]
 #[ApiFilter(SearchFilter::class, properties: ['shortName' => 'partial', 'gtfsRouteId' => 'exact'])]
-#[ApiFilter(BooleanFilter::class, properties: ['active'])]
+#[ApiFilter(ExistsFilter::class, properties: ['deprecatedAt'])]
 class Route
 {
     #[ORM\Id]
@@ -79,12 +79,8 @@ class Route
     private string $textColor;
 
     /**
-     * false si la ligne a disparu d'un import GTFS ultérieur.
+     * Date à laquelle la ligne a disparu d'un import GTFS ultérieur, null tant qu'elle est active.
      */
-    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
-    #[Groups(['route:read'])]
-    private bool $active = true;
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Groups(['route:read'])]
     private ?\DateTimeImmutable $deprecatedAt = null;
@@ -189,12 +185,11 @@ class Route
 
     public function isActive(): bool
     {
-        return $this->active;
+        return !$this->deprecatedAt instanceof \DateTimeImmutable;
     }
 
     public function markDeprecated(): static
     {
-        $this->active = false;
         $this->deprecatedAt = new \DateTimeImmutable();
 
         return $this;
@@ -202,7 +197,6 @@ class Route
 
     public function markActive(): static
     {
-        $this->active = true;
         $this->deprecatedAt = null;
 
         return $this;

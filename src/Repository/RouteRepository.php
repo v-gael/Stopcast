@@ -22,12 +22,4 @@ class RouteRepository extends ServiceEntityRepository
     {
         return $this->findOneBy(['gtfsRouteId' => $gtfsRouteId]);
     }
-
-    /**
-     * @return Route[]
-     */
-    public function findAllActive(): array
-    {
-        return $this->findBy(['active' => true], ['shortName' => 'ASC']);
-    }
 }

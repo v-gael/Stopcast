@@ -144,6 +144,60 @@ final class AdminAccessTest extends WebTestCase
     }
 
     /**
+     * @return iterable<string, array{class-string<Quay|Route>, string, string}>
+     */
+    public static function referenceCollections(): iterable
+    {
+        yield 'quais' => [Quay::class, '/api/quays', 'gtfsStopId'];
+        yield 'lignes' => [Route::class, '/api/routes', 'gtfsRouteId'];
+    }
+
+    /**
+     * @param class-string<Quay|Route> $class
+     */
+    #[DataProvider('referenceCollections')]
+    public function testActiveFilterExcludesOnlyDeprecatedReferencesWithoutExposingActive(string $class, string $path, string $idField): void
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        $deprecated = Quay::class === $class
+            ? new Quay('S0', 'QUAI SUPPRIMÉ', 38.5, -28.6, 'P0')
+            : new Route('R0', '0', '000000', 'FFFFFF');
+        $entityManager->persist($deprecated->markDeprecated());
+        $entityManager->flush();
+
+        $activeId = Quay::class === $class ? 'S1' : 'R1';
+        $deprecatedId = Quay::class === $class ? 'S0' : 'R0';
+
+        self::assertEqualsCanonicalizing([$activeId, $deprecatedId], $this->collectionIds($path, $idField));
+        self::assertSame([$activeId], $this->collectionIds($path.'?exists[deprecatedAt]=false', $idField));
+    }
+
+    /**
+     * @return string[]
+     */
+    private function collectionIds(string $path, string $idField): array
+    {
+        $this->request('GET', $path, $this->adminHeaders());
+        self::assertResponseIsSuccessful();
+
+        $collection = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($collection);
+        self::assertIsArray($collection['member'] ?? null);
+
+        $ids = [];
+        foreach ($collection['member'] as $member) {
+            self::assertIsArray($member);
+            self::assertArrayNotHasKey('active', $member);
+            self::assertIsString($member[$idField] ?? null);
+            $ids[] = $member[$idField];
+        }
+
+        return $ids;
+    }
+
+    /**
      * @return array<string, string>
      */
     private function adminHeaders(): array

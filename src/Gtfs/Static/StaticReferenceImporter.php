@@ -240,7 +240,7 @@ final readonly class StaticReferenceImporter
         /** @var Route[] $missingRoutes */
         $missingRoutes = $this->entityManager->getRepository(Route::class)
             ->createQueryBuilder('r')
-            ->where('r.active = true')
+            ->where('r.deprecatedAt IS NULL')
             ->andWhere('r.gtfsRouteId NOT IN (:seenIds)')
             ->setParameter('seenIds', $seenGtfsRouteIds)
             ->getQuery()
@@ -254,7 +254,7 @@ final readonly class StaticReferenceImporter
         /** @var Quay[] $missingQuays */
         $missingQuays = $this->entityManager->getRepository(Quay::class)
             ->createQueryBuilder('q')
-            ->where('q.active = true')
+            ->where('q.deprecatedAt IS NULL')
             ->andWhere('q.gtfsStopId NOT IN (:seenIds)')
             ->setParameter('seenIds', $seenGtfsStopIds)
             ->getQuery()
