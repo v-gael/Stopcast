@@ -1,24 +1,12 @@
 # API
 
-CRUD complet sur `Device` et `DisplayConfiguration` exposé par API Platform (`/api/devices`, `/api/display_configurations`), pour l'administration des dispositifs. Les quais et les lignes importés sont consultables en lecture seule (`/api/quays`, `/api/routes`), avec des filtres de recherche pour aider à choisir son quai.
+L'API ne sert que le dispositif d'affichage : un seul endpoint, `GET /api/next-passages`, exposé par API Platform. La gestion des dispositifs et de leurs quais se fait depuis l'espace web, avec un compte utilisateur (voir [ADR 0003](adr/0003-front-twig.md)).
 
-## Authentification
-
-Toute l'API, sauf `/api/next-passages`, exige la clé d'administration dans le header `Authorization` :
-
-```
-GET /api/devices
-Authorization: Bearer <ADMIN_API_KEY>
-```
-
-Cela couvre l'administration (`/api/devices`, `/api/display_configurations`), le référentiel (`/api/quays`, `/api/routes`) et la documentation OpenAPI (`/api/docs.jsonopenapi`, `/api/docs.jsonld`). Sans clé, ou avec une mauvaise clé, la réponse est `401`. Si `ADMIN_API_KEY` est vide ou absente, l'administration est fermée : aucune clé n'est acceptée.
-
-La clé est unique, sans comptes utilisateurs : pour la changer, modifier `ADMIN_API_KEY` et redémarrer le conteneur. La page Swagger UI (`/api` dans un navigateur) n'est plus consultable directement, un navigateur n'envoyant pas ce header ; récupérer plutôt la spécification OpenAPI avec la clé.
+La documentation OpenAPI est publique : Swagger UI sur `/api` dans un navigateur, spécification sur `/api/docs.jsonopenapi`.
 
 ## Endpoint du dispositif d'affichage
 
-
-Le Raspberry Pi, lui, n'appelle qu'un seul endpoint métier :
+Le Raspberry Pi appelle :
 
 ```
 GET /api/next-passages
@@ -27,7 +15,7 @@ X-Device-Token: <token du device>
 
 Renvoie, pour chaque `DisplayConfiguration` active du dispositif (triées par `position`), les prochains passages du quai correspondant. Pas de flag "flux indisponible" : si le GTFS-RT échoue, l'erreur remonte telle quelle plutôt qu'une réponse partielle — le Pi garde alors son dernier affichage valide.
 
-Un token absent, inconnu ou d'un dispositif désactivé renvoie `401` (`Token manquant.` ou `Token invalide ou dispositif désactivé.`), sans header `WWW-Authenticate`. Les deux accès sont cloisonnés : la clé d'administration n'ouvre pas cet endpoint, et le token d'un dispositif n'ouvre pas l'administration.
+Un token absent, inconnu ou d'un dispositif désactivé renvoie `401` (`Token manquant.` ou `Token invalide ou dispositif désactivé.`), sans header `WWW-Authenticate`. Les accès sont cloisonnés : une session d'utilisateur connecté n'ouvre pas cet endpoint, et le token d'un dispositif n'ouvre pas l'espace web.
 
 Exemple de réponse : voir le [README](../README.md#exemple-de-réponse).
 
@@ -39,4 +27,3 @@ Exemple de réponse : voir le [README](../README.md#exemple-de-réponse).
 | `GTFS_REALTIME_TRIP_UPDATES_URL` | URL du flux GTFS-RT TripUpdates |
 | `GTFS_REALTIME_CACHE_TTL` | Durée (s) de mise en cache partagée du flux RT téléchargé (une réponse illisible n'est jamais mise en cache : l'appel suivant retente le téléchargement) |
 | `GTFS_REALTIME_NEXT_PASSAGES_LIMIT` | Nombre max de prochains passages renvoyés par quai |
-| `ADMIN_API_KEY` | Clé d'administration de l'API (voir [Authentification](#authentification)) ; vide = administration fermée |
