@@ -9,3 +9,49 @@
 @source "../../vendor/symfony/twig-bridge/Resources/views/Form/tailwind_2_layout.html.twig";
 
 @plugin "@tailwindcss/forms";
+
+/*
+ * Tom Select (choix du quai) aux couleurs des champs du thème de formulaire.
+ * Le wrapper reprend les classes du <select> d'origine : la bordure passe sur
+ * .ts-control seul.
+ */
+@layer components {
+    .ts-wrapper.single,
+    .ts-wrapper.multi {
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        background: none;
+    }
+
+    .ts-wrapper .ts-control {
+        border-radius: var(--radius-md);
+        border-color: var(--color-slate-300);
+        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+        font-size: var(--text-sm);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .ts-wrapper.focus .ts-control {
+        border-color: var(--color-amber-500);
+        box-shadow: 0 0 0 1px var(--color-amber-500);
+    }
+
+    .ts-dropdown {
+        margin-top: calc(var(--spacing) * 1);
+        border-radius: var(--radius-md);
+        border-color: var(--color-slate-200);
+        font-size: var(--text-sm);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .ts-dropdown .active {
+        background-color: var(--color-amber-50);
+        color: var(--color-slate-900);
+    }
+
+    .ts-dropdown .no-results,
+    .ts-dropdown .loading {
+        color: var(--color-slate-500);
+    }
+}

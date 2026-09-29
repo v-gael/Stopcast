@@ -18,26 +18,7 @@
 
     <div class="grid gap-6 lg:grid-cols-3">
         <twig:Card title="Configurations d'affichage" class="lg:col-span-2">
-            {% set configurations = device.displayConfigurations|sort((a, b) => a.position <=> b.position) %}
-            {% if configurations is empty %}
-                <p class="text-slate-600">Aucune configuration : le dispositif n'a rien à afficher.</p>
-            {% else %}
-                <ol class="divide-y divide-slate-200">
-                    {% for configuration in configurations %}
-                        <li class="flex flex-wrap items-center justify-between gap-2 py-3">
-                            <div>
-                                <p class="font-medium text-slate-900">{{ configuration.label ?: configuration.quay.name }}</p>
-                                <p class="text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
-                            </div>
-                            {% if configuration.active %}
-                                <twig:Badge variant="success">Affichée</twig:Badge>
-                            {% else %}
-                                <twig:Badge variant="warning">Masquée</twig:Badge>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ol>
-            {% endif %}
+            {{ include('display_configuration/_rotation.html.twig') }}
         </twig:Card>
 
         <twig:Card title="Dispositif">

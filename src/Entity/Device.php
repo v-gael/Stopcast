@@ -152,17 +152,14 @@ class Device
     }
 
     /**
-     * Configurations à afficher, dans l'ordre de rotation (position croissante).
+     * Toutes les configurations, masquées comprises, dans l'ordre de rotation.
+     * À position égale, l'ordre d'ajout départage.
      *
      * @return list<DisplayConfiguration>
      */
-    public function getActiveDisplayConfigurations(): array
+    public function getDisplayConfigurationsInRotationOrder(): array
     {
-        $configurations = array_values(
-            $this->displayConfigurations
-                ->filter(static fn (DisplayConfiguration $configuration): bool => $configuration->isActive())
-                ->toArray(),
-        );
+        $configurations = array_values($this->displayConfigurations->toArray());
 
         usort(
             $configurations,
@@ -170,6 +167,19 @@ class Device
         );
 
         return $configurations;
+    }
+
+    /**
+     * Configurations à afficher, dans l'ordre de rotation (position croissante).
+     *
+     * @return list<DisplayConfiguration>
+     */
+    public function getActiveDisplayConfigurations(): array
+    {
+        return array_values(array_filter(
+            $this->getDisplayConfigurationsInRotationOrder(),
+            static fn (DisplayConfiguration $configuration): bool => $configuration->isActive(),
+        ));
     }
 
     public function addDisplayConfiguration(DisplayConfiguration $configuration): static
@@ -182,6 +192,27 @@ class Device
         return $this;
     }
 
+    /**
+     * Ajoute la configuration après toutes les autres, masquées comprises.
+     */
+    public function appendDisplayConfiguration(DisplayConfiguration $configuration): static
+    {
+        $positions = $this->displayConfigurations->map(static fn (DisplayConfiguration $existing): int => $existing->getPosition())->toArray();
+        $configuration->setPosition([] === $positions ? 0 : max($positions) + 1);
+
+        return $this->addDisplayConfiguration($configuration);
+    }
+
+    public function moveDisplayConfigurationUp(DisplayConfiguration $configuration): static
+    {
+        return $this->moveDisplayConfiguration($configuration, -1);
+    }
+
+    public function moveDisplayConfigurationDown(DisplayConfiguration $configuration): static
+    {
+        return $this->moveDisplayConfiguration($configuration, 1);
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -190,5 +221,27 @@ class Device
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * Échange la configuration avec sa voisine puis renumérote toute la rotation
+     * à partir de 0 : des positions en double ne bloquent pas l'échange.
+     */
+    private function moveDisplayConfiguration(DisplayConfiguration $configuration, int $offset): static
+    {
+        $rotation = $this->getDisplayConfigurationsInRotationOrder();
+        $index = array_search($configuration, $rotation, true);
+
+        if (false === $index || !isset($rotation[$index + $offset])) {
+            return $this;
+        }
+
+        [$rotation[$index], $rotation[$index + $offset]] = [$rotation[$index + $offset], $rotation[$index]];
+
+        foreach ($rotation as $position => $each) {
+            $each->setPosition($position);
+        }
+
+        return $this;
     }
 }
