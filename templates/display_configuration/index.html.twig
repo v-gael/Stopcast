@@ -1,0 +1,21 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Configurations d'affichage · Abribus{% endblock %}
+
+{% block content %}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Configurations d'affichage</h1>
+
+    {% if devices is empty %}
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p class="text-slate-600">Aucun dispositif pour l'instant. <a href="{{ path('app_device_new') }}" class="font-medium text-amber-600 hover:text-amber-500">Ajoutez-en un</a> avant de configurer son affichage.</p>
+        </div>
+    {% else %}
+        <div class="space-y-6">
+            {% for device in devices %}
+                <twig:Card title="{{ device.label }}">
+                    {{ include('display_configuration/_rotation.html.twig') }}
+                </twig:Card>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Modifier une configuration d'affichage · Abribus{% endblock %}
+
+{% block content %}
+    <div class="mb-6 flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-bold text-slate-900">Modifier la configuration</h1>
+        {{ include('display_configuration/_deprecated_quay.html.twig') }}
+    </div>
+    <p class="mb-6 text-slate-600">Dispositif <a href="{{ path('app_device_show', {id: configuration.device.id}) }}" class="font-medium text-slate-900 hover:text-amber-600">{{ configuration.device.label }}</a></p>
+
+    <twig:Card class="max-w-xl">
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+
+            <div class="flex flex-wrap gap-3">
+                <twig:Button type="submit">Enregistrer</twig:Button>
+                <twig:Button href="{{ path('app_device_show', {id: configuration.device.id}) }}" variant="secondary">Annuler</twig:Button>
+            </div>
+        {{ form_end(form) }}
+    </twig:Card>
+{% endblock %}

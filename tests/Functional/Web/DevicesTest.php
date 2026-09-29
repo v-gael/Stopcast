@@ -184,7 +184,7 @@ final class DevicesTest extends WebTestCase
         $this->configure($device);
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        $this->client->submit($crawler->selectButton('Supprimer')->form());
+        $this->client->submit($crawler->filter(\sprintf('form[action="/devices/%d/delete"]', $device->getId()))->form());
 
         self::assertResponseRedirects('/devices', 303);
         $this->client->followRedirect();

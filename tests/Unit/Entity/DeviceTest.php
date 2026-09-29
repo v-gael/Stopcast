@@ -63,6 +63,107 @@ final class DeviceTest extends TestCase
         self::assertSame([], $device->getActiveDisplayConfigurations());
     }
 
+    public function testAppendedConfigurationGoesToTheEndOfTheRotation(): void
+    {
+        $device = new Device($this->owner(), 'A');
+        $device->addDisplayConfiguration($this->configuration($device, 'Masqué')->setPosition(4)->setActive(false));
+        $device->addDisplayConfiguration($this->configuration($device, 'Premier')->setPosition(1));
+
+        $appended = $this->configuration($device, 'Nouveau');
+        $device->appendDisplayConfiguration($appended);
+
+        self::assertTrue($device->getDisplayConfigurations()->contains($appended));
+        self::assertSame(5, $appended->getPosition());
+    }
+
+    public function testFirstAppendedConfigurationStartsTheRotation(): void
+    {
+        $device = new Device($this->owner(), 'A');
+        $appended = $this->configuration($device, 'Seul');
+
+        $device->appendDisplayConfiguration($appended);
+
+        self::assertSame(0, $appended->getPosition());
+    }
+
+    public function testMovingUpSwapsWithThePreviousConfigurationMaskedOnesIncluded(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Masqué' => 3, 'Troisième' => 7]);
+
+        $device->moveDisplayConfigurationUp($this->find($device, 'Troisième'));
+
+        self::assertSame(['Premier' => 0, 'Troisième' => 1, 'Masqué' => 2], $this->rotation($device));
+    }
+
+    public function testMovingDownSwapsWithTheNextConfiguration(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Deuxième' => 1, 'Troisième' => 2]);
+
+        $device->moveDisplayConfigurationDown($this->find($device, 'Premier'));
+
+        self::assertSame(['Deuxième' => 0, 'Premier' => 1, 'Troisième' => 2], $this->rotation($device));
+    }
+
+    public function testMovingBeyondTheEndsChangesNothing(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Dernier' => 1]);
+
+        $device->moveDisplayConfigurationUp($this->find($device, 'Premier'));
+        $device->moveDisplayConfigurationDown($this->find($device, 'Dernier'));
+
+        self::assertSame(['Premier' => 0, 'Dernier' => 1], $this->rotation($device));
+    }
+
+    public function testMovingSeparatesConfigurationsSharingAPosition(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Deuxième' => 0, 'Troisième' => 0]);
+
+        $device->moveDisplayConfigurationUp($this->find($device, 'Troisième'));
+
+        self::assertSame(['Premier' => 0, 'Troisième' => 1, 'Deuxième' => 2], $this->rotation($device));
+    }
+
+    /**
+     * @param array<string, int> $positions
+     */
+    private function deviceWithRotation(array $positions): Device
+    {
+        $device = new Device($this->owner(), 'A');
+
+        foreach ($positions as $label => $position) {
+            $device->addDisplayConfiguration($this->configuration($device, $label)->setPosition($position)->setActive('Masqué' !== $label));
+        }
+
+        return $device;
+    }
+
+    private function find(Device $device, string $label): DisplayConfiguration
+    {
+        $configuration = $device->getDisplayConfigurations()->findFirst(static fn (int $key, DisplayConfiguration $configuration): bool => $label === $configuration->getLabel());
+        self::assertInstanceOf(DisplayConfiguration::class, $configuration);
+
+        return $configuration;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function rotation(Device $device): array
+    {
+        $rotation = [];
+
+        foreach ($device->getDisplayConfigurationsInRotationOrder() as $configuration) {
+            $rotation[(string) $configuration->getLabel()] = $configuration->getPosition();
+        }
+
+        return $rotation;
+    }
+
+    private function configuration(Device $device, string $label): DisplayConfiguration
+    {
+        return new DisplayConfiguration($device, new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1'))->setLabel($label);
+    }
+
     private function owner(): User
     {
         return new User('lea@example.com');
