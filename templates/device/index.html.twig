@@ -1,0 +1,41 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Mes dispositifs · Abribus{% endblock %}
+
+{% block content %}
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-bold text-slate-900">Mes dispositifs</h1>
+        <twig:Button href="{{ path('app_device_new') }}">Ajouter un dispositif</twig:Button>
+    </div>
+
+    {% if devices is empty %}
+        <twig:Card>
+            <p class="text-slate-600">Aucun dispositif pour l'instant. Ajoutez-en un pour obtenir le jeton à configurer sur l'afficheur.</p>
+        </twig:Card>
+    {% else %}
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-left font-semibold text-slate-700">
+                    <tr>
+                        <th scope="col" class="px-4 py-3">Libellé</th>
+                        <th scope="col" class="px-4 py-3">État</th>
+                        <th scope="col" class="px-4 py-3">Configurations</th>
+                        <th scope="col" class="px-4 py-3">Créé le</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for device in devices %}
+                        <tr>
+                            <td class="px-4 py-3 font-medium">
+                                <a href="{{ path('app_device_show', {id: device.id}) }}" class="text-slate-900 hover:text-amber-600">{{ device.label }}</a>
+                            </td>
+                            <td class="px-4 py-3">{{ include('device/_state.html.twig') }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ device.displayConfigurations|length }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ device.createdAt|date('d/m/Y') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

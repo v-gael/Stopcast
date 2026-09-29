@@ -27,14 +27,14 @@ final class LoginTest extends WebTestCase
         UserFactory::createOne(['email' => self::EMAIL]);
     }
 
-    public function testLoginFromTheShowcaseOpensTheAccount(): void
+    public function testLoginFromTheShowcaseOpensTheDevices(): void
     {
         $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
 
-        self::assertResponseRedirects('/account');
+        self::assertResponseRedirects('/devices');
         $this->client->followRedirect();
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', self::EMAIL);
+        self::assertSelectorTextContains('main h1', 'Mes dispositifs');
     }
 
     public function testFailedLoginShowsTheShowcaseAgainWithTheErrorAndTheEmail(): void
@@ -83,7 +83,7 @@ final class LoginTest extends WebTestCase
         $crawler = $this->client->request('GET', '/');
 
         self::assertCount(0, $crawler->filter('input[name="_password"]'));
-        self::assertSame('/account', $crawler->selectLink('Ouvrir mon espace')->attr('href'));
+        self::assertSame('/devices', $crawler->selectLink('Ouvrir mon espace')->attr('href'));
     }
 
     public function testLogoutReturnsToTheShowcase(): void

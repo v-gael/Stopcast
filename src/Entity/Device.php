@@ -26,6 +26,14 @@ class Device
     private ?int $id = null;
 
     /**
+     * Seul compte qui voit et gère ce dispositif. Sa suppression emporte le
+     * dispositif et ses configurations, au niveau de la base.
+     */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'owner_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private User $owner;
+
+    /**
      * Nom/label libre du dispositif pour s'y retrouver côté admin.
      */
     #[ORM\Column(type: Types::STRING, length: 255)]
@@ -63,12 +71,13 @@ class Device
      * Jeton généré si aucun n'est fourni. En imposer un sert aux fixtures, pour
      * un appareil de développement au jeton stable.
      */
-    public function __construct(string $label, ?string $token = null)
+    public function __construct(User $owner, string $label, ?string $token = null)
     {
         if (null !== $token && ('' === $token || \strlen($token) > self::TOKEN_MAX_LENGTH)) {
             throw new \InvalidArgumentException(\sprintf('Le jeton doit faire entre 1 et %d caractères, %d reçus.', self::TOKEN_MAX_LENGTH, \strlen($token)));
         }
 
+        $this->owner = $owner;
         $this->label = $label;
         $this->token = $token ?? Uuid::v4()->toRfc4122();
         $this->displayConfigurations = new ArrayCollection();
@@ -91,6 +100,11 @@ class Device
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getOwner(): User
+    {
+        return $this->owner;
     }
 
     public function getLabel(): string

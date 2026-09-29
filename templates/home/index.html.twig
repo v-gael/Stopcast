@@ -62,7 +62,7 @@
             <p class="mb-6 text-slate-600">La gestion des dispositifs et de leurs quais se fait depuis un espace réservé aux comptes invités.</p>
 
             {% if is_granted('ROLE_USER') %}
-                <twig:Button href="{{ path('app_account') }}">Ouvrir mon espace</twig:Button>
+                <twig:Button href="{{ path('app_device_index') }}">Ouvrir mon espace</twig:Button>
             {% else %}
                 <form action="{{ path('app_login') }}" method="post">
                     {% if error %}

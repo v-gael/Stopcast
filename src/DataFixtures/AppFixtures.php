@@ -18,8 +18,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Chargées avec --append (make fixtures) pour garder le référentiel importé :
- * seuls les appareils, leurs configurations et le compte de développement
- * sont remplacés.
+ * seuls les appareils, leurs configurations et le compte de développement,
+ * qui les possède tous, sont remplacés.
  */
 final class AppFixtures extends Fixture
 {
@@ -42,11 +42,16 @@ final class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        // Construit avant la purge : un jeton invalide arrête tout sans rien supprimer.
-        $fixedDevice = '' !== $this->fixedDeviceToken ? new Device(self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;
+        // Construits avant la purge : un jeton invalide arrête tout sans rien supprimer.
+        $devUser = UserFactory::new([
+            'email' => self::DEV_USER_EMAIL,
+            'role' => User::ROLE_ADMIN,
+            'password' => self::DEV_USER_PASSWORD,
+        ])->withoutPersisting()->create();
+        $fixedDevice = '' !== $this->fixedDeviceToken ? new Device($devUser, self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;
 
         $this->removeDevices($manager);
-        $this->loadDevUser($manager);
+        $this->replaceDevUser($manager, $devUser);
 
         if ($fixedDevice instanceof Device) {
             $this->loadFixedDevice($manager, $fixedDevice);
@@ -54,7 +59,7 @@ final class AppFixtures extends Fixture
             $this->logger->warning('FIXTURES_DEVICE_TOKEN vide : pas d\'appareil de développement. Le définir dans .env.local (voir docs/developpement.md).');
         }
 
-        foreach (DeviceFactory::createMany(5) as $device) {
+        foreach (DeviceFactory::createMany(5, ['owner' => $devUser]) as $device) {
             $configCount = random_int(2, 4);
 
             for ($position = 0; $position < $configCount; ++$position) {
@@ -79,9 +84,10 @@ final class AppFixtures extends Fixture
 
     /**
      * Recréé à chaque chargement : ses identifiants restent ceux de la documentation.
-     * Les autres comptes (app:user:create) sont conservés.
+     * Les autres comptes (app:user:create) sont conservés. Il possède tous les
+     * dispositifs de démonstration.
      */
-    private function loadDevUser(ObjectManager $manager): void
+    private function replaceDevUser(ObjectManager $manager, User $devUser): void
     {
         if (!$manager instanceof EntityManagerInterface) {
             throw new \LogicException('Les fixtures nécessitent l\'ORM Doctrine.');
@@ -91,11 +97,8 @@ final class AppFixtures extends Fixture
             ->setParameter('email', self::DEV_USER_EMAIL)
             ->execute();
 
-        UserFactory::createOne([
-            'email' => self::DEV_USER_EMAIL,
-            'role' => User::ROLE_ADMIN,
-            'password' => self::DEV_USER_PASSWORD,
-        ]);
+        $manager->persist($devUser);
+        $manager->flush();
     }
 
     private function loadFixedDevice(ObjectManager $manager, Device $device): void

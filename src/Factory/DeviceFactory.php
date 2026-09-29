@@ -20,6 +20,7 @@ final class DeviceFactory extends PersistentObjectFactory
     protected function defaults(): array
     {
         return [
+            'owner' => UserFactory::new(),
             'label' => \sprintf('Écran %s', self::faker()->streetName()),
             'active' => true,
         ];
