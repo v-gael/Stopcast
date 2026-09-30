@@ -98,6 +98,8 @@ Si une modification n'est pas prise en compte, vérifier d'abord ces logs (une l
 
 L'image de prod compile la CSS minifiée (`tailwind:build --minify`) puis les assets (`asset-map:compile`) au build : aucun watcher en prod.
 
+Les tests (CI GitHub, `make ci-run`) ne compilent pas la CSS. En environnement `test`, le bundle sert alors `app.css` brut, et AssetMapper passe en `missing_import_mode: warn` pour que l'`@import "tailwindcss"` non résolu ne fasse pas échouer le rendu des pages. Les tests passent donc de la même façon, que la CSS soit compilée ou non.
+
 ## Fixtures et écran de développement
 
 `make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) et les comptes créés par `app:user:create` ne sont pas modifiés. Il crée :

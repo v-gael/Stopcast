@@ -9,3 +9,11 @@ when@prod:
     framework:
         asset_mapper:
             missing_import_mode: warn
+
+# Sans CSS compilée (CI), le bundle Tailwind sert app.css brut en test : son
+# @import "tailwindcss" ne correspond à aucun asset et ne doit pas faire échouer
+# le rendu des pages.
+when@test:
+    framework:
+        asset_mapper:
+            missing_import_mode: warn
