@@ -91,7 +91,10 @@
 
                     <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
 
-                    <twig:Button type="submit">Se connecter</twig:Button>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <twig:Button type="submit">Se connecter</twig:Button>
+                        <a href="{{ path('app_forgot_password_request') }}" class="text-sm font-medium text-amber-700 underline hover:text-amber-600">Mot de passe oublié ?</a>
+                    </div>
                 </form>
             {% endif %}
         </twig:Card>

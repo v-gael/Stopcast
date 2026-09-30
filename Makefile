@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -23,6 +23,12 @@ sh: ## Ouvre un shell dans le conteneur app
 logs: ## Suit les logs du conteneur app
 	docker compose logs -f app
 
+worker-restart: ## Redémarre le worker (à faire après un changement de code)
+	docker compose restart worker
+
+worker-logs: ## Suit les logs du worker (envoi des emails)
+	docker compose logs -f worker
+
 ## —— Prod (local, pour tester) ———————————————————————————————————————————
 prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : mêmes ports)
 	$(PROD) up -d --build
@@ -30,8 +36,8 @@ prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le 
 prod-down: ## Arrête l'environnement prod
 	$(PROD) down
 
-prod-logs: ## Suit les logs de l'environnement prod
-	$(PROD) logs -f app
+prod-logs: ## Suit les logs de l'environnement prod (app et worker)
+	$(PROD) logs -f app worker
 
 prod-ps: ## État des conteneurs prod (vérifier healthy)
 	$(PROD) ps

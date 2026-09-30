@@ -1,0 +1,19 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Email envoyé · Abribus{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Vérifiez vos emails" class="max-w-md">
+            <p class="mb-4 text-slate-600">
+                Si un compte existe pour cette adresse, un email a été envoyé.
+                Le lien qu'il contient est valable {{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}.
+            </p>
+            <p class="text-slate-600">
+                Rien reçu ? Vérifiez vos courriers indésirables, ou
+                <a href="{{ path('app_forgot_password_request') }}" class="font-medium text-amber-700 underline hover:text-amber-600">refaites une demande</a>
+                dans une heure.
+            </p>
+        </twig:Card>
+    </section>
+{% endblock %}

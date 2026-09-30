@@ -39,4 +39,13 @@ final class HomeTest extends WebTestCase
         $steps = $crawler->filter('main ol > li h2')->each(static fn (Crawler $title): string => trim($title->text()));
         self::assertSame(['1. Référentiel statique', '2. Flux temps réel', '3. Afficheur'], $steps);
     }
+
+    public function testLoginFormOffersAForgottenPasswordLink(): void
+    {
+        $client = self::createClient();
+
+        $crawler = $client->request('GET', '/');
+
+        self::assertSame('/reset-password', $crawler->filter('#connexion')->selectLink('Mot de passe oublié ?')->attr('href'));
+    }
 }

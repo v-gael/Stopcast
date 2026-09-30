@@ -1,0 +1,207 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional\Web;
+
+use App\Factory\UserFactory;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
+use Symfony\Component\Mime\Email;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
+
+final class ResetPasswordTest extends WebTestCase
+{
+    use ClockSensitiveTrait;
+    use Factories;
+    use ResetDatabase;
+
+    private const string EMAIL = 'lea@example.com';
+
+    private const string NEW_PASSWORD = 'nouveau-mot-de-passe';
+
+    private KernelBrowser $client;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        UserFactory::createOne(['email' => self::EMAIL]);
+    }
+
+    public function testRequestSendsAResetLinkToTheAccount(): void
+    {
+        $this->requestReset(self::EMAIL);
+
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailAddressContains($email, 'To', self::EMAIL);
+        self::assertEmailHeaderSame($email, 'From', 'Abribus <no-reply@abribus.local>');
+        self::assertEmailHtmlBodyContains($email, 'http://localhost/reset-password/reset/');
+        self::assertEmailTextBodyContains($email, 'http://localhost/reset-password/reset/');
+
+        $this->assertConfirmationPage();
+    }
+
+    public function testUnknownEmailShowsTheSamePageWithoutSendingAnything(): void
+    {
+        $this->requestReset('inconnu@example.com');
+
+        self::assertQueuedEmailCount(0);
+        $this->assertConfirmationPage();
+    }
+
+    public function testSecondRequestWithinTheHourSendsNothingMore(): void
+    {
+        $this->requestReset(self::EMAIL);
+        self::assertQueuedEmailCount(1);
+
+        $this->requestReset(self::EMAIL);
+
+        self::assertQueuedEmailCount(0);
+        $this->assertConfirmationPage();
+    }
+
+    public function testLinkFromTheEmailLetsTheUserChooseANewPassword(): void
+    {
+        $this->followResetLink($this->requestResetLink());
+        $this->submitNewPassword(self::NEW_PASSWORD, self::NEW_PASSWORD);
+
+        self::assertResponseRedirects('/', 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Votre mot de passe a été modifié, vous pouvez vous connecter.');
+        self::assertSelectorExists('input[name="_password"]');
+
+        $this->logIn(UserFactory::DEFAULT_PASSWORD);
+        self::assertResponseRedirects('/');
+
+        $this->logIn(self::NEW_PASSWORD);
+        self::assertResponseRedirects('/devices');
+    }
+
+    public function testTooShortPasswordIsRefused(): void
+    {
+        $this->followResetLink($this->requestResetLink());
+        $this->submitNewPassword('court', 'court');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'Le mot de passe doit faire au moins 12 caractères.');
+    }
+
+    public function testInvalidTokenIsRefused(): void
+    {
+        $this->followResetLink('/reset-password/reset/'.str_repeat('x', 40));
+
+        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe n\'est pas valide.');
+    }
+
+    public function testLinkCannotBeUsedTwice(): void
+    {
+        $link = $this->requestResetLink();
+        $this->followResetLink($link);
+        $this->submitNewPassword(self::NEW_PASSWORD, self::NEW_PASSWORD);
+
+        $this->followResetLink($link);
+
+        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe n\'est pas valide.');
+    }
+
+    public function testLinkExpiresAfterAnHour(): void
+    {
+        $link = $this->requestResetLink();
+
+        self::mockTime('+1 hour');
+        $this->followResetLink($link);
+
+        $this->assertLinkRefused('Le lien dans votre e-mail est expiré.');
+    }
+
+    public function testLinkIsStillValidJustBeforeTheHour(): void
+    {
+        $link = $this->requestResetLink();
+
+        self::mockTime('+59 minutes');
+        $this->followResetLink($link);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="reset_password[newPassword][first]"]');
+    }
+
+    /**
+     * Retour sur la demande de lien, avec le motif du refus.
+     */
+    private function assertLinkRefused(string $reason): void
+    {
+        self::assertResponseRedirects('/reset-password');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', $reason);
+        self::assertSelectorExists('input[name="reset_password_request[email]"]');
+    }
+
+    /**
+     * Page affichée après toute demande, que le compte existe ou non.
+     */
+    private function assertConfirmationPage(): void
+    {
+        self::assertResponseRedirects('/reset-password/check-email');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('main', 'Si un compte existe pour cette adresse, un email a été envoyé.');
+        self::assertSelectorTextContains('main', 'valable 1 heure');
+    }
+
+    /**
+     * Demande un lien pour le compte et le retrouve dans l'email envoyé.
+     */
+    private function requestResetLink(): string
+    {
+        $this->requestReset(self::EMAIL);
+
+        $email = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $email);
+        if (1 !== preg_match('#http://localhost(/reset-password/reset/\S+)#', (string) $email->getTextBody(), $matches)) {
+            self::fail('Aucun lien de réinitialisation dans l\'email.');
+        }
+
+        return $matches[1];
+    }
+
+    private function followResetLink(string $link): void
+    {
+        $this->client->request('GET', $link);
+
+        // Le jeton quitte l'URL pour la session.
+        self::assertResponseRedirects('/reset-password/reset');
+        $this->client->followRedirect();
+    }
+
+    private function submitNewPassword(string $password, string $confirmation): void
+    {
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($this->client->getCrawler()->selectButton('Enregistrer')->form([
+            'reset_password[newPassword][first]' => $password,
+            'reset_password[newPassword][second]' => $confirmation,
+        ]));
+    }
+
+    private function logIn(string $password): void
+    {
+        $crawler = $this->client->request('GET', '/');
+        $this->client->submit($crawler->selectButton('Se connecter')->form([
+            '_username' => self::EMAIL,
+            '_password' => $password,
+        ]));
+    }
+
+    private function requestReset(string $email): void
+    {
+        $crawler = $this->client->request('GET', '/reset-password');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($crawler->selectButton('Envoyer le lien')->form([
+            'reset_password_request[email]' => $email,
+        ]));
+    }
+}
