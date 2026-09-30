@@ -1,0 +1,22 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Supprimer mon compte · Abribus{% endblock %}
+
+{% block content %}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Supprimer mon compte</h1>
+
+    <twig:Card class="max-w-md">
+        <p class="mb-6 text-slate-700">
+            Seront supprimés immédiatement et définitivement : votre compte et vos {{ deviceCount }} dispositif{{ deviceCount > 1 ? 's' }}, avec leurs configurations.
+        </p>
+
+        {{ form_start(form, {attr: {'data-turbo-confirm': 'Supprimer votre compte ? Cette action est définitive.'}}) }}
+            {{ form_widget(form) }}
+
+            <div class="flex flex-wrap gap-3">
+                <twig:Button type="submit" variant="danger">Supprimer mon compte</twig:Button>
+                <twig:Button href="{{ path('app_account') }}" variant="secondary">Annuler</twig:Button>
+            </div>
+        {{ form_end(form) }}
+    </twig:Card>
+{% endblock %}
