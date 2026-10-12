@@ -165,5 +165,6 @@ Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`abri
 
 ## Conventions
 
+- Règles de code vérifiées en relecture, en plus de `make check` : [CODING_STANDARDS.md](../CODING_STANDARDS.md).
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
 - Gitflow : branches `feature/<nom>` créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases.
