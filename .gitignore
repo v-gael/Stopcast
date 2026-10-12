@@ -33,6 +33,7 @@ Thumbs.db
 /.scratch/
 /docs/agents/
 /CONTEXT.md
+/.ua/
 
 ###> phpstan/phpstan ###
 phpstan.neon
