@@ -11,7 +11,7 @@ L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base Postg
 
 ```bash
 cp .env .env.local           # puis renseigner les URLs GTFS (voir docs/api.md)
-make up                      # démarre les conteneurs de dev
+make up                      # démarre les conteneurs de dev et active le hook pre-push
 make migrate                 # applique les migrations
 make import                  # importe le référentiel GTFS statique
 make fixtures                # (optionnel) crée un compte admin et des dispositifs de démo (voir plus bas)
@@ -133,14 +133,21 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 ## Qualité de code
 
+`make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
+
+Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
+
+PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : liste dans `phpstan.dist.neon`). Pour un usage légitime, l'ignorer ponctuellement avec `// @phpstan-ignore disallowed.function (raison)`.
+
 | Commande | Outil |
 |---|---|
+| `make check` | Tous les contrôles de la CI |
 | `make test` | PHPUnit |
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
 | `make rector` / `make rector-fix` | Rector |
 
-Les mêmes vérifications tournent en CI (GitHub Actions) à chaque push et pull request.
+La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request.
 
 ## Environnement de prod (local)
 

@@ -11,3 +11,15 @@ parameters:
         - tests/bootstrap.php
         - public/index.php
     tmpDir: var/cache/phpstan
+    # Appels de débogage : jamais dans le code commité (voir docs/developpement.md).
+    disallowedFunctionCalls:
+        -
+            function:
+                - 'dd()'
+                - 'debug_zval_dump()'
+                - 'dump()'
+                - 'phpinfo()'
+                - 'print_r()'
+                - 'var_dump()'
+                - 'var_export()'
+            message: 'appel de débogage oublié'
