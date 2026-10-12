@@ -32,7 +32,7 @@ Thumbs.db
 /.claude/
 /.scratch/
 /docs/agents/
-/CONTEXT.md
+/GLOSSARY.md
 /.ua/
 
 ###> phpstan/phpstan ###
