@@ -120,6 +120,7 @@
         "phpstan/phpstan-symfony": "^2.0",
         "phpunit/phpunit": "^13.3",
         "rector/rector": "^2.6",
+        "spaze/phpstan-disallowed-calls": "^4.14",
         "symfony/browser-kit": "8.1.*",
         "symfony/css-selector": "8.1.*",
         "symfony/debug-bundle": "8.1.*",

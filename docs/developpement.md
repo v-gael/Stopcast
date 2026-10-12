@@ -135,6 +135,8 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
 
+PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : liste dans `phpstan.dist.neon`). Pour un usage légitime, l'ignorer ponctuellement avec `// @phpstan-ignore disallowed.function (raison)`.
+
 | Commande | Outil |
 |---|---|
 | `make check` | Tous les contrôles de la CI |
