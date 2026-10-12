@@ -135,7 +135,7 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
 
-Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
+Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 
 PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : liste dans `phpstan.dist.neon`). Pour un usage légitime, l'ignorer ponctuellement avec `// @phpstan-ignore disallowed.function (raison)`.
 
