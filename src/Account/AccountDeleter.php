@@ -14,11 +14,11 @@ use Symfony\Component\Mailer\MailerInterface;
  * Les dispositifs, leurs configurations et les demandes de réinitialisation
  * suivent par les clés étrangères en cascade.
  */
-final class AccountDeleter
+final readonly class AccountDeleter
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly MailerInterface $mailer,
+        private EntityManagerInterface $entityManager,
+        private MailerInterface $mailer,
     ) {
     }
 
