@@ -1,0 +1,38 @@
+#!/bin/sh
+# Lance les contrôles de la CI, dans l'ordre, et s'arrête au premier échec.
+# Seule liste des contrôles : la CI GitHub l'appelle directement, `make check`
+# l'exécute dans le conteneur app. Les lignes ::group:: replient chaque contrôle
+# dans les logs GitHub ; ailleurs, elles servent de titres.
+
+# Comme la CI : tous les contrôles tournent en environnement de test.
+export APP_ENV=test
+
+summary=''
+
+run() {
+    name=$1
+    shift
+    echo "::group::$name"
+    start=$(date +%s)
+    "$@"
+    status=$?
+    duration=$(($(date +%s) - start))
+    echo '::endgroup::'
+    summary="$summary$(printf '  %-20s %4ss' "$name" "$duration")
+"
+    if [ "$status" -ne 0 ]; then
+        printf '\nÉchec : %s (code %s)\n\n%s' "$name" "$status" "$summary"
+        exit "$status"
+    fi
+}
+
+run 'Composer validate' composer validate --strict
+run 'Lint YAML' php bin/console lint:yaml config --parse-tags
+run 'Lint Twig' php bin/console lint:twig templates
+run 'Lint container' php bin/console lint:container
+run 'PHP CS Fixer' vendor/bin/php-cs-fixer check --diff
+run 'Rector' vendor/bin/rector process --dry-run --no-progress-bar
+run 'PHPStan' vendor/bin/phpstan analyse --no-progress
+run 'PHPUnit' php bin/phpunit
+
+printf '\nTous les contrôles passent.\n\n%s' "$summary"

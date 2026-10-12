@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose check rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -66,6 +66,9 @@ composer: ## Lance composer avec les arguments passés (ex: make composer c="req
 	docker compose exec app composer $(c)
 
 ## —— Qualité de code ——————————————————————————————————————————————————————
+check: ## Lance tous les contrôles de la CI (à faire avant une PR)
+	docker compose exec app bin/check
+
 test: ## Lance PHPUnit
 	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
 

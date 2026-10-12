@@ -133,14 +133,17 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 ## Qualité de code
 
+`make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
+
 | Commande | Outil |
 |---|---|
+| `make check` | Tous les contrôles de la CI |
 | `make test` | PHPUnit |
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
 | `make rector` / `make rector-fix` | Rector |
 
-Les mêmes vérifications tournent en CI (GitHub Actions) à chaque push et pull request.
+La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request.
 
 ## Environnement de prod (local)
 
