@@ -1,0 +1,17 @@
+#!/bin/sh
+# Cherche les failles connues dans les dépendances PHP (Composer) et JS
+# (importmap). Lance les deux audits même si le premier échoue, et sort en
+# erreur si l'un d'eux en trouve. Le workflow GitHub `audit.yml` l'appelle
+# directement, `make audit` l'exécute dans le conteneur app.
+
+status=0
+
+echo '::group::Composer audit'
+composer audit || status=1
+echo '::endgroup::'
+
+echo '::group::Importmap audit'
+php bin/console importmap:audit || status=1
+echo '::endgroup::'
+
+exit "$status"

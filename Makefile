@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose check hooks rector rector-fix cs-fixer cs-fixer-fix phpstan import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose check hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -96,6 +96,9 @@ cs-fixer-fix: ## Corrige le style de code
 
 phpstan: ## Lance l'analyse statique PHPStan
 	docker compose exec app php vendor/bin/phpstan analyse
+
+audit: ## Cherche les failles connues dans les dépendances PHP et JS
+	docker compose exec app bin/audit
 
 ## —— Métier ———————————————————————————————————————————————————————————————
 import: ## Lance l'import GTFS

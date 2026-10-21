@@ -146,8 +146,11 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
 | `make rector` / `make rector-fix` | Rector |
+| `make audit` | Failles connues des dépendances (`composer audit`, `importmap:audit`) |
 
 La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request.
+
+`make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
 
 ## Environnement de prod (local)
 
