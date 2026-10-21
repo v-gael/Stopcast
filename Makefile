@@ -14,8 +14,9 @@ up: hooks ## Démarre les conteneurs (dev) et active le hook pre-push
 down: ## Arrête les conteneurs
 	docker compose down
 
-build: ## Rebuild les images
-	docker compose up -d --build
+build: ## Rebuild les images (retélécharge l'image de base)
+	docker compose build --pull
+	docker compose up -d
 
 sh: ## Ouvre un shell dans le conteneur app
 	docker compose exec app sh
@@ -31,7 +32,8 @@ worker-logs: ## Suit les logs du worker (envoi des emails)
 
 ## —— Prod (local, pour tester) ———————————————————————————————————————————
 prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : mêmes ports)
-	$(PROD) up -d --build
+	$(PROD) build --pull
+	$(PROD) up -d
 
 prod-down: ## Arrête l'environnement prod
 	$(PROD) down
@@ -44,13 +46,15 @@ prod-ps: ## État des conteneurs prod (vérifier healthy)
 
 prod-reset: ## ⚠️ Supprime volumes + rebuild + remigre à zéro (reset complet du test prod)
 	$(PROD) down -v
-	$(PROD) up -d --build
+	$(PROD) build --pull
+	$(PROD) up -d
 	$(PROD) exec app php bin/console doctrine:migrations:migrate --no-interaction
 
 ## —— CI (local, pour tester) —————————————————————————————————————————————
 ci-run: ## Build + lance la suite de tests façon CI sur une base vierge, retourne le code de sortie
 	$(CI) down -v
-	$(CI) up --build --abort-on-container-exit --exit-code-from app
+	$(CI) build --pull
+	$(CI) up --abort-on-container-exit --exit-code-from app
 
 ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
 	$(CI) down -v
