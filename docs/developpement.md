@@ -152,6 +152,13 @@ La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develo
 
 `make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
 
+## Mettre à jour les dépendances
+
+1. Regarder d'abord ce qui bouge : `make composer c='update "symfony/*" --dry-run'` (ou les paquets visés). Un motif comme `symfony/*` attrape aussi les paquets en contrainte `^` (UX, maker-bundle), qui peuvent changer de version mineure.
+2. Lancer la mise à jour sans `--dry-run`. `bump-after-update` est activé : Composer remonte les contraintes de `composer.json` aux versions installées.
+3. `make composer c="recipes"` liste les recipes à mettre à jour. Chacune se met à jour avec `make composer c="recipes:update <paquet>"`. Flex refuse de tourner tant que l'index git contient des changements : committer entre deux.
+4. Finir par `make audit` puis `make check`.
+
 ## Environnement de prod (local)
 
 ```bash
