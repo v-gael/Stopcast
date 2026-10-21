@@ -25,10 +25,6 @@ RUN apk add --no-cache \
         pdo_pgsql \
         zip
 
-# En dev, /app est un bind mount qui n'appartient pas à root : sans cette
-# exception, git (donc Composer et Flex) refuse d'y travailler.
-RUN git config --system --add safe.directory /app
-
 COPY frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 COPY frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint
@@ -50,6 +46,10 @@ ENV APP_ENV=dev \
 RUN install-php-extensions xdebug
 
 COPY frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/conf.d/
+
+# /app est un bind mount qui n'appartient pas à root : sans cette exception,
+# git (donc Composer et Flex) refuse d'y travailler.
+RUN git config --system --add safe.directory /app
 
 
 # =============================================================================
