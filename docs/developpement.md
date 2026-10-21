@@ -5,7 +5,7 @@
 - Docker et Docker Compose
 - `make`
 
-L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base PostgreSQL 16.
+L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base PostgreSQL 16. La version minimale de PHP, correctifs de sécurité compris, est fixée dans `composer.json` : Composer refuse de s'installer et l'application de démarrer sur une version plus ancienne. `make build` retélécharge l'image de base pour récupérer le dernier correctif.
 
 ## Démarrage
 
