@@ -47,6 +47,10 @@ RUN install-php-extensions xdebug
 
 COPY frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/conf.d/
 
+# /app est un bind mount qui n'appartient pas à root : sans cette exception,
+# git (donc Composer et Flex) refuse d'y travailler.
+RUN git config --system --add safe.directory /app
+
 
 # =============================================================================
 # ci : exécution des tests fonctionnels avant merge request (à venir)
