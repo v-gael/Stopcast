@@ -62,12 +62,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function __construct(string $email, string $role = self::ROLE_USER)
     {
-        if (!\in_array($role, self::ROLES, true)) {
-            throw new \InvalidArgumentException(\sprintf('Rôle inconnu « %s », attendu : %s.', $role, implode(', ', self::ROLES)));
-        }
-
         $this->email = $email;
-        $this->roles = self::ROLE_USER === $role ? [] : [$role];
+        $this->changeRole($role);
     }
 
     #[ORM\PrePersist]
@@ -106,6 +102,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isAdmin(): bool
     {
         return \in_array(self::ROLE_ADMIN, $this->roles, true);
+    }
+
+    /**
+     * Le rôle principal du compte, l'un de ROLES.
+     */
+    public function getRole(): string
+    {
+        return $this->isAdmin() ? self::ROLE_ADMIN : self::ROLE_USER;
+    }
+
+    /**
+     * Les sessions ouvertes du compte sont déconnectées à leur requête
+     * suivante : Security compare leurs rôles à ceux relus en base.
+     */
+    public function changeRole(string $role): void
+    {
+        if (!\in_array($role, self::ROLES, true)) {
+            throw new \InvalidArgumentException(\sprintf('Rôle inconnu « %s », attendu : %s.', $role, implode(', ', self::ROLES)));
+        }
+
+        $this->roles = self::ROLE_USER === $role ? [] : [$role];
     }
 
     public function getPassword(): string
