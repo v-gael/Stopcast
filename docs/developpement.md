@@ -156,6 +156,16 @@ La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develo
 
 `make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
 
+## Pièges en test
+
+Comportements qu'on ne découvre qu'en lançant les tests :
+
+- Un jeton CSRF invalide sur une action `#[IsCsrfTokenValid]` lève `InvalidCsrfTokenException`, une exception d'authentification : la réponse est une redirection 302 vers la connexion (`http://localhost/`), pas un 403.
+- `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
+- Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
+- La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
+- `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
+
 ## Mettre à jour les dépendances
 
 1. Regarder d'abord ce qui bouge : `make composer c='update "symfony/*" --dry-run'` (ou les paquets visés). Un motif comme `symfony/*` attrape aussi les paquets en contrainte `^` (UX, maker-bundle), qui peuvent changer de version mineure.
