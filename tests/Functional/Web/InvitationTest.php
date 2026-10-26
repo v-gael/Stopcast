@@ -16,6 +16,7 @@ use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 use function Zenstruck\Foundry\Persistence\repository;
+use function Zenstruck\Foundry\Persistence\save;
 
 final class InvitationTest extends WebTestCase
 {
@@ -195,6 +196,78 @@ final class InvitationTest extends WebTestCase
         self::assertResponseRedirects('/devices');
     }
 
+    public function testResendRightAfterTheInvitationReplacesTheLink(): void
+    {
+        $this->invite(self::EMAIL, Role::User);
+        $oldLink = '/invitation/'.$this->tokenFromEmail('#http://localhost/invitation/(\S+)#');
+
+        $this->resendInvitation(self::EMAIL);
+
+        self::assertResponseRedirects('/admin/users', 303);
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailAddressContains($email, 'To', self::EMAIL);
+        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Abribus');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Invitation renvoyée à lea@example.com.');
+
+        $this->client->getCookieJar()->clear();
+        $this->followInvitationLink($oldLink);
+        $this->assertInvitationRefused();
+    }
+
+    public function testResentLinkActivatesTheAccount(): void
+    {
+        $this->invite(self::EMAIL, Role::User);
+        $this->resendInvitation(self::EMAIL);
+        $link = '/invitation/'.$this->tokenFromEmail('#http://localhost/invitation/(\S+)#');
+        $this->client->getCookieJar()->clear();
+
+        $this->followInvitationLink($link);
+        $this->choosePassword(self::PASSWORD);
+        $this->logIn(self::EMAIL, self::PASSWORD);
+
+        self::assertResponseRedirects('/devices');
+    }
+
+    public function testResendWithoutAValidCsrfTokenIsRefused(): void
+    {
+        $user = UserFactory::new()->pending()->create(['email' => self::EMAIL]);
+
+        $this->client->request('POST', \sprintf('/admin/users/%d/resend-invitation', $user->getId()), ['_token' => 'invalide']);
+
+        // Jeton CSRF invalide : Security renvoie vers la connexion.
+        self::assertResponseRedirects('http://localhost/');
+        self::assertQueuedEmailCount(0);
+    }
+
+    public function testResendForAnAccountActivatedMeanwhileSendsNothing(): void
+    {
+        $user = UserFactory::new()->pending()->create(['email' => self::EMAIL]);
+        $form = $this->rowOf($this->client->request('GET', '/admin/users'), self::EMAIL)->selectButton("Renvoyer l'invitation")->form();
+        $user->setPassword('hash');
+        save($user);
+
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/admin/users', 303);
+        self::assertQueuedEmailCount(0);
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', 'lea@example.com a déjà activé son compte : rien à renvoyer.');
+        self::assertCount(0, $this->rowOf($crawler, self::EMAIL)->selectButton("Renvoyer l'invitation"));
+    }
+
+    public function testResendIsForbiddenToAUser(): void
+    {
+        $user = UserFactory::new()->pending()->create(['email' => self::EMAIL]);
+        $this->client->loginUser(UserFactory::createOne());
+
+        $this->client->request('POST', \sprintf('/admin/users/%d/resend-invitation', $user->getId()));
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     /**
      * Invite le compte puis se déconnecte : la suite se joue côté invité.
      */
@@ -254,6 +327,12 @@ final class InvitationTest extends WebTestCase
         ]));
     }
 
+    private function resendInvitation(string $email): void
+    {
+        $crawler = $this->client->request('GET', '/admin/users');
+        $this->client->submit($this->rowOf($crawler, $email)->selectButton("Renvoyer l'invitation")->form());
+    }
+
     private function invite(string $email, Role $role): void
     {
         $crawler = $this->client->request('GET', '/admin/users');
@@ -271,11 +350,15 @@ final class InvitationTest extends WebTestCase
      */
     private function statusOf(string $email): string
     {
-        $crawler = $this->client->request('GET', '/admin/users');
+        return trim($this->rowOf($this->client->request('GET', '/admin/users'), $email)->filter('td')->eq(2)->text());
+    }
+
+    private function rowOf(Crawler $crawler, string $email): Crawler
+    {
         $row = $crawler->filter('main tbody tr')->reduce(static fn (Crawler $row): bool => str_starts_with(trim($row->filter('td')->text()), $email));
         self::assertCount(1, $row);
 
-        return trim($row->filter('td')->eq(2)->text());
+        return $row;
     }
 
     private function findUser(string $email): User

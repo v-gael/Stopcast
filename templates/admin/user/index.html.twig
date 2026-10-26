@@ -41,8 +41,16 @@
                         </td>
                         <td class="px-4 py-3 text-slate-600">{{ row.deviceCount }}</td>
                         <td class="px-4 py-3 text-slate-600">{{ user.createdAt|date('d/m/Y') }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <a href="{{ path('app_admin_user_edit', {id: user.id}) }}" class="font-medium text-amber-600 hover:text-amber-500">Modifier<span class="sr-only"> {{ user.email }}</span></a>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                                {% if user.pending %}
+                                    <form method="post" action="{{ path('app_admin_user_resend_invitation', {id: user.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('resend-invitation-' ~ user.id) }}">
+                                        <button type="submit" class="font-medium text-amber-600 hover:text-amber-500">Renvoyer l'invitation<span class="sr-only"> à {{ user.email }}</span></button>
+                                    </form>
+                                {% endif %}
+                                <a href="{{ path('app_admin_user_edit', {id: user.id}) }}" class="font-medium text-amber-600 hover:text-amber-500">Modifier<span class="sr-only"> {{ user.email }}</span></a>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
