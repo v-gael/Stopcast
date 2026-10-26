@@ -2,6 +2,12 @@
 
 {% block title %}{{ device.label }} · Abribus{% endblock %}
 
+{% block meta %}
+    {# Une action qui ramène ici met la page à jour sans la faire remonter. #}
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+{% endblock %}
+
 {% block content %}
     <div class="mb-6 flex flex-wrap items-center gap-3">
         <h1 class="text-2xl font-bold text-slate-900">{{ device.label }}</h1>
@@ -32,7 +38,7 @@
             <div class="mt-6 flex flex-col gap-3">
                 <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
 
-                <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}"
+                <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}" data-turbo-action="advance"
                       data-turbo-confirm="Générer un nouveau jeton ? L'ancien cessera immédiatement de fonctionner : l'afficheur devra être reconfiguré.">
                     <input type="hidden" name="_token" value="{{ csrf_token('regenerate-device-token-' ~ device.id) }}">
                     <twig:Button type="submit" variant="secondary" class="w-full">Régénérer le jeton</twig:Button>
