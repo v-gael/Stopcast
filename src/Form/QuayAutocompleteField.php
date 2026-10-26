@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Quay;
-use App\Entity\User;
+use App\Enum\Role;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Form\AbstractType;
@@ -49,7 +49,7 @@ final class QuayAutocompleteField extends AbstractType
                     ->andWhere('quay.deprecatedAt IS NULL OR quay.id = :keptQuay')
                     ->setParameter('keptQuay', $keptQuay);
             },
-            'security' => User::ROLE_USER,
+            'security' => Role::User->value,
         ]);
     }
 

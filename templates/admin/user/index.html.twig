@@ -13,6 +13,7 @@
                     <th scope="col" class="px-4 py-3">Rôle</th>
                     <th scope="col" class="px-4 py-3">Dispositifs</th>
                     <th scope="col" class="px-4 py-3">Créé le</th>
+                    <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
@@ -26,9 +27,12 @@
                                 {{ user.email }}
                             {%- endif -%}
                         </td>
-                        <td class="px-4 py-3"><twig:Badge>{{ user.admin ? 'Administrateur' : 'Utilisateur' }}</twig:Badge></td>
+                        <td class="px-4 py-3"><twig:Badge>{{ user.role.label }}</twig:Badge></td>
                         <td class="px-4 py-3 text-slate-600">{{ row.deviceCount }}</td>
                         <td class="px-4 py-3 text-slate-600">{{ user.createdAt|date('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{{ path('app_admin_user_edit', {id: user.id}) }}" class="font-medium text-amber-600 hover:text-amber-500">Modifier<span class="sr-only"> {{ user.email }}</span></a>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

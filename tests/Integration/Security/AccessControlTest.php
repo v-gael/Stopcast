@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Security;
 
 use App\Entity\User;
+use App\Enum\Role;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,21 +21,21 @@ use Symfony\Component\Security\Http\AccessMapInterface;
 final class AccessControlTest extends KernelTestCase
 {
     /**
-     * @return iterable<string, array{string, string, bool}>
+     * @return iterable<string, array{string, Role, bool}>
      */
     public static function accesses(): iterable
     {
-        yield 'utilisateur sur /admin' => ['/admin/users', User::ROLE_USER, false];
-        yield 'administrateur sur /admin' => ['/admin/users', User::ROLE_ADMIN, true];
-        yield 'utilisateur sur son compte' => ['/account', User::ROLE_USER, true];
-        yield 'administrateur sur son compte' => ['/account', User::ROLE_ADMIN, true];
-        yield 'utilisateur sur ses dispositifs' => ['/devices', User::ROLE_USER, true];
-        yield 'utilisateur sur ses configurations' => ['/display-configurations', User::ROLE_USER, true];
-        yield 'utilisateur sur /api/next-passages' => ['/api/next-passages', User::ROLE_ADMIN, false];
+        yield 'utilisateur sur /admin' => ['/admin/users', Role::User, false];
+        yield 'administrateur sur /admin' => ['/admin/users', Role::Admin, true];
+        yield 'utilisateur sur son compte' => ['/account', Role::User, true];
+        yield 'administrateur sur son compte' => ['/account', Role::Admin, true];
+        yield 'utilisateur sur ses dispositifs' => ['/devices', Role::User, true];
+        yield 'utilisateur sur ses configurations' => ['/display-configurations', Role::User, true];
+        yield 'utilisateur sur /api/next-passages' => ['/api/next-passages', Role::Admin, false];
     }
 
     #[DataProvider('accesses')]
-    public function testAccessDependsOnTheRole(string $path, string $role, bool $granted): void
+    public function testAccessDependsOnTheRole(string $path, Role $role, bool $granted): void
     {
         $request = Request::create($path);
         $accessMap = self::getContainer()->get('security.access_map');

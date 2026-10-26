@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -76,7 +77,7 @@ final class DevicesTest extends WebTestCase
     #[DataProvider('deviceActions')]
     public function testAnotherUsersDeviceIsForbiddenEvenToAnAdministrator(string $method, string $path): void
     {
-        $this->client->loginUser(UserFactory::createOne(['role' => User::ROLE_ADMIN]));
+        $this->client->loginUser(UserFactory::createOne(['role' => Role::Admin]));
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $token = $device->getToken();
 

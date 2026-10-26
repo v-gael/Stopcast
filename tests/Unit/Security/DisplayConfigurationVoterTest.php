@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Security\Voter\DisplayConfigurationVoter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -44,7 +45,7 @@ final class DisplayConfigurationVoterTest extends TestCase
     #[DataProvider('attributes')]
     public function testAdministratorIsDeniedOnAnotherUsersConfiguration(string $attribute): void
     {
-        $administrator = new User('admin@example.com', User::ROLE_ADMIN);
+        $administrator = new User('admin@example.com', Role::Admin);
 
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor($administrator), $this->configurationOf(new User('lea@example.com')), $attribute));
     }
