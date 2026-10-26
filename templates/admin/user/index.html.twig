@@ -3,7 +3,10 @@
 {% block title %}Utilisateurs · Abribus{% endblock %}
 
 {% block content %}
-    <h1 class="mb-6 text-2xl font-bold text-slate-900">Utilisateurs</h1>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-bold text-slate-900">Utilisateurs</h1>
+        <twig:Button href="{{ path('app_admin_user_invite') }}">Inviter un compte</twig:Button>
+    </div>
 
     <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -11,6 +14,7 @@
                 <tr>
                     <th scope="col" class="px-4 py-3">Email</th>
                     <th scope="col" class="px-4 py-3">Rôle</th>
+                    <th scope="col" class="px-4 py-3">Statut</th>
                     <th scope="col" class="px-4 py-3">Dispositifs</th>
                     <th scope="col" class="px-4 py-3">Créé le</th>
                     <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
@@ -28,6 +32,13 @@
                             {%- endif -%}
                         </td>
                         <td class="px-4 py-3"><twig:Badge>{{ user.role.label }}</twig:Badge></td>
+                        <td class="px-4 py-3">
+                            {%- if user.pending -%}
+                                <twig:Badge variant="warning">Invitation en attente</twig:Badge>
+                            {%- else -%}
+                                <twig:Badge variant="success">Actif</twig:Badge>
+                            {%- endif -%}
+                        </td>
                         <td class="px-4 py-3 text-slate-600">{{ row.deviceCount }}</td>
                         <td class="px-4 py-3 text-slate-600">{{ user.createdAt|date('d/m/Y') }}</td>
                         <td class="px-4 py-3 text-right">

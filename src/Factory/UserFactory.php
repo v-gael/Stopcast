@@ -7,6 +7,7 @@ namespace App\Factory;
 use App\Entity\User;
 use App\Enum\Role;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Zenstruck\Foundry\Object\Instantiator;
 use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
 /**
@@ -47,11 +48,14 @@ final class UserFactory extends PersistentObjectFactory
 
     protected function initialize(): static
     {
-        return $this->afterInstantiate(function (User $user): void {
-            $password = $user->getPassword();
-            if (null !== $password) {
-                $user->setPassword($this->passwordHasher->hashPassword($user, $password));
-            }
-        });
+        return $this
+            // setPassword() n'accepte pas null : le mot de passe s'écrit directement.
+            ->instantiateWith(Instantiator::withConstructor()->alwaysForce('password'))
+            ->afterInstantiate(function (User $user): void {
+                $password = $user->getPassword();
+                if (null !== $password) {
+                    $user->setPassword($this->passwordHasher->hashPassword($user, $password));
+                }
+            });
     }
 }

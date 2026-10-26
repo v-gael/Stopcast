@@ -1,0 +1,261 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional\Web;
+
+use App\Entity\User;
+use App\Enum\Role;
+use App\Factory\UserFactory;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
+use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\Mime\Email;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
+
+use function Zenstruck\Foundry\Persistence\repository;
+
+final class InvitationTest extends WebTestCase
+{
+    use ClockSensitiveTrait;
+    use Factories;
+    use ResetDatabase;
+
+    private const string EMAIL = 'lea@example.com';
+
+    private const string PASSWORD = 'mot-de-passe-choisi';
+
+    private KernelBrowser $client;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        $this->admin = UserFactory::createOne(['email' => 'admin@example.com', 'role' => Role::Admin]);
+        $this->client->loginUser($this->admin);
+    }
+
+    public function testAdministratorInvitesAPerson(): void
+    {
+        $this->invite(self::EMAIL, Role::Admin);
+
+        self::assertResponseRedirects('/admin/users', 303);
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailAddressContains($email, 'To', self::EMAIL);
+        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Abribus');
+        self::assertEmailHtmlBodyContains($email, 'http://localhost/invitation/');
+        self::assertEmailTextBodyContains($email, 'http://localhost/invitation/');
+        self::assertEmailTextBodyContains($email, 'valable 24 heures');
+
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Invitation envoyée à lea@example.com.');
+        self::assertSame('Invitation en attente', $this->statusOf(self::EMAIL));
+
+        $user = $this->findUser(self::EMAIL);
+        self::assertTrue($user->isPending());
+        self::assertSame(Role::Admin, $user->getRole());
+    }
+
+    public function testEmailAlreadyUsedIsRefused(): void
+    {
+        UserFactory::createOne(['email' => self::EMAIL]);
+
+        $this->invite(self::EMAIL, Role::User);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'Un compte existe déjà avec cet email.');
+        self::assertQueuedEmailCount(0);
+    }
+
+    public function testInviteIsForbiddenToAUser(): void
+    {
+        $this->client->loginUser(UserFactory::createOne());
+
+        $this->client->request('GET', '/admin/users/invite');
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testPendingAccountCannotLogIn(): void
+    {
+        UserFactory::new()->pending()->create(['email' => self::EMAIL]);
+        $this->client->getCookieJar()->clear();
+
+        $this->logIn(self::EMAIL, self::PASSWORD);
+
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#connexion [role="alert"]', 'Identifiants invalides.');
+    }
+
+    public function testInviteeActivatesTheAccountWithTheLink(): void
+    {
+        $link = $this->inviteAndGetLink();
+
+        $this->followInvitationLink($link);
+        self::assertSelectorTextContains('main', 'Choisissez votre mot de passe');
+        $this->choosePassword(self::PASSWORD);
+
+        self::assertResponseRedirects('/', 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Votre compte est activé, vous pouvez vous connecter.');
+
+        $this->logIn(self::EMAIL, self::PASSWORD);
+        self::assertResponseRedirects('/devices');
+
+        $this->client->loginUser($this->admin);
+        self::assertSame('Actif', $this->statusOf(self::EMAIL));
+    }
+
+    public function testInvitationLinkCannotBeUsedTwice(): void
+    {
+        $link = $this->inviteAndGetLink();
+        $this->followInvitationLink($link);
+        $this->choosePassword(self::PASSWORD);
+
+        $this->followInvitationLink($link);
+
+        $this->assertInvitationRefused();
+    }
+
+    public function testInvitationLinkIsStillValidJustBeforeADay(): void
+    {
+        $link = $this->inviteAndGetLink();
+
+        self::mockTime('+23 hours 59 minutes');
+        $this->followInvitationLink($link);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('input[name="reset_password[newPassword][first]"]');
+    }
+
+    public function testInvitationLinkExpiresAfterADay(): void
+    {
+        $link = $this->inviteAndGetLink();
+
+        self::mockTime('+24 hours');
+        $this->followInvitationLink($link);
+
+        $this->assertInvitationRefused();
+    }
+
+    public function testInvalidInvitationLinkIsRefused(): void
+    {
+        $this->client->getCookieJar()->clear();
+
+        $this->followInvitationLink('/invitation/'.str_repeat('x', 40));
+
+        $this->assertInvitationRefused();
+    }
+
+    public function testActiveAccountIsSentToTheLoginForm(): void
+    {
+        UserFactory::createOne(['email' => self::EMAIL]);
+        $this->client->getCookieJar()->clear();
+        $crawler = $this->client->request('GET', '/reset-password');
+        $this->client->submit($crawler->selectButton('Envoyer le lien')->form(['reset_password_request[email]' => self::EMAIL]));
+        $token = $this->tokenFromEmail('#http://localhost/reset-password/reset/(\S+)#');
+
+        $this->followInvitationLink('/invitation/'.$token);
+
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', 'Votre compte est déjà activé, connectez-vous.');
+    }
+
+    /**
+     * Invite le compte puis se déconnecte : la suite se joue côté invité.
+     */
+    private function inviteAndGetLink(): string
+    {
+        $this->invite(self::EMAIL, Role::User);
+        $this->client->getCookieJar()->clear();
+
+        return '/invitation/'.$this->tokenFromEmail('#http://localhost/invitation/(\S+)#');
+    }
+
+    private function tokenFromEmail(string $pattern): string
+    {
+        $email = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $email);
+        if (1 !== preg_match($pattern, (string) $email->getTextBody(), $matches)) {
+            self::fail("Aucun lien dans l'email.");
+        }
+
+        return $matches[1];
+    }
+
+    private function followInvitationLink(string $link): void
+    {
+        $this->client->request('GET', $link);
+
+        // Le jeton quitte l'URL pour la session.
+        self::assertResponseRedirects('/invitation');
+        $this->client->followRedirect();
+    }
+
+    private function choosePassword(string $password): void
+    {
+        $this->client->submit($this->client->getCrawler()->selectButton('Activer mon compte')->form([
+            'reset_password[newPassword][first]' => $password,
+            'reset_password[newPassword][second]' => $password,
+        ]));
+    }
+
+    /**
+     * Retour sur « Mot de passe oublié », qui permet de demander un nouveau lien.
+     */
+    private function assertInvitationRefused(): void
+    {
+        self::assertResponseRedirects('/reset-password');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', "Ce lien d'invitation n'est plus valable. Demandez un nouveau lien ci-dessous.");
+        self::assertSelectorExists('input[name="reset_password_request[email]"]');
+    }
+
+    private function logIn(string $email, string $password): void
+    {
+        $crawler = $this->client->request('GET', '/');
+        $this->client->submit($crawler->selectButton('Se connecter')->form([
+            '_username' => $email,
+            '_password' => $password,
+        ]));
+    }
+
+    private function invite(string $email, Role $role): void
+    {
+        $crawler = $this->client->request('GET', '/admin/users');
+        $crawler = $this->client->click($crawler->selectLink('Inviter un compte')->link());
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($crawler->selectButton("Envoyer l'invitation")->form([
+            'invite_user[email]' => $email,
+            'invite_user[role]' => $role->value,
+        ]));
+    }
+
+    /**
+     * Badge de statut de la ligne du compte dans la liste.
+     */
+    private function statusOf(string $email): string
+    {
+        $crawler = $this->client->request('GET', '/admin/users');
+        $row = $crawler->filter('main tbody tr')->reduce(static fn (Crawler $row): bool => str_starts_with(trim($row->filter('td')->text()), $email));
+        self::assertCount(1, $row);
+
+        return trim($row->filter('td')->eq(2)->text());
+    }
+
+    private function findUser(string $email): User
+    {
+        $user = repository(User::class)->findOneBy(['email' => $email]);
+        self::assertInstanceOf(User::class, $user);
+
+        return $user;
+    }
+}
