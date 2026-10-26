@@ -23,7 +23,7 @@ La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://
 
 ## Comptes utilisateurs
 
-L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
+L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Un administrateur crée les comptes par invitation (voir plus bas). Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
 
 ```bash
 make console c="app:user:create lea@example.com --role=ROLE_ADMIN"
@@ -37,7 +37,9 @@ La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. 
 
 Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs jetons cessent de fonctionner. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé.
 
-Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`.
+Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, statut (« Actif » ou « Invitation en attente »), nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`. « Modifier » change le rôle d'un compte, jamais son email ; ses sessions ouvertes sont alors déconnectées.
+
+« Inviter un compte » crée un compte en attente à partir d'un email et d'un rôle, sans mot de passe : il ne peut pas se connecter, et l'échec de connexion ne le révèle pas. L'invité reçoit « Activez votre compte Abribus », avec un lien valable 24 h et utilisable une fois (en dev, dans Mailpit). Le lien mène à « Choisissez votre mot de passe » (`/invitation`), qui active le compte puis renvoie vers la connexion. Un lien expiré ou invalide renvoie vers « Mot de passe oublié ? », d'où l'invité demande lui-même un nouveau lien : choisir un mot de passe par ce chemin active aussi le compte. Une seule demande par heure étant acceptée pour un même compte, ce chemin ne fonctionne qu'une heure après l'invitation.
 
 ## Emails
 
