@@ -72,7 +72,7 @@ final class AccountDeletionTest extends WebTestCase
         $this->deleteAccount('mauvais-mot-de-passe');
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Le mot de passe actuel est incorrect.');
+        self::assertSelectorTextContains('main form', 'Le mot de passe actuel est incorrect.');
         UserFactory::assert()->exists(['email' => self::EMAIL]);
         DeviceFactory::assert()->count(1);
         DisplayConfigurationFactory::assert()->count(1);

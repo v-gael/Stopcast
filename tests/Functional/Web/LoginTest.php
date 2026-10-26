@@ -91,11 +91,34 @@ final class LoginTest extends WebTestCase
     {
         $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
 
-        $this->client->request('GET', '/logout');
+        $this->logOut();
 
         self::assertResponseRedirects('/');
         $this->client->request('GET', '/account');
         self::assertResponseRedirects('/');
+    }
+
+    public function testLogoutByGetIsRefusedAndKeepsTheSession(): void
+    {
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
+
+        $this->client->request('GET', '/logout');
+
+        self::assertResponseStatusCodeSame(405);
+        $this->client->request('GET', '/account');
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testLogoutWithoutCsrfTokenKeepsTheSession(): void
+    {
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
+
+        $this->client->request('POST', '/logout');
+
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('GET', '/account');
+        self::assertResponseIsSuccessful();
     }
 
     public function testAnonymousVisitorIsSentToTheShowcase(): void

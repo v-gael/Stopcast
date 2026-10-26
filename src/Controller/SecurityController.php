@@ -19,7 +19,7 @@ final class SecurityController extends AbstractController
         throw new \LogicException('Intercepté par form_login du firewall main.');
     }
 
-    #[Route('/logout', name: 'app_logout', methods: ['GET'])]
+    #[Route('/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(): never
     {
         throw new \LogicException('Intercepté par logout du firewall main.');

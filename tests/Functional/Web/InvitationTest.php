@@ -78,7 +78,7 @@ final class InvitationTest extends WebTestCase
         $this->invite(self::EMAIL, Role::User);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Un compte existe déjà avec cet email.');
+        self::assertSelectorTextContains('main form', 'Un compte existe déjà avec cet email.');
         self::assertQueuedEmailCount(0);
     }
 

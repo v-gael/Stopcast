@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Web;
 
 use App\Entity\User;
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
@@ -15,6 +16,7 @@ final class AccountTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -40,7 +42,9 @@ final class AccountTest extends WebTestCase
         self::assertSame('/account/password', $crawler->selectLink('Modifier mon mot de passe')->attr('href'));
         self::assertSame('/account', $crawler->filter('header nav')->selectLink('Mon compte')->attr('href'));
         self::assertSame('/devices', $crawler->filter('header nav')->selectLink('Dispositifs')->attr('href'));
-        self::assertSame('/logout', $crawler->filter('header nav')->selectLink('Se déconnecter')->attr('href'));
+        $logout = $crawler->filter('header nav')->selectButton('Se déconnecter')->form();
+        self::assertSame('POST', $logout->getMethod());
+        self::assertStringEndsWith('/logout', $logout->getUri());
     }
 
     public function testWrongCurrentPasswordIsRefused(): void
@@ -48,7 +52,7 @@ final class AccountTest extends WebTestCase
         $this->changePassword('mauvais-mot-de-passe', self::NEW_PASSWORD, self::NEW_PASSWORD);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Le mot de passe actuel est incorrect.');
+        self::assertSelectorTextContains('main form', 'Le mot de passe actuel est incorrect.');
         $this->assertCanLogInWith(UserFactory::DEFAULT_PASSWORD);
     }
 
@@ -57,7 +61,7 @@ final class AccountTest extends WebTestCase
         $this->changePassword(UserFactory::DEFAULT_PASSWORD, 'court', 'court');
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Le mot de passe doit faire au moins 12 caractères.');
+        self::assertSelectorTextContains('main form', 'Le mot de passe doit faire au moins 12 caractères.');
     }
 
     public function testMismatchedConfirmationIsRefused(): void
@@ -65,7 +69,7 @@ final class AccountTest extends WebTestCase
         $this->changePassword(UserFactory::DEFAULT_PASSWORD, self::NEW_PASSWORD, 'autre-mot-de-passe');
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Les deux mots de passe ne correspondent pas.');
+        self::assertSelectorTextContains('main form', 'Les deux mots de passe ne correspondent pas.');
     }
 
     public function testPasswordIsChangedAndTheNewOneOpensTheAccount(): void
@@ -96,7 +100,7 @@ final class AccountTest extends WebTestCase
      */
     private function assertCanLogInWith(string $password): void
     {
-        $this->client->request('GET', '/logout');
+        $this->logOut();
 
         $crawler = $this->client->request('GET', '/');
         $this->client->submit($crawler->selectButton('Se connecter')->form([

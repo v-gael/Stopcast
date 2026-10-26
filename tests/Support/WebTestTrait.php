@@ -39,6 +39,15 @@ trait WebTestTrait
     }
 
     /**
+     * Déconnexion depuis le bouton de la navigation de l'espace.
+     */
+    private function logOut(): void
+    {
+        $crawler = $this->browser()->request('GET', '/account');
+        $this->browser()->submit($crawler->filter('header nav')->selectButton('Se déconnecter')->form());
+    }
+
+    /**
      * Ligne d'un compte dans la liste des comptes.
      */
     private function accountRow(Crawler $crawler, string $email): Crawler
