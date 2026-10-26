@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Web;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
@@ -58,6 +59,18 @@ final class AdminUsersTest extends WebTestCase
 
         self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
         self::assertSame(['0', '2', '1'], array_column($rows, 2));
+    }
+
+    public function testListLinksEveryAccountToItsEditPage(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+
+        $crawler = $this->client->request('GET', '/admin/users');
+
+        self::assertSame(
+            [\sprintf('/admin/users/%d/edit', $alice->getId()), \sprintf('/admin/users/%d/edit', $this->admin->getId())],
+            $crawler->filter('main tbody')->selectLink('Modifier')->each(static fn (Crawler $link): ?string => $link->attr('href')),
+        );
     }
 
     public function testListIsForbiddenToAUser(): void
@@ -141,6 +154,57 @@ final class AdminUsersTest extends WebTestCase
         $this->client->request('GET', '/devices');
 
         self::assertResponseRedirects('http://localhost/');
+    }
+
+    public function testEditFormShowsTheCurrentRoleAndNoEmailField(): void
+    {
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+
+        $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $bob->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('main', 'bob@abribus.test');
+        self::assertSame(User::ROLE_ADMIN, $crawler->filter('main form input[name="user_role[role]"]:checked')->attr('value'));
+        self::assertCount(0, $crawler->filter('main form input[name*="email"]'));
+    }
+
+    public function testUnknownRoleIsRefused(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $alice->getId()));
+        $form = $crawler->selectButton('Enregistrer')->form();
+        $form->disableValidation()->setValues(['user_role[role]' => 'ROLE_SUPER_ADMIN']);
+
+        $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(User::ROLE_USER, refresh($alice)->getRole());
+    }
+
+    #[DataProvider('editMethods')]
+    public function testEditIsForbiddenToAUser(string $method): void
+    {
+        $this->client->loginUser(UserFactory::createOne());
+
+        $this->client->request($method, \sprintf('/admin/users/%d/edit', $this->admin->getId()));
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function editMethods(): iterable
+    {
+        yield 'GET' => ['GET'];
+        yield 'POST' => ['POST'];
+    }
+
+    public function testEditOfAnUnknownAccountIsNotFound(): void
+    {
+        $this->client->request('GET', '/admin/users/999999/edit');
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     /**
