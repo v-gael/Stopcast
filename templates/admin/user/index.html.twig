@@ -50,6 +50,14 @@
                                     </form>
                                 {% endif %}
                                 <a href="{{ path('app_admin_user_edit', {id: user.id}) }}" class="font-medium text-amber-600 hover:text-amber-500">Modifier<span class="sr-only"> {{ user.email }}</span></a>
+                                {# Son propre compte se supprime depuis « Mon compte », avec le mot de passe. #}
+                                {% if user.id != app.user.id %}
+                                    <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}"
+                                          data-turbo-confirm="Supprimer le compte {{ user.email }}{{ row.deviceCount == 1 ? ' et son dispositif' : (row.deviceCount > 1 ? ' et ses ' ~ row.deviceCount ~ ' dispositifs') }} ? Cette action est définitive.">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete-user-' ~ user.id) }}">
+                                        <button type="submit" class="font-medium text-red-600 hover:text-red-500">Supprimer<span class="sr-only"> {{ user.email }}</span></button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
