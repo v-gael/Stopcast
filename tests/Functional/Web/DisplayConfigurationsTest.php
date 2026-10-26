@@ -104,6 +104,70 @@ final class DisplayConfigurationsTest extends WebTestCase
     }
 
     /**
+     * @return iterable<string, array{string, string|null}>
+     */
+    public static function rotationPages(): iterable
+    {
+        yield 'liste des configurations' => ['/display-configurations', 'index'];
+        yield 'page du dispositif' => ['/devices/%d', null];
+    }
+
+    #[DataProvider('rotationPages')]
+    public function testRotationFormsRecordTheirPageWhichIsRefreshedInPlace(string $path, ?string $return): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf($path, $device->getId()));
+
+        self::assertSame('morph', $crawler->filter('head meta[name="turbo-refresh-method"]')->attr('content'));
+        self::assertSame('preserve', $crawler->filter('head meta[name="turbo-refresh-scroll"]')->attr('content'));
+        $items = $crawler->filter('main li');
+        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Supprimer')] as $button) {
+            self::assertSame($return, $button->form()->getValues()['_return'] ?? null);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function rotationButtons(): iterable
+    {
+        yield 'montée' => ['Monter'];
+        yield 'descente' => ['Descendre'];
+        yield 'suppression' => ['Supprimer'];
+    }
+
+    #[DataProvider('rotationButtons')]
+    public function testRotationActionFromTheListReturnsToTheList(string $button): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', '/display-configurations');
+        $this->client->submit($crawler->filter('main li')->eq('Monter' === $button ? 1 : 0)->selectButton($button)->form());
+
+        self::assertResponseRedirects('/display-configurations', 303);
+    }
+
+    public function testUnknownReturnValueFallsBackToTheDevice(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', '/display-configurations');
+        $form = $crawler->filter('main li')->eq(0)->selectButton('Descendre')->form();
+        $form['_return'] = 'https://example.com/';
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        self::assertSame(['Deuxième', 'Premier'], $this->displayedLabels($device));
+    }
+
+    /**
      * @return iterable<string, array{string, string}>
      */
     public static function configurationActions(): iterable

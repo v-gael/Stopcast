@@ -1,5 +1,7 @@
 {# Configurations d'un dispositif (« device ») dans l'ordre de rotation, masquées comprises. #}
 {% set configurations = device.displayConfigurationsInRotationOrder %}
+{# Depuis la liste des configurations, les actions y ramènent ; sinon, vers le dispositif. #}
+{% set from_index = app.current_route == 'app_display_configuration_index' %}
 {% if configurations is empty %}
     <p class="text-slate-600">Aucune configuration : le dispositif n'a rien à afficher.</p>
 {% else %}
@@ -15,6 +17,7 @@
                         {% if move.show %}
                             <form method="post" action="{{ path(move.route, {id: configuration.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('move-display-configuration-' ~ configuration.id) }}">
+                                {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
                                 <button type="submit" title="{{ move.title }}" class="flex size-7 items-center justify-center rounded-md text-slate-500 ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
                                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><path d="{{ move.icon }}"/></svg>
                                     <span class="sr-only">{{ move.label }}</span>
@@ -40,6 +43,7 @@
                     <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
                           data-turbo-confirm="Supprimer la configuration « {{ configuration.label ?: configuration.quay.name }} » ? Cette action est définitive.">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
+                        {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
                         <twig:Button type="submit" variant="danger">Supprimer</twig:Button>
                     </form>
                 </div>

@@ -164,7 +164,10 @@ final class DevicesTest extends WebTestCase
         $oldToken = $device->getToken();
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        $this->client->submit($crawler->selectButton('Régénérer le jeton')->form());
+        $form = $crawler->selectButton('Régénérer le jeton')->form();
+        // Pas un rafraîchissement Turbo : la page s'affiche en haut, avec le nouveau jeton.
+        self::assertSame('advance', $form->getFormNode()->getAttribute('data-turbo-action'));
+        $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();

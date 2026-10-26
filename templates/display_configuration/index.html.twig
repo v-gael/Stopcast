@@ -2,6 +2,12 @@
 
 {% block title %}Configurations d'affichage · Abribus{% endblock %}
 
+{% block meta %}
+    {# Une action qui ramène ici met la page à jour sans la faire remonter. #}
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+{% endblock %}
+
 {% block content %}
     <h1 class="mb-6 text-2xl font-bold text-slate-900">Configurations d'affichage</h1>
 
