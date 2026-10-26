@@ -92,8 +92,8 @@ final class AccountDeletionTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
-        self::assertEmailHtmlBodyContains($email, 'Votre compte Abribus a été supprimé.');
-        self::assertEmailTextBodyContains($email, "Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.");
+        self::assertEmailHtmlBodyContains($email, "Votre compte Abribus a été supprimé, avec ses écrans d'affichage.");
+        self::assertEmailTextBodyContains($email, "Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.");
         self::assertEmailHtmlBodyNotContains($email, 'href');
         self::assertEmailTextBodyNotContains($email, 'http');
 
