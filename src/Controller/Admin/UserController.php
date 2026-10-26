@@ -11,10 +11,12 @@ use App\Form\UserRoleType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 #[Route('/admin/users')]
 final class UserController extends AbstractController
@@ -46,6 +48,23 @@ final class UserController extends AbstractController
         return $this->render('admin/user/invite.html.twig', [
             'form' => $form,
         ]);
+    }
+
+    #[Route('/{id}/resend-invitation', name: 'app_admin_user_resend_invitation', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid(new Expression('"resend-invitation-" ~ args["user"].getId()'))]
+    public function resendInvitation(User $user, UserInviter $userInviter): Response
+    {
+        if (!$user->isPending()) {
+            $this->addFlash('error', \sprintf('%s a déjà activé son compte : rien à renvoyer.', $user->getEmail()));
+
+            return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
+        }
+
+        $userInviter->resend($user);
+
+        $this->addFlash('success', \sprintf('Invitation renvoyée à %s.', $user->getEmail()));
+
+        return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{id}/edit', name: 'app_admin_user_edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
