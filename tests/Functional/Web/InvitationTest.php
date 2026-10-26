@@ -61,6 +61,14 @@ final class InvitationTest extends WebTestCase
         self::assertSame(Role::Admin, $user->getRole());
     }
 
+    public function testInviteFormProposesTheUserRoleByDefault(): void
+    {
+        $crawler = $this->client->request('GET', '/admin/users/invite');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(Role::User->value, $crawler->filter('main form input[name="invite_user[role]"]:checked')->attr('value'));
+    }
+
     public function testEmailAlreadyUsedIsRefused(): void
     {
         UserFactory::createOne(['email' => self::EMAIL]);
@@ -166,6 +174,25 @@ final class InvitationTest extends WebTestCase
         self::assertResponseRedirects('/');
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="alert"]', 'Votre compte est déjà activé, connectez-vous.');
+    }
+
+    public function testForgottenPasswordAlsoActivatesAPendingAccount(): void
+    {
+        UserFactory::new()->pending()->create(['email' => self::EMAIL]);
+        $this->client->getCookieJar()->clear();
+        $crawler = $this->client->request('GET', '/reset-password');
+        $this->client->submit($crawler->selectButton('Envoyer le lien')->form(['reset_password_request[email]' => self::EMAIL]));
+        $this->client->request('GET', '/reset-password/reset/'.$this->tokenFromEmail('#http://localhost/reset-password/reset/(\S+)#'));
+
+        $crawler = $this->client->followRedirect();
+
+        $this->client->submit($crawler->selectButton('Enregistrer')->form([
+            'reset_password[newPassword][first]' => self::PASSWORD,
+            'reset_password[newPassword][second]' => self::PASSWORD,
+        ]));
+        $this->logIn(self::EMAIL, self::PASSWORD);
+
+        self::assertResponseRedirects('/devices');
     }
 
     /**
