@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\Role;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -23,12 +24,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[UniqueEntity(fields: ['email'], message: 'Un compte existe déjà avec cet email.')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    public const string ROLE_USER = 'ROLE_USER';
-
-    public const string ROLE_ADMIN = 'ROLE_ADMIN';
-
-    public const array ROLES = [self::ROLE_USER, self::ROLE_ADMIN];
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
@@ -60,7 +55,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $email, string $role = self::ROLE_USER)
+    public function __construct(string $email, Role $role = Role::User)
     {
         $this->email = $email;
         $this->changeRole($role);
@@ -96,33 +91,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        return array_values(array_unique([...$this->roles, self::ROLE_USER]));
+        return array_values(array_unique([...$this->roles, Role::User->value]));
     }
 
     public function isAdmin(): bool
     {
-        return \in_array(self::ROLE_ADMIN, $this->roles, true);
+        return \in_array(Role::Admin->value, $this->roles, true);
     }
 
-    /**
-     * Le rôle principal du compte, l'un de ROLES.
-     */
-    public function getRole(): string
+    public function getRole(): Role
     {
-        return $this->isAdmin() ? self::ROLE_ADMIN : self::ROLE_USER;
+        return $this->isAdmin() ? Role::Admin : Role::User;
     }
 
     /**
      * Les sessions ouvertes du compte sont déconnectées à leur requête
      * suivante : Security compare leurs rôles à ceux relus en base.
      */
-    public function changeRole(string $role): void
+    public function changeRole(Role $role): void
     {
-        if (!\in_array($role, self::ROLES, true)) {
-            throw new \InvalidArgumentException(\sprintf('Rôle inconnu « %s », attendu : %s.', $role, implode(', ', self::ROLES)));
-        }
-
-        $this->roles = self::ROLE_USER === $role ? [] : [$role];
+        $this->roles = Role::User === $role ? [] : [$role->value];
     }
 
     public function getPassword(): string

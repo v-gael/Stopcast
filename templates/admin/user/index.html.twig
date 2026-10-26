@@ -27,7 +27,7 @@
                                 {{ user.email }}
                             {%- endif -%}
                         </td>
-                        <td class="px-4 py-3"><twig:Badge>{{ user.admin ? 'Administrateur' : 'Utilisateur' }}</twig:Badge></td>
+                        <td class="px-4 py-3"><twig:Badge>{{ user.role.label }}</twig:Badge></td>
                         <td class="px-4 py-3 text-slate-600">{{ row.deviceCount }}</td>
                         <td class="px-4 py-3 text-slate-600">{{ user.createdAt|date('d/m/Y') }}</td>
                         <td class="px-4 py-3 text-right">

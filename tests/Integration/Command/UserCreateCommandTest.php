@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Command;
 
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\UserFactory;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -33,7 +34,7 @@ final class UserCreateCommandTest extends KernelTestCase
         $tester->assertCommandIsSuccessful();
 
         $user = $this->findUser(self::EMAIL);
-        self::assertSame([User::ROLE_USER], $user->getRoles());
+        self::assertSame([Role::User->value], $user->getRoles());
         self::assertTrue($this->passwordHasher()->isPasswordValid($user, self::PASSWORD));
     }
 
@@ -41,10 +42,10 @@ final class UserCreateCommandTest extends KernelTestCase
     {
         $tester = $this->command();
 
-        $tester->execute(['email' => self::EMAIL, '--role' => User::ROLE_ADMIN, '--password' => self::PASSWORD]);
+        $tester->execute(['email' => self::EMAIL, '--role' => Role::Admin->value, '--password' => self::PASSWORD]);
 
         $tester->assertCommandIsSuccessful();
-        self::assertEqualsCanonicalizing([User::ROLE_ADMIN, User::ROLE_USER], $this->findUser(self::EMAIL)->getRoles());
+        self::assertEqualsCanonicalizing([Role::Admin->value, Role::User->value], $this->findUser(self::EMAIL)->getRoles());
     }
 
     public function testAsksThePasswordTwiceWhenNotGiven(): void

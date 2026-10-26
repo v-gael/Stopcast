@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Web;
 
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\DisplayConfigurationFactory;
 use App\Factory\UserFactory;
@@ -114,7 +115,7 @@ final class AccountDeletionTest extends WebTestCase
 
     public function testLastAdminCanDeleteTheirAccount(): void
     {
-        $admin = UserFactory::createOne(['email' => 'admin@example.com', 'role' => User::ROLE_ADMIN]);
+        $admin = UserFactory::createOne(['email' => 'admin@example.com', 'role' => Role::Admin]);
 
         $this->client->loginUser($admin);
         $this->deleteAccount(UserFactory::DEFAULT_PASSWORD);

@@ -7,6 +7,7 @@ namespace App\DataFixtures;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\DisplayConfigurationFactory;
 use App\Factory\UserFactory;
@@ -45,7 +46,7 @@ final class AppFixtures extends Fixture
         // Construits avant la purge : un jeton invalide arrête tout sans rien supprimer.
         $devUser = UserFactory::new([
             'email' => self::DEV_USER_EMAIL,
-            'role' => User::ROLE_ADMIN,
+            'role' => Role::Admin,
             'password' => self::DEV_USER_PASSWORD,
         ])->withoutPersisting()->create();
         $fixedDevice = '' !== $this->fixedDeviceToken ? new Device($devUser, self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;

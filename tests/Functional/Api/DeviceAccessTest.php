@@ -8,7 +8,7 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\Route;
-use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\UserFactory;
 use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -112,7 +112,7 @@ final class DeviceAccessTest extends WebTestCase
     public function testUserSessionDoesNotOpenNextPassages(): void
     {
         // Vraie connexion par le formulaire : loginUser() injecterait le jeton quel que soit le firewall.
-        $user = UserFactory::createOne(['role' => User::ROLE_ADMIN]);
+        $user = UserFactory::createOne(['role' => Role::Admin]);
         $crawler = $this->client->request('GET', '/');
         $this->client->submit($crawler->selectButton('Se connecter')->form([
             '_username' => $user->getEmail(),

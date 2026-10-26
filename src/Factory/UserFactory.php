@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Entity\User;
+use App\Enum\Role;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
@@ -31,7 +32,7 @@ final class UserFactory extends PersistentObjectFactory
     {
         return [
             'email' => self::faker()->unique()->safeEmail(),
-            'role' => User::ROLE_USER,
+            'role' => Role::User,
             'password' => self::DEFAULT_PASSWORD,
         ];
     }

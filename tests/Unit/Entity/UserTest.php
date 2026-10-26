@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Entity;
 
 use App\Entity\User;
+use App\Enum\Role;
 use PHPUnit\Framework\TestCase;
 
 final class UserTest extends TestCase
@@ -13,30 +14,21 @@ final class UserTest extends TestCase
     {
         $user = new User('alice@abribus.test');
 
-        $user->changeRole(User::ROLE_ADMIN);
+        $user->changeRole(Role::Admin);
 
         self::assertTrue($user->isAdmin());
-        self::assertSame(User::ROLE_ADMIN, $user->getRole());
+        self::assertSame(Role::Admin, $user->getRole());
         self::assertEqualsCanonicalizing(['ROLE_ADMIN', 'ROLE_USER'], $user->getRoles());
     }
 
     public function testAdministratorIsDemotedToUser(): void
     {
-        $user = new User('alice@abribus.test', User::ROLE_ADMIN);
+        $user = new User('alice@abribus.test', Role::Admin);
 
-        $user->changeRole(User::ROLE_USER);
+        $user->changeRole(Role::User);
 
         self::assertFalse($user->isAdmin());
-        self::assertSame(User::ROLE_USER, $user->getRole());
+        self::assertSame(Role::User, $user->getRole());
         self::assertSame(['ROLE_USER'], $user->getRoles());
-    }
-
-    public function testUnknownRoleIsRejected(): void
-    {
-        $user = new User('alice@abribus.test');
-
-        $this->expectException(\InvalidArgumentException::class);
-
-        $user->changeRole('ROLE_SUPER_ADMIN');
     }
 }

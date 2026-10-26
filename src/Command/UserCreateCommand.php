@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\User;
+use App\Enum\Role;
 use App\Validator\PasswordRequirements;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -39,7 +40,7 @@ class UserCreateCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Email du compte, qui sert à se connecter')
-            ->addOption('role', null, InputOption::VALUE_REQUIRED, \sprintf('Rôle du compte (%s)', implode(' ou ', User::ROLES)), User::ROLE_USER)
+            ->addOption('role', null, InputOption::VALUE_REQUIRED, \sprintf('Rôle du compte (%s)', $this->roleValues()), Role::User->value)
             ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe ; demandé de façon masquée s\'il est absent')
         ;
     }
@@ -50,11 +51,12 @@ class UserCreateCommand extends Command
 
         /** @var string $email */
         $email = $input->getArgument('email');
-        /** @var string $role */
-        $role = $input->getOption('role');
+        /** @var string $roleOption */
+        $roleOption = $input->getOption('role');
+        $role = Role::tryFrom($roleOption);
 
-        if (!\in_array($role, User::ROLES, true)) {
-            $io->error(\sprintf('Rôle inconnu « %s », attendu : %s.', $role, implode(' ou ', User::ROLES)));
+        if (null === $role) {
+            $io->error(\sprintf('Rôle inconnu « %s », attendu : %s.', $roleOption, $this->roleValues()));
 
             return Command::FAILURE;
         }
@@ -89,7 +91,7 @@ class UserCreateCommand extends Command
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        $io->success(\sprintf('Compte %s créé (%s).', $email, $role));
+        $io->success(\sprintf('Compte %s créé (%s).', $email, $role->value));
 
         return Command::SUCCESS;
     }
@@ -118,5 +120,10 @@ class UserCreateCommand extends Command
         }
 
         $io->error($messages);
+    }
+
+    private function roleValues(): string
+    {
+        return implode(' ou ', array_map(static fn (Role $role): string => $role->value, Role::cases()));
     }
 }

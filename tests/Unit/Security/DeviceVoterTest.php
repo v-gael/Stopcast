@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Security;
 
 use App\Entity\Device;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Security\Voter\DeviceVoter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -47,7 +48,7 @@ final class DeviceVoterTest extends TestCase
     {
         $device = new Device(new User('lea@example.com'), 'Salon');
 
-        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor(new User('admin@example.com', User::ROLE_ADMIN)), $device, $attribute));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor(new User('admin@example.com', Role::Admin)), $device, $attribute));
     }
 
     public function testAnonymousVisitorIsDenied(): void

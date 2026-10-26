@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\User;
+use App\Enum\Role;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -19,15 +20,13 @@ final class UserRoleType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $builder->add('role', ChoiceType::class, [
+        $builder->add('role', EnumType::class, [
             'label' => 'Rôle',
-            'choices' => [
-                'Utilisateur' => User::ROLE_USER,
-                'Administrateur' => User::ROLE_ADMIN,
-            ],
+            'class' => Role::class,
+            'choice_label' => static fn (Role $role): string => $role->label(),
             'expanded' => true,
-            'getter' => static fn (User $user): string => $user->getRole(),
-            'setter' => static fn (User $user, string $role) => $user->changeRole($role),
+            'getter' => static fn (User $user): Role => $user->getRole(),
+            'setter' => static fn (User $user, Role $role) => $user->changeRole($role),
         ]);
     }
 

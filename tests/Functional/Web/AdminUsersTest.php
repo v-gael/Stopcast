@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -28,14 +29,14 @@ final class AdminUsersTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        $this->admin = UserFactory::createOne(['email' => 'admin@abribus.test', 'role' => User::ROLE_ADMIN]);
+        $this->admin = UserFactory::createOne(['email' => 'admin@abribus.test', 'role' => Role::Admin]);
         $this->client->loginUser($this->admin);
     }
 
     public function testListShowsEveryAccountNewestFirst(): void
     {
         $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
 
         $crawler = $this->client->request('GET', '/admin/users');
         $rows = $this->rows($crawler);
@@ -103,7 +104,7 @@ final class AdminUsersTest extends WebTestCase
     {
         $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
 
-        $this->changeRole($alice, User::ROLE_ADMIN);
+        $this->changeRole($alice, Role::Admin);
 
         self::assertResponseRedirects('/admin/users', 303);
         $this->client->followRedirect();
@@ -117,9 +118,9 @@ final class AdminUsersTest extends WebTestCase
 
     public function testAdministratorDemotesAnotherAdministrator(): void
     {
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
 
-        $this->changeRole($bob, User::ROLE_USER);
+        $this->changeRole($bob, Role::User);
 
         self::assertResponseRedirects('/admin/users', 303);
 
@@ -131,7 +132,7 @@ final class AdminUsersTest extends WebTestCase
 
     public function testAdministratorWhoDemotesThemselvesIsLoggedOut(): void
     {
-        $this->changeRole($this->admin, User::ROLE_USER);
+        $this->changeRole($this->admin, Role::User);
 
         self::assertResponseRedirects('/admin/users', 303);
         $this->client->followRedirect();
@@ -148,7 +149,7 @@ final class AdminUsersTest extends WebTestCase
         $this->client->getCookieJar()->clear();
         $this->client->loginUser($this->admin);
 
-        $this->changeRole($alice, User::ROLE_ADMIN);
+        $this->changeRole($alice, Role::Admin);
 
         $this->client->getCookieJar()->set($aliceSession);
         $this->client->request('GET', '/devices');
@@ -158,13 +159,13 @@ final class AdminUsersTest extends WebTestCase
 
     public function testEditFormShowsTheCurrentRoleAndNoEmailField(): void
     {
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
 
         $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $bob->getId()));
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('main', 'bob@abribus.test');
-        self::assertSame(User::ROLE_ADMIN, $crawler->filter('main form input[name="user_role[role]"]:checked')->attr('value'));
+        self::assertSame(Role::Admin->value, $crawler->filter('main form input[name="user_role[role]"]:checked')->attr('value'));
         self::assertCount(0, $crawler->filter('main form input[name*="email"]'));
     }
 
@@ -178,7 +179,7 @@ final class AdminUsersTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame(User::ROLE_USER, refresh($alice)->getRole());
+        self::assertSame(Role::User, refresh($alice)->getRole());
     }
 
     #[DataProvider('editMethods')]
@@ -215,11 +216,11 @@ final class AdminUsersTest extends WebTestCase
         return $crawler->filter('main tbody tr')->each(static fn (Crawler $row): array => $row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())));
     }
 
-    private function changeRole(User $user, string $role): void
+    private function changeRole(User $user, Role $role): void
     {
         $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $user->getId()));
         self::assertResponseIsSuccessful();
 
-        $this->client->submit($crawler->selectButton('Enregistrer')->form(['user_role[role]' => $role]));
+        $this->client->submit($crawler->selectButton('Enregistrer')->form(['user_role[role]' => $role->value]));
     }
 }
