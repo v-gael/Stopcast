@@ -10,7 +10,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Zenstruck\Foundry\Persistence\PersistentObjectFactory;
 
 /**
- * « password » reçoit le mot de passe en clair : il est haché à l'instanciation.
+ * « password » reçoit le mot de passe en clair : il est haché à l'instanciation (null : compte en attente).
  *
  * @extends PersistentObjectFactory<User>
  */
@@ -37,10 +37,21 @@ final class UserFactory extends PersistentObjectFactory
         ];
     }
 
+    /**
+     * Compte invité qui n'a pas encore choisi son mot de passe.
+     */
+    public function pending(): static
+    {
+        return $this->with(['password' => null]);
+    }
+
     protected function initialize(): static
     {
         return $this->afterInstantiate(function (User $user): void {
-            $user->setPassword($this->passwordHasher->hashPassword($user, $user->getPassword()));
+            $password = $user->getPassword();
+            if (null !== $password) {
+                $user->setPassword($this->passwordHasher->hashPassword($user, $password));
+            }
         });
     }
 }
