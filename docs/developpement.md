@@ -94,13 +94,15 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
 
-En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `tailwind:build --watch` : modifier une classe dans un template recompile la CSS, il suffit de recharger la page. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
+En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `bin/tailwind-watch` : une compilation complète au démarrage, puis une nouvelle dès que le contenu d'un fichier listé en `@source` dans `app.css` change. Il suffit de recharger la page, une à deux secondes après l'enregistrement. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
 
 ```bash
 docker compose logs -f tailwind
 ```
 
-Si une modification n'est pas prise en compte, vérifier d'abord ces logs (une ligne `Done in …` par recompilation), puis relancer le service avec `docker compose restart tailwind`. L'option `--poll` du bundle n'existe plus avec Tailwind v4 : les événements de fichiers du bind mount de Docker Desktop suffisent sur macOS.
+Le script compare chaque seconde une empreinte de ces fichiers : le watcher de Tailwind (`tailwind:build --watch`) manque des modifications faites depuis le Mac sur le bind mount de Docker Desktop (raisons en tête du script). Une compilation en échec est retentée toutes les 5 secondes.
+
+En cas de doute, vérifier ces logs (une ligne `Done in …` par recompilation) ou recompiler à la main : `make console c="tailwind:build"`.
 
 L'image de prod compile la CSS minifiée (`tailwind:build --minify`) puis les assets (`asset-map:compile`) au build : aucun watcher en prod.
 
