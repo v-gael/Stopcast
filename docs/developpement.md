@@ -161,7 +161,7 @@ La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develo
 
 ## Pièges en test
 
-Comportements qu'on ne découvre qu'en lançant les tests :
+Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs aux tests de l'espace web (connexion, ligne de la liste des comptes, jeton d'un lien reçu par email, jeton CSRF qu'aucune page n'affiche) sont dans `tests/Support/WebTestTrait.php`.
 
 - Un jeton CSRF invalide sur une action `#[IsCsrfTokenValid]` lève `InvalidCsrfTokenException`, une exception d'authentification : la réponse est une redirection 302 vers la connexion (`http://localhost/`), pas un 403.
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.

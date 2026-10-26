@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\HttpFoundation\Cookie;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -16,6 +16,7 @@ final class LoginTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -102,23 +103,6 @@ final class LoginTest extends WebTestCase
         $this->client->request('GET', '/account');
 
         self::assertResponseRedirects('/');
-    }
-
-    private function logIn(string $email, string $password, bool $rememberMe = false): void
-    {
-        $crawler = $this->client->request('GET', '/');
-        $form = $crawler->selectButton('Se connecter')->form([
-            '_username' => $email,
-            '_password' => $password,
-        ]);
-
-        if ($rememberMe) {
-            $checkbox = $form['_remember_me'];
-            self::assertInstanceOf(ChoiceFormField::class, $checkbox);
-            $checkbox->tick();
-        }
-
-        $this->client->submit($form);
     }
 
     private function responseCookie(string $name): ?Cookie

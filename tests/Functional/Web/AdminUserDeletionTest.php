@@ -10,14 +10,11 @@ use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\DisplayConfigurationFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -25,6 +22,7 @@ final class AdminUserDeletionTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -112,7 +110,7 @@ final class AdminUserDeletionTest extends WebTestCase
     public function testAdministratorCannotDeleteTheirOwnAccountFromTheList(): void
     {
         $crawler = $this->client->request('GET', '/admin/users');
-        self::assertCount(0, $this->rowOf($crawler, 'admin@example.com')->selectButton('Supprimer'));
+        self::assertCount(0, $this->accountRow($crawler, 'admin@example.com')->selectButton('Supprimer'));
 
         $this->client->request('POST', \sprintf('/admin/users/%d/delete', $this->admin->getId()), ['_token' => $this->csrfToken('delete-user-'.$this->admin->getId())]);
 
@@ -134,43 +132,11 @@ final class AdminUserDeletionTest extends WebTestCase
         UserFactory::assert()->exists(['email' => self::EMAIL]);
     }
 
-    /**
-     * Jeton CSRF valide dans la session du client, comme le porterait un
-     * formulaire forgé : la page n'en affiche pas pour ce compte.
-     */
-    private function csrfToken(string $tokenId): string
-    {
-        $session = $this->client->getRequest()->getSession();
-        $request = new Request();
-        $request->setSession($session);
-
-        $requestStack = self::getContainer()->get(RequestStack::class);
-        self::assertInstanceOf(RequestStack::class, $requestStack);
-        $requestStack->push($request);
-
-        $tokenManager = self::getContainer()->get(CsrfTokenManagerInterface::class);
-        self::assertInstanceOf(CsrfTokenManagerInterface::class, $tokenManager);
-        $token = $tokenManager->getToken($tokenId)->getValue();
-
-        $session->save();
-        $requestStack->pop();
-
-        return $token;
-    }
-
     private function deleteForm(string $email): Form
     {
         $crawler = $this->client->request('GET', '/admin/users');
 
-        return $this->rowOf($crawler, $email)->selectButton('Supprimer')->form();
-    }
-
-    private function rowOf(Crawler $crawler, string $email): Crawler
-    {
-        $row = $crawler->filter('main tbody tr')->reduce(static fn (Crawler $row): bool => str_starts_with(trim($row->filter('td')->text()), $email));
-        self::assertCount(1, $row);
-
-        return $row;
+        return $this->accountRow($crawler, $email)->selectButton('Supprimer')->form();
     }
 
     private function createDeviceWithConfiguration(User $owner): string

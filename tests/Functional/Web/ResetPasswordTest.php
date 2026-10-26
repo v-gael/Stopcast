@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
@@ -17,6 +18,7 @@ final class ResetPasswordTest extends WebTestCase
     use ClockSensitiveTrait;
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -74,10 +76,10 @@ final class ResetPasswordTest extends WebTestCase
         self::assertSelectorTextContains('[role="status"]', 'Votre mot de passe a été modifié, vous pouvez vous connecter.');
         self::assertSelectorExists('input[name="_password"]');
 
-        $this->logIn(UserFactory::DEFAULT_PASSWORD);
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
         self::assertResponseRedirects('/');
 
-        $this->logIn(self::NEW_PASSWORD);
+        $this->logIn(self::EMAIL, self::NEW_PASSWORD);
         self::assertResponseRedirects('/devices');
     }
 
@@ -183,15 +185,6 @@ final class ResetPasswordTest extends WebTestCase
         $this->client->submit($this->client->getCrawler()->selectButton('Enregistrer')->form([
             'reset_password[newPassword][first]' => $password,
             'reset_password[newPassword][second]' => $confirmation,
-        ]));
-    }
-
-    private function logIn(string $password): void
-    {
-        $crawler = $this->client->request('GET', '/');
-        $this->client->submit($crawler->selectButton('Se connecter')->form([
-            '_username' => self::EMAIL,
-            '_password' => $password,
         ]));
     }
 
