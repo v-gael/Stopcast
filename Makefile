@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose check hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -8,7 +8,7 @@ PROD := docker compose -p abribus-prod --env-file .env.prod.local -f compose.yam
 CI := docker compose -p abribus-ci -f compose.yaml -f compose.ci.yaml
 
 ## —— Docker ———————————————————————————————————————————————————————————————
-up: hooks ## Démarre les conteneurs (dev) et active le hook pre-push
+up: hooks ## Démarre les conteneurs (dev) et active les hooks du dépôt
 	docker compose up -d
 
 down: ## Arrête les conteneurs
@@ -73,7 +73,11 @@ composer: ## Lance composer avec les arguments passés (ex: make composer c="req
 check: ## Lance tous les contrôles de la CI (à faire avant une PR)
 	docker compose exec app bin/check
 
-hooks: ## Active le hook pre-push du dépôt (lance make check avant chaque push)
+fix: ## Applique Rector puis PHP CS Fixer (le hook pre-commit le fait sur les fichiers du commit)
+	docker compose exec app php vendor/bin/rector process --no-progress-bar
+	docker compose exec app php vendor/bin/php-cs-fixer fix
+
+hooks: ## Active les hooks du dépôt (pre-commit : corrige le style ; pre-push : lance make check)
 	@git config core.hooksPath .githooks
 
 test: ## Lance PHPUnit

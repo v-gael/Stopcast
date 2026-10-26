@@ -141,11 +141,14 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 
+Un hook `pre-commit`, activé de la même façon, applique Rector puis PHP CS Fixer aux fichiers PHP du commit et les ré-indexe : le style est corrigé avant le commit plutôt que refusé au push. Il ne fait rien si les conteneurs sont arrêtés ou si un fichier n'est indexé qu'en partie (le ré-indexer embarquerait le reste) : `make check` le contrôlera au push. `make fix` applique les mêmes corrections à tout le projet.
+
 PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : liste dans `phpstan.dist.neon`). Pour un usage légitime, l'ignorer ponctuellement avec `// @phpstan-ignore disallowed.function (raison)`.
 
 | Commande | Outil |
 |---|---|
 | `make check` | Tous les contrôles de la CI |
+| `make fix` | Rector puis PHP CS Fixer, en correction |
 | `make test` | PHPUnit |
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
