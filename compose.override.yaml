@@ -25,9 +25,10 @@ services:
       - app_var:/app/var
   ###< app ###
 
-  # Recompile la CSS Tailwind à chaque modification d'un template ou d'un
-  # asset. Même image et mêmes montages que app, pour partager var/tailwind/
-  # (binaire et CSS compilée) : app sert directement la CSS recompilée.
+  # Recompile la CSS Tailwind au démarrage puis à chaque modification d'un
+  # template ou d'un asset (bin/tailwind-watch). Même image et mêmes montages
+  # que app, pour partager var/tailwind/ (binaire et CSS compilée) : app sert
+  # directement la CSS recompilée.
   tailwind:
     image: abribus-dev
     build:
@@ -38,7 +39,7 @@ services:
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true
-    command: ["php", "bin/console", "tailwind:build", "--watch"]
+    command: ["bin/tailwind-watch"]
     depends_on:
       - app
     volumes:
