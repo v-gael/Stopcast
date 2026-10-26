@@ -10,7 +10,8 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 
 /**
- * Supprime définitivement un compte, puis prévient son adresse par email.
+ * Supprime définitivement un compte, puis prévient son adresse par email,
+ * sauf pour un compte en attente : c'est alors une invitation annulée.
  * Les dispositifs, leurs configurations et les demandes de réinitialisation
  * suivent par les clés étrangères en cascade.
  */
@@ -25,9 +26,14 @@ final readonly class AccountDeleter
     public function delete(User $user): void
     {
         $email = $user->getEmail();
+        $wasPending = $user->isPending();
 
         $this->entityManager->remove($user);
         $this->entityManager->flush();
+
+        if ($wasPending) {
+            return;
+        }
 
         // Le worker envoie l'email après la suppression : il ne porte que l'adresse.
         $this->mailer->send(new TemplatedEmail()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Account\AccountDeleter;
 use App\Account\UserInviter;
 use App\Entity\User;
 use App\Form\InviteUserType;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 #[Route('/admin/users')]
@@ -63,6 +65,27 @@ final class UserController extends AbstractController
         $userInviter->resend($user);
 
         $this->addFlash('success', \sprintf('Invitation renvoyée à %s.', $user->getEmail()));
+
+        return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Supprimer son propre compte passe par « Mon compte », avec le mot de passe.
+     */
+    #[Route('/{id}/delete', name: 'app_admin_user_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid(new Expression('"delete-user-" ~ args["user"].getId()'))]
+    public function delete(User $user, #[CurrentUser] User $currentUser, AccountDeleter $accountDeleter): Response
+    {
+        if ($user->getId() === $currentUser->getId()) {
+            $this->addFlash('error', 'Supprimez votre propre compte depuis « Mon compte ».');
+
+            return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
+        }
+
+        $email = $user->getEmail();
+        $accountDeleter->delete($user);
+
+        $this->addFlash('success', \sprintf('Le compte %s a été supprimé.', $email));
 
         return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
     }
