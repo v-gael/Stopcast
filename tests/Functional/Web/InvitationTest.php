@@ -7,10 +7,10 @@ namespace App\Tests\Functional\Web;
 use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
-use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -23,6 +23,7 @@ final class InvitationTest extends WebTestCase
     use ClockSensitiveTrait;
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -245,7 +246,7 @@ final class InvitationTest extends WebTestCase
     public function testResendForAnAccountActivatedMeanwhileSendsNothing(): void
     {
         $user = UserFactory::new()->pending()->create(['email' => self::EMAIL]);
-        $form = $this->rowOf($this->client->request('GET', '/admin/users'), self::EMAIL)->selectButton("Renvoyer l'invitation")->form();
+        $form = $this->accountRow($this->client->request('GET', '/admin/users'), self::EMAIL)->selectButton("Renvoyer l'invitation")->form();
         $user->setPassword('hash');
         save($user);
 
@@ -255,7 +256,7 @@ final class InvitationTest extends WebTestCase
         self::assertQueuedEmailCount(0);
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('[role="alert"]', 'lea@example.com a déjà activé son compte : rien à renvoyer.');
-        self::assertCount(0, $this->rowOf($crawler, self::EMAIL)->selectButton("Renvoyer l'invitation"));
+        self::assertCount(0, $this->accountRow($crawler, self::EMAIL)->selectButton("Renvoyer l'invitation"));
     }
 
     public function testResendIsForbiddenToAUser(): void
@@ -277,17 +278,6 @@ final class InvitationTest extends WebTestCase
         $this->client->getCookieJar()->clear();
 
         return '/invitation/'.$this->tokenFromEmail('#http://localhost/invitation/(\S+)#');
-    }
-
-    private function tokenFromEmail(string $pattern): string
-    {
-        $email = self::getMailerMessage();
-        self::assertInstanceOf(Email::class, $email);
-        if (1 !== preg_match($pattern, (string) $email->getTextBody(), $matches)) {
-            self::fail("Aucun lien dans l'email.");
-        }
-
-        return $matches[1];
     }
 
     private function followInvitationLink(string $link): void
@@ -318,19 +308,10 @@ final class InvitationTest extends WebTestCase
         self::assertSelectorExists('input[name="reset_password_request[email]"]');
     }
 
-    private function logIn(string $email, string $password): void
-    {
-        $crawler = $this->client->request('GET', '/');
-        $this->client->submit($crawler->selectButton('Se connecter')->form([
-            '_username' => $email,
-            '_password' => $password,
-        ]));
-    }
-
     private function resendInvitation(string $email): void
     {
         $crawler = $this->client->request('GET', '/admin/users');
-        $this->client->submit($this->rowOf($crawler, $email)->selectButton("Renvoyer l'invitation")->form());
+        $this->client->submit($this->accountRow($crawler, $email)->selectButton("Renvoyer l'invitation")->form());
     }
 
     private function invite(string $email, Role $role): void
@@ -350,15 +331,7 @@ final class InvitationTest extends WebTestCase
      */
     private function statusOf(string $email): string
     {
-        return trim($this->rowOf($this->client->request('GET', '/admin/users'), $email)->filter('td')->eq(2)->text());
-    }
-
-    private function rowOf(Crawler $crawler, string $email): Crawler
-    {
-        $row = $crawler->filter('main tbody tr')->reduce(static fn (Crawler $row): bool => str_starts_with(trim($row->filter('td')->text()), $email));
-        self::assertCount(1, $row);
-
-        return $row;
+        return trim($this->accountRow($this->client->request('GET', '/admin/users'), $email)->filter('td')->eq(2)->text());
     }
 
     private function findUser(string $email): User

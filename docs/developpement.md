@@ -141,11 +141,14 @@ curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 
+Un hook `pre-commit`, activé de la même façon, applique Rector puis PHP CS Fixer aux fichiers PHP du commit et les ré-indexe : le style est corrigé avant le commit plutôt que refusé au push. Il ne fait rien si les conteneurs sont arrêtés ou si un fichier n'est indexé qu'en partie (le ré-indexer embarquerait le reste) : `make check` le contrôlera au push. `make fix` applique les mêmes corrections à tout le projet.
+
 PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : liste dans `phpstan.dist.neon`). Pour un usage légitime, l'ignorer ponctuellement avec `// @phpstan-ignore disallowed.function (raison)`.
 
 | Commande | Outil |
 |---|---|
 | `make check` | Tous les contrôles de la CI |
+| `make fix` | Rector puis PHP CS Fixer, en correction |
 | `make test` | PHPUnit |
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
@@ -155,6 +158,16 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request.
 
 `make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
+
+## Pièges en test
+
+Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs aux tests de l'espace web (connexion, ligne de la liste des comptes, jeton d'un lien reçu par email, jeton CSRF qu'aucune page n'affiche) sont dans `tests/Support/WebTestTrait.php`.
+
+- Un jeton CSRF invalide sur une action `#[IsCsrfTokenValid]` lève `InvalidCsrfTokenException`, une exception d'authentification : la réponse est une redirection 302 vers la connexion (`http://localhost/`), pas un 403.
+- `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
+- Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
+- La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
+- `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
 
 ## Mettre à jour les dépendances
 
