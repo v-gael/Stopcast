@@ -1,0 +1,13 @@
+{% extends 'email/base.html.twig' %}
+
+{% block content %}
+    {% set link = url('app_accept_invitation', {token: invitationToken.token}) %}
+    <p style="margin: 0 0 16px;">Bonjour,</p>
+    <p style="margin: 0 0 16px;">Un compte a été créé pour vous sur l'espace de gestion Abribus, où vous pourrez gérer vos écrans d'affichage. Pour l'activer, choisissez votre mot de passe en suivant ce lien :</p>
+    <p style="margin: 0 0 16px;">
+        <a href="{{ link }}" style="display: inline-block; padding: 10px 16px; background-color: #f59e0b; color: #0f172a; font-weight: bold; text-decoration: none; border-radius: 6px;">Choisir mon mot de passe</a>
+    </p>
+    <p style="margin: 0 0 16px; font-size: 13px; color: #64748b; word-break: break-all;">{{ link }}</p>
+    <p style="margin: 0 0 16px;">Ce lien est valable {{ lifetimeInHours }} heures et ne sert qu'une fois. Passé ce délai, demandez un nouveau lien depuis « Mot de passe oublié » sur la page de connexion.</p>
+    <p style="margin: 0;">Si vous n'attendiez pas cette invitation, ignorez cet email : aucun compte ne sera activé sans vous.</p>
+{% endblock %}

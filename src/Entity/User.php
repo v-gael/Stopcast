@@ -47,10 +47,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private array $roles;
 
     /**
-     * Mot de passe haché.
+     * Mot de passe haché ; null tant que l'invité ne l'a pas choisi.
      */
-    #[ORM\Column(type: Types::STRING)]
-    private string $password = '';
+    #[ORM\Column(type: Types::STRING, nullable: true)]
+    private ?string $password = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -113,9 +113,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = Role::User === $role ? [] : [$role->value];
     }
 
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
+    }
+
+    /**
+     * Compte en attente : créé par une invitation, sans mot de passe, il ne
+     * peut pas se connecter.
+     */
+    public function isPending(): bool
+    {
+        return null === $this->password;
     }
 
     public function setPassword(string $password): static
@@ -141,7 +150,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         /** @var array<string, mixed> $data */
         $data = (array) $this;
-        $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
+        $data["\0".self::class."\0password"] = null === $this->password ? null : hash('crc32c', $this->password);
 
         return $data;
     }

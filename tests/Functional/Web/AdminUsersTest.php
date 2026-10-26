@@ -46,7 +46,8 @@ final class AdminUsersTest extends WebTestCase
         self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
         self::assertSame(['admin@abribus.test'], $crawler->filter('main tbody strong')->each(static fn (Crawler $email): string => $email->text()));
         self::assertSame(['Administrateur', 'Utilisateur', 'Administrateur'], array_column($rows, 1));
-        self::assertSame(array_map(static fn (User $user): string => $user->getCreatedAt()->format('d/m/Y'), [$bob, $alice, $this->admin]), array_column($rows, 3));
+        self::assertSame(['Actif', 'Actif', 'Actif'], array_column($rows, 2));
+        self::assertSame(array_map(static fn (User $user): string => $user->getCreatedAt()->format('d/m/Y'), [$bob, $alice, $this->admin]), array_column($rows, 4));
     }
 
     public function testListCountsTheDevicesOfEachAccount(): void
@@ -59,7 +60,7 @@ final class AdminUsersTest extends WebTestCase
         $rows = $this->rows($this->client->request('GET', '/admin/users'));
 
         self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
-        self::assertSame(['0', '2', '1'], array_column($rows, 2));
+        self::assertSame(['0', '2', '1'], array_column($rows, 3));
     }
 
     public function testListLinksEveryAccountToItsEditPage(): void

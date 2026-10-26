@@ -1,0 +1,17 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Activer votre compte · Abribus{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Choisissez votre mot de passe" class="max-w-md">
+            <p class="mb-4 text-sm text-slate-600">Il servira à vous connecter à l'espace de gestion avec votre email.</p>
+
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+
+                <twig:Button type="submit">Activer mon compte</twig:Button>
+            {{ form_end(form) }}
+        </twig:Card>
+    </section>
+{% endblock %}
