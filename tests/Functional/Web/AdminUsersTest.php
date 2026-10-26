@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional\Web;
+
+use App\Entity\User;
+use App\Factory\DeviceFactory;
+use App\Factory\UserFactory;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\DomCrawler\Crawler;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
+
+final class AdminUsersTest extends WebTestCase
+{
+    use Factories;
+    use ResetDatabase;
+
+    private KernelBrowser $client;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        $this->admin = UserFactory::createOne(['email' => 'admin@abribus.test', 'role' => User::ROLE_ADMIN]);
+        $this->client->loginUser($this->admin);
+    }
+
+    public function testListShowsEveryAccountNewestFirst(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+
+        $crawler = $this->client->request('GET', '/admin/users');
+        $rows = $this->rows($crawler);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('header nav [aria-current="page"]', 'Utilisateurs');
+        self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
+        self::assertSame(['admin@abribus.test'], $crawler->filter('main tbody strong')->each(static fn (Crawler $email): string => $email->text()));
+        self::assertSame(['Administrateur', 'Utilisateur', 'Administrateur'], array_column($rows, 1));
+        self::assertSame(array_map(static fn (User $user): string => $user->getCreatedAt()->format('d/m/Y'), [$bob, $alice, $this->admin]), array_column($rows, 3));
+    }
+
+    public function testListCountsTheDevicesOfEachAccount(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        DeviceFactory::createMany(2, ['owner' => $alice]);
+        DeviceFactory::createOne(['owner' => $this->admin, 'active' => false]);
+        UserFactory::createOne(['email' => 'bob@abribus.test']);
+
+        $rows = $this->rows($this->client->request('GET', '/admin/users'));
+
+        self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
+        self::assertSame(['0', '2', '1'], array_column($rows, 2));
+    }
+
+    public function testListIsForbiddenToAUser(): void
+    {
+        $this->client->loginUser(UserFactory::createOne());
+
+        $this->client->request('GET', '/admin/users');
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testNavigationLinksToTheListForAnAdministrator(): void
+    {
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertSame('/admin/users', $crawler->filter('header nav')->selectLink('Utilisateurs')->attr('href'));
+    }
+
+    public function testNavigationHidesTheListFromAUser(): void
+    {
+        $this->client->loginUser(UserFactory::createOne());
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('header nav')->selectLink('Utilisateurs'));
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private function rows(Crawler $crawler): array
+    {
+        return $crawler->filter('main tbody tr')->each(static fn (Crawler $row): array => $row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())));
+    }
+}

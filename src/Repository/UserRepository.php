@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Device;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,6 +20,27 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, User::class);
+    }
+
+    /**
+     * Tous les comptes, du plus récent au plus ancien, avec le nombre de leurs
+     * dispositifs compté dans la même requête.
+     *
+     * @return list<array{user: User, deviceCount: int}>
+     */
+    public function findAllWithDeviceCount(): array
+    {
+        /** @var list<array{user: User, deviceCount: int|string}> $rows */
+        $rows = $this->createQueryBuilder('u')
+            ->select('u AS user', 'COUNT(d.id) AS deviceCount')
+            ->leftJoin(Device::class, 'd', 'WITH', 'd.owner = u')
+            ->groupBy('u.id')
+            ->orderBy('u.createdAt', 'DESC')
+            ->addOrderBy('u.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return array_map(static fn (array $row): array => ['user' => $row['user'], 'deviceCount' => (int) $row['deviceCount']], $rows);
     }
 
     /**

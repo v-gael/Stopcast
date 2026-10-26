@@ -37,6 +37,8 @@ La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. 
 
 Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs jetons cessent de fonctionner. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé.
 
+Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`.
+
 ## Emails
 
 Les emails partent en asynchrone : l'application les met dans la file `async` (table `messenger_messages`), et le service `worker` (`messenger:consume async`) les envoie. En dev, ils arrivent dans Mailpit, sur `http://localhost:8025`, sans jamais quitter la machine.
