@@ -13,6 +13,8 @@ use Symfony\Component\DomCrawler\Crawler;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
+use function Zenstruck\Foundry\Persistence\refresh;
+
 final class AdminUsersTest extends WebTestCase
 {
     use Factories;
@@ -84,11 +86,76 @@ final class AdminUsersTest extends WebTestCase
         self::assertCount(0, $crawler->filter('header nav')->selectLink('Utilisateurs'));
     }
 
+    public function testAdministratorPromotesAUser(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+
+        $this->changeRole($alice, User::ROLE_ADMIN);
+
+        self::assertResponseRedirects('/admin/users', 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('main', 'Rôle de alice@abribus.test modifié.');
+
+        $this->client->loginUser(refresh($alice));
+        $this->client->request('GET', '/admin/users');
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testAdministratorDemotesAnotherAdministrator(): void
+    {
+        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => User::ROLE_ADMIN]);
+
+        $this->changeRole($bob, User::ROLE_USER);
+
+        self::assertResponseRedirects('/admin/users', 303);
+
+        $this->client->loginUser(refresh($bob));
+        $this->client->request('GET', '/admin/users');
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testAdministratorWhoDemotesThemselvesIsLoggedOut(): void
+    {
+        $this->changeRole($this->admin, User::ROLE_USER);
+
+        self::assertResponseRedirects('/admin/users', 303);
+        $this->client->followRedirect();
+        self::assertResponseRedirects('http://localhost/');
+    }
+
+    public function testOpenSessionsOfTheChangedAccountAreLoggedOut(): void
+    {
+        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $this->client->loginUser($alice);
+        $aliceSession = $this->client->getCookieJar()->get('MOCKSESSID');
+        self::assertNotNull($aliceSession);
+        // loginUser() réutilise la session du cookie : sans ce vidage, l'admin écraserait celle d'Alice.
+        $this->client->getCookieJar()->clear();
+        $this->client->loginUser($this->admin);
+
+        $this->changeRole($alice, User::ROLE_ADMIN);
+
+        $this->client->getCookieJar()->set($aliceSession);
+        $this->client->request('GET', '/devices');
+
+        self::assertResponseRedirects('http://localhost/');
+    }
+
     /**
      * @return list<list<string>>
      */
     private function rows(Crawler $crawler): array
     {
         return $crawler->filter('main tbody tr')->each(static fn (Crawler $row): array => $row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())));
+    }
+
+    private function changeRole(User $user, string $role): void
+    {
+        $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $user->getId()));
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($crawler->selectButton('Enregistrer')->form(['user_role[role]' => $role]));
     }
 }
