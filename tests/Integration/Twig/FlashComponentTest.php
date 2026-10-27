@@ -31,6 +31,36 @@ final class FlashComponentTest extends KernelTestCase
         self::assertStringNotContainsString('Type non géré.', $crawler->html());
     }
 
+    public function testFloatingSuccessDismissesItselfAndOthersWaitToBeClosed(): void
+    {
+        $session = $this->pushRequestWithSession();
+        $session->getFlashBag()->add('success', 'Dispositif enregistré.');
+        $session->getFlashBag()->add('error', 'Action impossible.');
+        $session->getFlashBag()->add('warning', 'Invitation expirée.');
+
+        $crawler = $this->renderTwigComponent('Flash', ['floating' => true])->crawler();
+
+        $toasts = $crawler->filter('[data-flash-stack] [data-controller="flash"]');
+        self::assertSame(
+            [['Dispositif enregistré.', '5000'], ['Action impossible.', null], ['Invitation expirée.', null]],
+            $toasts->each(static fn (Crawler $toast): array => [$toast->filter('[role]')->text(), $toast->attr('data-flash-dismiss-after-value')]),
+        );
+        self::assertSame(['status', 'alert', 'alert'], $toasts->filter('[role]')->each(static fn (Crawler $text): ?string => $text->attr('role')));
+        self::assertCount(3, $toasts->filter('button[data-action="flash#close"]'));
+        self::assertSame('Fermer', $toasts->first()->filter('button')->text());
+    }
+
+    public function testInFlowMessagesHaveNoToastBehavior(): void
+    {
+        $session = $this->pushRequestWithSession();
+        $session->getFlashBag()->add('success', 'Dispositif enregistré.');
+
+        $crawler = $this->renderTwigComponent('Flash')->crawler();
+
+        self::assertSame('Dispositif enregistré.', $crawler->filter('[role="status"]')->text());
+        self::assertCount(0, $crawler->filter('[data-flash-stack], [data-controller="flash"], button'));
+    }
+
     public function testRendersNothingWithoutMessages(): void
     {
         $this->pushRequestWithSession();

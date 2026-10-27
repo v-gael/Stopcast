@@ -114,6 +114,8 @@ final class InvitationTest extends WebTestCase
         self::assertResponseRedirects('/', 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Votre compte est activé, vous pouvez vous connecter.');
+        // Page publique : le message reste dans le flux, au-dessus du formulaire.
+        self::assertSelectorNotExists('[data-flash-stack], [data-controller="flash"]');
 
         $this->logIn(self::EMAIL, self::PASSWORD);
         self::assertResponseRedirects('/devices');
