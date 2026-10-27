@@ -137,6 +137,22 @@ Vérifier que l'écran a des passages :
 curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 ```
 
+AbribusDisplay appelle cette route toutes les 10 secondes : le profiler ne la profile pas, pour que ces appels ne noient pas ceux du navigateur. Pour en profiler un, ajouter `?_profile=1` (`http://localhost/api/next-passages?_profile=1`) ; le profil apparaît alors dans `/_profiler`.
+
+## Logs
+
+En dev, trois sources, chacune avec sa commande :
+
+| Source | Contenu | Commande |
+|---|---|---|
+| Fichier de log Symfony | Logs de l'application, du conteneur `app` comme du `worker` | `make dev-log` |
+| Sortie des conteneurs | `app` : journal d'accès de Caddy ; `worker` : sortie de `messenger:consume` (envoi des emails) | `make logs`, `make worker-logs` |
+| Profiler | Détail d'une requête (logs, requêtes SQL, sécurité…) | `http://localhost/_profiler` |
+
+Le fichier Symfony est dans `var/log/`, qui est le volume Docker `app_var` : il n'est pas visible depuis la machine hôte, seulement dans les conteneurs. Monolog écrit un fichier par jour, `dev-AAAA-MM-JJ.log`, et garde les 7 derniers. Il retient le niveau `info` sur tous les canaux (sauf `event`), et tout le canal `app` dès `debug`. `make dev-log` suit le fichier du jour ; après minuit, relancer la commande pour passer au nouveau fichier. Pour lire un autre jour : `make sh`, puis `ls var/log/`.
+
+Le profiler ne garde pas les appels d'AbribusDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
+
 ## Qualité de code
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.

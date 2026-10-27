@@ -1,7 +1,15 @@
+# Sortie des conteneurs de dev bornée à 3 fichiers de 10 Mo.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   ###> app ###
   app:
     image: abribus-dev
+    logging: *logging
     build:
       target: dev
     environment:
@@ -31,6 +39,7 @@ services:
   # directement la CSS recompilée.
   tailwind:
     image: abribus-dev
+    logging: *logging
     build:
       context: .
       target: dev
@@ -50,6 +59,7 @@ services:
   # que app : après un changement de code, `make worker-restart`.
   worker:
     image: abribus-dev
+    logging: *logging
     build:
       context: .
       target: dev
