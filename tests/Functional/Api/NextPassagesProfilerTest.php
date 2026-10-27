@@ -38,6 +38,15 @@ final class NextPassagesProfilerTest extends WebTestCase
         self::assertNull($this->client->getProfile());
     }
 
+    public function testRejectedNextPassagesCallIsNotProfiled(): void
+    {
+        $this->client->enableProfiler();
+        $this->client->request('GET', '/api/next-passages');
+
+        self::assertResponseStatusCodeSame(401);
+        self::assertNull($this->client->getProfile());
+    }
+
     public function testNextPassagesCallIsProfiledOnRequest(): void
     {
         $this->requestNextPassages('/api/next-passages?_profile=1');
