@@ -33,6 +33,7 @@ Thumbs.db
 /.scratch/
 /docs/agents/
 /GLOSSARY.md
+/core
 /.ua/
 /.githooks/commit-msg
 /.worktreeinclude
