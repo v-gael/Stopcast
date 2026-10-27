@@ -137,6 +137,8 @@ Vérifier que l'écran a des passages :
 curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 ```
 
+AbribusDisplay appelle cette route toutes les 10 secondes : le profiler ne la profile pas, pour que ces appels ne noient pas ceux du navigateur. Pour en profiler un, ajouter `?_profile=1` (`http://localhost/api/next-passages?_profile=1`) ; le profil apparaît alors dans `/_profiler`.
+
 ## Qualité de code
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
