@@ -98,7 +98,7 @@ final class DevicesTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
 
         $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'Le dispositif a été créé.');
+        self::assertSelectorTextContains('[data-flash-stack] [data-controller="flash"] [role="status"]', 'Le dispositif a été créé.');
         self::assertSelectorTextSame('[data-new-token] code', $device->getToken());
 
         $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
