@@ -186,6 +186,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
 - Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
 - La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
+- Le pool `cache.rate_limiter` est en mémoire et vidé à chaque requête : la limite de la connexion ne s'accumule jamais en test. Le limiteur du mot de passe actuel (`current_password`) a son propre stockage en mémoire, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
 
 ## Mettre à jour les dépendances
