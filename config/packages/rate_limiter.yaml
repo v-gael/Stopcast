@@ -1,0 +1,24 @@
+framework:
+    rate_limiter:
+        # Essais du mot de passe actuel (changement de mot de passe, suppression
+        # du compte), un compteur par compte : voir CurrentPasswordValidator.
+        current_password:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+            # Pas de verrou : des envois simultanés peuvent dépasser la limite
+            # de quelques essais (limite connue, voir SECURITY.md).
+            lock_factory: null
+
+when@test:
+    framework:
+        rate_limiter:
+            current_password:
+                # En mémoire, sans remise à zéro entre deux requêtes (le pool
+                # cache.rate_limiter, lui, est vidé à chaque requête) : avec
+                # disableReboot(), le compteur tient le temps d'un test.
+                storage_service: app.rate_limiter.test_storage
+
+    services:
+        app.rate_limiter.test_storage:
+            class: Symfony\Component\RateLimiter\Storage\InMemoryStorage
