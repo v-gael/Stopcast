@@ -44,7 +44,9 @@ security:
             remember_me:
                 secret: '%kernel.secret%'
                 lifetime: 2592000 # 30 jours
-            login_throttling: ~
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
             logout:
                 path: app_logout
                 target: app_home
