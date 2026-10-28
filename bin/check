@@ -1,8 +1,10 @@
 #!/bin/sh
 # Lance les contrôles de la CI, dans l'ordre, et s'arrête au premier échec.
-# Seule liste des contrôles : la CI GitHub l'appelle directement, `make check`
-# l'exécute dans le conteneur app. Les lignes ::group:: replient chaque contrôle
-# dans les logs GitHub ; ailleurs, elles servent de titres.
+# Liste des contrôles du code : la CI GitHub l'appelle directement, `make check`
+# l'exécute dans le conteneur app. Les fichiers Compose sont validés à part, sur
+# l'hôte, par `bin/check-compose` (le conteneur app n'a pas docker). Les lignes
+# ::group:: replient chaque contrôle dans les logs GitHub ; ailleurs, elles
+# servent de titres.
 
 # Comme la CI : tous les contrôles tournent en environnement de test.
 export APP_ENV=test
