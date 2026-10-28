@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Form;
 
+use App\Validator\CurrentPassword;
 use App\Validator\PasswordRequirements;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
 
 /**
  * Changement de mot de passe du compte connecté : l'actuel, puis le nouveau deux fois.
@@ -23,7 +23,7 @@ final class ChangePasswordType extends AbstractType
         $builder
             ->add('currentPassword', PasswordType::class, [
                 'label' => 'Mot de passe actuel',
-                'constraints' => [new UserPassword(message: 'Le mot de passe actuel est incorrect.')],
+                'constraints' => [new CurrentPassword()],
                 'attr' => ['autocomplete' => 'current-password'],
             ])
             ->add('newPassword', RepeatedType::class, [

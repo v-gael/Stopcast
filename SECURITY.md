@@ -9,6 +9,15 @@ Seule la **dernière release** publiée reçoit des correctifs de sécurité.
 | Dernière release | ✅ |
 | Versions antérieures | ❌ |
 
+## Limite d'essais du mot de passe
+
+Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre glissante) :
+
+- à la connexion, par couple identifiant + adresse IP (`login_throttling`) ;
+- au changement de mot de passe et à la suppression du compte, avec un seul compteur par compte, partagé entre ces deux formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
+
+Limite connue : le compteur n'est pas protégé par un verrou, des envois simultanés peuvent dépasser la limite de quelques essais.
+
 ## Signaler une vulnérabilité
 
 **N'ouvrez pas d'issue publique** pour signaler une faille de sécurité.
