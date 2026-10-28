@@ -155,7 +155,9 @@ Le profiler ne garde pas les appels d'AbribusDisplay à `/api/next-passages`, sa
 
 ## Qualité de code
 
-`make check` lance tous les contrôles de la CI et s'arrête au premier échec. La liste des contrôles est dans `bin/check`, que la CI GitHub appelle aussi : si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
+`make check` lance tous les contrôles de la CI et s'arrête au premier échec. Les contrôles sont dans deux scripts, que la CI GitHub appelle aussi : `bin/check-compose` valide les fichiers Compose, sur l'hôte (le conteneur `app` n'a pas `docker`), puis `bin/check` lance les contrôles du code dans le conteneur `app`. Si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
+
+`bin/check-compose` valide `compose.yaml` avec chacune de ses surcharges (`compose.override.yaml`, `compose.ci.yaml`, `compose.prod.yaml`) par `docker compose config -q`, sans démarrer de conteneur. La combinaison prod est lue avec `--env-file .env.prod.local.example` : une variable ajoutée à `compose.prod.yaml` sans entrée dans ce modèle fait échouer le contrôle, comme toute erreur ou tout avertissement de Compose. Le script valide les trois combinaisons avant de conclure, pour montrer toutes les erreurs d'un coup.
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 

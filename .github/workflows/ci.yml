@@ -62,3 +62,15 @@ jobs:
       # Même liste de contrôles que `make check` en local.
       - name: Contrôles
         run: bin/check
+
+  # Valide les fichiers Compose : `make check` lance le même script sur l'hôte.
+  compose:
+    name: Fichiers Compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Valider les combinaisons
+        run: bin/check-compose
