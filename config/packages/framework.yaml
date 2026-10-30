@@ -5,6 +5,13 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # Proxys dont Symfony croit les en-têtes X-Forwarded-* (IP du client,
+    # HTTPS, hôte, port), et hôtes acceptés dans l'en-tête Host : voir
+    # TRUSTED_PROXIES et TRUSTED_HOSTS dans .env.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'x-forwarded-port']
+    trusted_hosts: '%env(TRUSTED_HOSTS)%'
+
     #esi: true
     #fragments: true
 

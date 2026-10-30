@@ -11,6 +11,8 @@ services:
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
       MAILER_DSN: ${MAILER_DSN:-null://null}
       MAILER_FROM: ${MAILER_FROM:-Abribus <no-reply@abribus.local>}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS}
     ports:
       - "80:80"
       - "443:443"
@@ -36,6 +38,8 @@ services:
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
       MAILER_DSN: ${MAILER_DSN:-null://null}
       MAILER_FROM: ${MAILER_FROM:-Abribus <no-reply@abribus.local>}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS}
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true

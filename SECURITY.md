@@ -32,6 +32,10 @@ La **Content Security Policy** est stricte et bloquante dans tous les environnem
 
 HSTS n'est pas posé par l'application : il revient au serveur qui termine le TLS.
 
+## Proxy et hôtes de confiance
+
+L'application ne croit les en-têtes `X-Forwarded-*` que venant des proxys listés dans `TRUSTED_PROXIES`, et refuse (400) tout hôte absent de `TRUSTED_HOSTS`, à partir duquel sont construits les liens des emails (voir [docs/developpement.md](docs/developpement.md#proxy-et-hôtes-de-confiance)).
+
 ## Signaler une vulnérabilité
 
 **N'ouvrez pas d'issue publique** pour signaler une faille de sécurité.
