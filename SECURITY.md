@@ -18,6 +18,14 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 
 Limite connue : le compteur n'est pas protégé par un verrou, des envois simultanés peuvent dépasser la limite de quelques essais.
 
+## Sessions
+
+- La session dure le temps du navigateur et expire après **2 heures d'inactivité**.
+- « Se souvenir de moi », sur case à cocher, garde la connexion **30 jours**.
+- Les deux cookies sont `HttpOnly` et `SameSite=Lax` ; en production, ils sont aussi `Secure` et préfixés `__Host-`, ce qui interdit à un autre site du domaine parent de les remplacer.
+- Changer son mot de passe déconnecte les autres sessions ouvertes sur le compte et invalide les cookies « se souvenir de moi » émis avant le changement.
+- Les sessions sont stockées sur le serveur d'application : un redéploiement les ferme, « se souvenir de moi » reconnecte.
+
 ## Signaler une vulnérabilité
 
 **N'ouvrez pas d'issue publique** pour signaler une faille de sécurité.
