@@ -38,7 +38,7 @@ final readonly class AccountDeleter
         // Le worker envoie l'email après la suppression : il ne porte que l'adresse.
         $this->mailer->send(new TemplatedEmail()
             ->to($email)
-            ->subject('Votre compte Abribus a été supprimé')
+            ->subject('Votre compte Stopcast a été supprimé')
             ->htmlTemplate('email/account_deleted.html.twig')
             ->textTemplate('email/account_deleted.txt.twig')
         );

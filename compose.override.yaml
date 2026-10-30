@@ -8,7 +8,7 @@ x-logging: &logging
 services:
   ###> app ###
   app:
-    image: abribus-dev
+    image: stopcast-dev
     logging: *logging
     build:
       target: dev
@@ -38,7 +38,7 @@ services:
   # que app, pour partager var/tailwind/ (binaire et CSS compilée) : app sert
   # directement la CSS recompilée.
   tailwind:
-    image: abribus-dev
+    image: stopcast-dev
     logging: *logging
     build:
       context: .
@@ -58,7 +58,7 @@ services:
   # Consomme la file async (envoi des emails). Même image et mêmes montages
   # que app : après un changement de code, `make worker-restart`.
   worker:
-    image: abribus-dev
+    image: stopcast-dev
     logging: *logging
     build:
       context: .

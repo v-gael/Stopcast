@@ -49,7 +49,7 @@ final class InvitationTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
-        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Abribus');
+        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Stopcast');
         self::assertEmailHtmlBodyContains($email, 'http://localhost/invitation/');
         self::assertEmailTextBodyContains($email, 'http://localhost/invitation/');
         self::assertEmailTextBodyContains($email, 'valable 24 heures');
@@ -211,7 +211,7 @@ final class InvitationTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
-        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Abribus');
+        self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Stopcast');
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Invitation renvoyée à lea@example.com.');
 

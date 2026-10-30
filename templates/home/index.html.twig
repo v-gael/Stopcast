@@ -1,6 +1,6 @@
 {% extends 'layout/public.html.twig' %}
 
-{% block title %}Abribus · Le panneau de votre arrêt de bus, chez vous{% endblock %}
+{% block title %}Stopcast · Le panneau de votre arrêt de bus, chez vous{% endblock %}
 
 {# Seule page indexée : pas de noindex. #}
 {% block robots %}{% endblock %}
@@ -17,11 +17,11 @@
                 Le panneau de votre arrêt de bus, sur un petit écran chez vous
             </h1>
             <p class="mt-4 text-lg text-slate-600">
-                Abribus réplique en temps réel l'affichage d'un panneau d'abribus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
+                Stopcast réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <twig:Button href="https://github.com/v-gael/Abribus">Dépôt Abribus (API)</twig:Button>
-                <twig:Button href="https://github.com/v-gael/AbribusDisplay" variant="secondary">Dépôt AbribusDisplay (afficheur)</twig:Button>
+                <twig:Button href="https://github.com/v-gael/Stopcast">Dépôt Stopcast (API)</twig:Button>
+                <twig:Button href="https://github.com/v-gael/StopcastDisplay" variant="secondary">Dépôt StopcastDisplay (afficheur)</twig:Button>
             </div>
         </div>
 
@@ -38,7 +38,7 @@
         <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
             <h2 class="text-2xl font-bold text-slate-900">Comment ça marche</h2>
             <p class="mt-2 max-w-3xl text-slate-600">
-                Abribus croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport, et reconstitue pour un quai donné ce qu'affiche le vrai panneau.
+                Stopcast croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport, et reconstitue pour un quai donné ce qu'affiche le vrai panneau.
             </p>
             <ol class="mt-8 grid gap-6 md:grid-cols-3">
                 <li>

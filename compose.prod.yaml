@@ -10,7 +10,7 @@ services:
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
       MAILER_DSN: ${MAILER_DSN:-null://null}
-      MAILER_FROM: ${MAILER_FROM:-Abribus <no-reply@abribus.local>}
+      MAILER_FROM: ${MAILER_FROM:-Stopcast <no-reply@stopcast.local>}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
     ports:
@@ -37,7 +37,7 @@ services:
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
       MAILER_DSN: ${MAILER_DSN:-null://null}
-      MAILER_FROM: ${MAILER_FROM:-Abribus <no-reply@abribus.local>}
+      MAILER_FROM: ${MAILER_FROM:-Stopcast <no-reply@stopcast.local>}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.

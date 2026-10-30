@@ -67,7 +67,7 @@ final readonly class UserInviter
 
         $this->mailer->send(new TemplatedEmail()
             ->to($user->getEmail())
-            ->subject('Activez votre compte Abribus')
+            ->subject('Activez votre compte Stopcast')
             ->htmlTemplate('email/invitation.html.twig')
             ->textTemplate('email/invitation.txt.twig')
             ->context([

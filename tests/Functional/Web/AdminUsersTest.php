@@ -29,22 +29,22 @@ final class AdminUsersTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        $this->admin = UserFactory::createOne(['email' => 'admin@abribus.test', 'role' => Role::Admin]);
+        $this->admin = UserFactory::createOne(['email' => 'admin@stopcast.test', 'role' => Role::Admin]);
         $this->client->loginUser($this->admin);
     }
 
     public function testListShowsEveryAccountNewestFirst(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
+        $bob = UserFactory::createOne(['email' => 'bob@stopcast.test', 'role' => Role::Admin]);
 
         $crawler = $this->client->request('GET', '/admin/users');
         $rows = $this->rows($crawler);
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('header nav [aria-current="page"]', 'Utilisateurs');
-        self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
-        self::assertSame(['admin@abribus.test'], $crawler->filter('main tbody strong')->each(static fn (Crawler $email): string => $email->text()));
+        self::assertSame(['bob@stopcast.test', 'alice@stopcast.test', 'admin@stopcast.test (vous)'], array_column($rows, 0));
+        self::assertSame(['admin@stopcast.test'], $crawler->filter('main tbody strong')->each(static fn (Crawler $email): string => $email->text()));
         self::assertSame(['Administrateur', 'Utilisateur', 'Administrateur'], array_column($rows, 1));
         self::assertSame(['Actif', 'Actif', 'Actif'], array_column($rows, 2));
         self::assertSame(array_map(static fn (User $user): string => $user->getCreatedAt()->format('d/m/Y'), [$bob, $alice, $this->admin]), array_column($rows, 4));
@@ -52,20 +52,20 @@ final class AdminUsersTest extends WebTestCase
 
     public function testListCountsTheDevicesOfEachAccount(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
         DeviceFactory::createMany(2, ['owner' => $alice]);
         DeviceFactory::createOne(['owner' => $this->admin, 'active' => false]);
-        UserFactory::createOne(['email' => 'bob@abribus.test']);
+        UserFactory::createOne(['email' => 'bob@stopcast.test']);
 
         $rows = $this->rows($this->client->request('GET', '/admin/users'));
 
-        self::assertSame(['bob@abribus.test', 'alice@abribus.test', 'admin@abribus.test (vous)'], array_column($rows, 0));
+        self::assertSame(['bob@stopcast.test', 'alice@stopcast.test', 'admin@stopcast.test (vous)'], array_column($rows, 0));
         self::assertSame(['0', '2', '1'], array_column($rows, 3));
     }
 
     public function testListLinksEveryAccountToItsEditPage(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
 
         $crawler = $this->client->request('GET', '/admin/users');
 
@@ -103,13 +103,13 @@ final class AdminUsersTest extends WebTestCase
 
     public function testAdministratorPromotesAUser(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
 
         $this->changeRole($alice, Role::Admin);
 
         self::assertResponseRedirects('/admin/users', 303);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('main', 'Rôle de alice@abribus.test modifié.');
+        self::assertSelectorTextContains('main', 'Rôle de alice@stopcast.test modifié.');
 
         $this->client->loginUser(refresh($alice));
         $this->client->request('GET', '/admin/users');
@@ -119,7 +119,7 @@ final class AdminUsersTest extends WebTestCase
 
     public function testAdministratorDemotesAnotherAdministrator(): void
     {
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
+        $bob = UserFactory::createOne(['email' => 'bob@stopcast.test', 'role' => Role::Admin]);
 
         $this->changeRole($bob, Role::User);
 
@@ -142,7 +142,7 @@ final class AdminUsersTest extends WebTestCase
 
     public function testOpenSessionsOfTheChangedAccountAreLoggedOut(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
         $this->client->loginUser($alice);
         $aliceSession = $this->client->getCookieJar()->get('MOCKSESSID');
         self::assertNotNull($aliceSession);
@@ -160,19 +160,19 @@ final class AdminUsersTest extends WebTestCase
 
     public function testEditFormShowsTheCurrentRoleAndNoEmailField(): void
     {
-        $bob = UserFactory::createOne(['email' => 'bob@abribus.test', 'role' => Role::Admin]);
+        $bob = UserFactory::createOne(['email' => 'bob@stopcast.test', 'role' => Role::Admin]);
 
         $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $bob->getId()));
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', 'bob@abribus.test');
+        self::assertSelectorTextContains('main', 'bob@stopcast.test');
         self::assertSame(Role::Admin->value, $crawler->filter('main form input[name="user_role[role]"]:checked')->attr('value'));
         self::assertCount(0, $crawler->filter('main form input[name*="email"]'));
     }
 
     public function testUnknownRoleIsRefused(): void
     {
-        $alice = UserFactory::createOne(['email' => 'alice@abribus.test']);
+        $alice = UserFactory::createOne(['email' => 'alice@stopcast.test']);
         $crawler = $this->client->request('GET', \sprintf('/admin/users/%d/edit', $alice->getId()));
         $form = $crawler->selectButton('Enregistrer')->form();
         $form->disableValidation()->setValues(['user_role[role]' => 'ROLE_SUPER_ADMIN']);

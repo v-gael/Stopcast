@@ -1,6 +1,6 @@
 {
-    "name": "v-gael/abribus",
-    "description": "API Symfony qui reproduit un panneau d'abribus en temps réel (GTFS + GTFS-RT) pour un écran Raspberry Pi.",
+    "name": "v-gael/stopcast",
+    "description": "API Symfony qui reproduit le panneau d'un arrêt de bus en temps réel (GTFS + GTFS-RT) pour un écran Raspberry Pi.",
     "type": "project",
     "license": "MIT",
     "minimum-stability": "stable",
@@ -25,7 +25,7 @@
         "symfony/doctrine-messenger": "8.1.*",
         "symfony/dotenv": "8.1.*",
         "symfony/expression-language": "8.1.*",
-        "symfony/flex": "^2",
+        "symfony/flex": "^2.12",
         "symfony/form": "8.1.*",
         "symfony/framework-bundle": "8.1.*",
         "symfony/http-client": "8.1.*",

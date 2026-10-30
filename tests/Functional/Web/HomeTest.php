@@ -26,8 +26,8 @@ final class HomeTest extends WebTestCase
         self::assertMatchesRegularExpression('#^/assets/images/demo-[\w-]+\.gif$#', $images[0]);
         self::assertMatchesRegularExpression('#^/assets/images/afficheur-en-situation-[\w-]+\.jpg$#', $images[1]);
 
-        self::assertCount(1, $crawler->filter('main a[href="https://github.com/v-gael/Abribus"]'));
-        self::assertCount(1, $crawler->filter('main a[href="https://github.com/v-gael/AbribusDisplay"]'));
+        self::assertCount(1, $crawler->filter('main a[href="https://github.com/v-gael/Stopcast"]'));
+        self::assertCount(1, $crawler->filter('main a[href="https://github.com/v-gael/StopcastDisplay"]'));
     }
 
     public function testShowcaseExplainsHowItWorks(): void
