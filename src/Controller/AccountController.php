@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Account\AccountDataExporter;
 use App\Account\AccountDeleter;
 use App\Entity\User;
 use App\Form\ChangePasswordType;
 use App\Form\DeleteAccountType;
 use App\Repository\DeviceRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 #[Route('/account')]
 final class AccountController extends AbstractController
@@ -80,5 +84,22 @@ final class AccountController extends AbstractController
             'form' => $form,
             'deviceCount' => $deviceRepository->count(['owner' => $user]),
         ]);
+    }
+
+    #[Route('/export', name: 'app_account_export', methods: ['POST'])]
+    #[IsCsrfTokenValid('export-account')]
+    public function export(
+        #[CurrentUser] User $user,
+        AccountDataExporter $exporter,
+        ClockInterface $clock,
+    ): JsonResponse {
+        $now = $clock->now();
+
+        $response = new JsonResponse($exporter->export($user, $now));
+        $response->setEncodingOptions(\JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR);
+        $response->headers->set('Content-Disposition', \sprintf('attachment; filename="stopcast-donnees-%s.json"', $now->format('Y-m-d')));
+        $response->headers->set('Cache-Control', 'no-store');
+
+        return $response;
     }
 }
