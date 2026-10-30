@@ -230,7 +230,7 @@ Valeurs par environnement :
 |---|---|---|
 | `.env` (tests compris) | vide | `localhost` et `127.0.0.1` |
 | `.env.dev` | vide | `localhost` et toute adresse IPv4, pour le Raspberry Pi du réseau local |
-| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau du proxy | domaine servi |
+| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau du proxy | domaine servi et `localhost`, que le healthcheck interroge (`curl http://localhost/`) |
 
 `compose.prod.yaml` passe les deux variables aux services `app` et `worker` : une valeur vide dans `.env.prod.local` l'emporte sur celle de `.env`, et désactive donc la vérification de l'hôte.
 
