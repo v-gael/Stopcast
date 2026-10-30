@@ -1,0 +1,62 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Conditions d'utilisation · Stopcast{% endblock %}
+
+{% block content %}
+    <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Conditions d'utilisation</h1>
+
+        <div class="mt-8 space-y-8 text-slate-700">
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Objet</h2>
+                <p>Stopcast affiche les prochains passages aux arrêts de bus sur des écrans configurés par leurs utilisateurs. Ces conditions fixent les règles d'usage du service.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Accès</h2>
+                <p>Un compte s'ouvre uniquement sur invitation d'un administrateur. L'utilisateur garde son mot de passe secret et ne le partage pas.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Usage</h2>
+                <p>Les dispositifs et leurs configurations restent sous la responsabilité de leur propriétaire. Tout usage abusif est interdit, notamment le contournement des limites du service ou son automatisation contre le service.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Disponibilité</h2>
+                <p>
+                    Le service est gratuit et fourni sans garantie de disponibilité ni d'exactitude.
+                    Les horaires viennent des données publiées par le réseau de transport sur <a href="https://transport.data.gouv.fr/" class="font-medium text-amber-700 underline hover:text-amber-600">transport.data.gouv.fr</a>, fournies telles quelles.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Suspension et suppression</h2>
+                <p>
+                    Un compte peut être supprimé en cas d'abus. L'utilisateur peut supprimer le sien à tout moment depuis « Mon compte ».
+                    Un compte inactif pendant 2 ans est supprimé, comme le décrit la politique de confidentialité.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Données personnelles</h2>
+                <p>Le traitement des données personnelles est décrit dans la politique de confidentialité.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Modification des conditions</h2>
+                <p>Ces conditions peuvent évoluer ; la version applicable est celle publiée sur cette page.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Droit applicable</h2>
+                <p>Ces conditions sont soumises au droit français.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Contact</h2>
+                <p><a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a></p>
+            </section>
+        </div>
+    </article>
+{% endblock %}
