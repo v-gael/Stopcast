@@ -239,3 +239,4 @@ Valeurs par environnement :
 - Règles de code vérifiées en relecture, en plus de `make check` : [CODING_STANDARDS.md](../CODING_STANDARDS.md).
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
 - Gitflow : branches `feature/<nom>` créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases.
+- Quand `develop` avance pendant qu'une PR est ouverte, fusionner `develop` dans la branche en local, puis pousser : relancer un check de la PR ne suffit pas, il réutilise l'ancien commit de fusion avec `develop`.
