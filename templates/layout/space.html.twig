@@ -30,5 +30,7 @@
             <twig:Flash :floating="true" />
             {% block content %}{% endblock %}
         </main>
+
+        {{ include('layout/_footer.html.twig') }}
     </div>
 {% endblock %}
