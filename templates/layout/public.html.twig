@@ -8,11 +8,11 @@
                 <a href="{{ path('app_home') }}" class="flex items-center gap-2 text-lg font-bold text-slate-900">
                     <span aria-hidden="true">🚏</span> Stopcast
                 </a>
-                <a href="https://github.com/v-gael/Stopcast" class="text-sm font-medium text-slate-600 hover:text-slate-900">GitHub</a>
+                <a href="https://github.com/v-gael/Stopcast" class="text-sm font-medium text-slate-600 hover:text-slate-900">GitHub<span class="sr-only"> : code source de Stopcast</span></a>
             </div>
         </header>
 
-        <main class="flex-1">
+        <main id="contenu" class="flex-1">
             <twig:Flash class="mx-auto max-w-6xl space-y-2 px-4 pt-6 sm:px-6" />
             {% block content %}{% endblock %}
         </main>

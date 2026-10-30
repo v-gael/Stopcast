@@ -27,7 +27,7 @@
                     {% for device in devices %}
                         <tr>
                             <td class="px-4 py-3 font-medium">
-                                <a href="{{ path('app_device_show', {id: device.id}) }}" class="text-slate-900 hover:text-amber-600">{{ device.label }}</a>
+                                <a href="{{ path('app_device_show', {id: device.id}) }}" class="text-slate-900 underline-offset-2 hover:text-amber-700 hover:underline">{{ device.label }}</a>
                             </td>
                             <td class="px-4 py-3">{{ include('device/_state.html.twig') }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ device.displayConfigurations|length }}</td>

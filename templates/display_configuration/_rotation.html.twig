@@ -18,9 +18,9 @@
                             <form method="post" action="{{ path(move.route, {id: configuration.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('move-display-configuration-' ~ configuration.id) }}">
                                 {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
-                                <button type="submit" title="{{ move.title }}" class="flex size-7 items-center justify-center rounded-md text-slate-500 ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
+                                <button type="submit" title="{{ move.title }}" class="flex size-7 items-center justify-center rounded-md text-slate-500 ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
                                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><path d="{{ move.icon }}"/></svg>
-                                    <span class="sr-only">{{ move.label }}</span>
+                                    <span class="sr-only">{{ move.label }} {{ configuration.label ?: configuration.quay.name }}</span>
                                 </button>
                             </form>
                         {% else %}
@@ -39,12 +39,12 @@
                         <twig:Badge variant="warning">Masquée</twig:Badge>
                     {% endif %}
                     {{ include('display_configuration/_deprecated_quay.html.twig') }}
-                    <twig:Button href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" variant="secondary">Modifier</twig:Button>
+                    <twig:Button href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" variant="secondary">Modifier<span class="sr-only"> {{ configuration.label ?: configuration.quay.name }}</span></twig:Button>
                     <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
                           data-turbo-confirm="Supprimer la configuration « {{ configuration.label ?: configuration.quay.name }} » ? Cette action est définitive.">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
                         {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
-                        <twig:Button type="submit" variant="danger">Supprimer</twig:Button>
+                        <twig:Button type="submit" variant="danger">Supprimer<span class="sr-only"> {{ configuration.label ?: configuration.quay.name }}</span></twig:Button>
                     </form>
                 </div>
             </li>
@@ -52,5 +52,5 @@
     </ol>
 {% endif %}
 <div class="mt-4">
-    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary">Ajouter une configuration</twig:Button>
+    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary">Ajouter une configuration<span class="sr-only"> à {{ device.label }}</span></twig:Button>
 </div>
