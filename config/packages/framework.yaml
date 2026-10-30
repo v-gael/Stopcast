@@ -3,10 +3,32 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        # Cookie limité à la durée du navigateur ; la session expire après
+        # 2 h d'inactivité. « Se souvenir de moi » prend le relais au-delà.
+        cookie_lifetime: 0
+        gc_maxlifetime: 7200
+        cookie_httponly: true
+        cookie_samesite: lax
+
+    # Proxys dont Symfony croit les en-têtes X-Forwarded-* (IP du client,
+    # HTTPS, hôte, port), et hôtes acceptés dans l'en-tête Host : voir
+    # TRUSTED_PROXIES et TRUSTED_HOSTS dans .env.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'x-forwarded-port']
+    trusted_hosts: '%env(TRUSTED_HOSTS)%'
 
     #esi: true
     #fragments: true
+
+when@prod:
+    framework:
+        session:
+            # Le préfixe __Host- exige Secure, Path=/ et aucun Domain : un
+            # autre site du domaine parent ne peut pas masquer le cookie.
+            name: __Host-SESSID
+            cookie_secure: true
+            cookie_path: /
 
 when@test:
     framework:

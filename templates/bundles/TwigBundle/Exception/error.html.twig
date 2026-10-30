@@ -1,0 +1,18 @@
+{#
+ # Page d'erreur de la prod (hors debug) pour tout code sans page dédiée.
+ # Ne montre que le statut HTTP : ni message d'exception, ni trace.
+ #}
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}{{ block('heading') }} · Stopcast{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <p class="text-sm font-semibold text-amber-700">Erreur {{ status_code }}</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{% block heading %}Une erreur est survenue{% endblock %}</h1>
+        <p class="mt-4 text-lg text-slate-600">{% block message %}La demande n'a pas pu aboutir. Réessayez dans quelques instants.{% endblock %}</p>
+        <div class="mt-8">
+            <twig:Button href="{{ path('app_home') }}">Retour à l'accueil</twig:Button>
+        </div>
+    </section>
+{% endblock %}

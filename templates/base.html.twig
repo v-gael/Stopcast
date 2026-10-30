@@ -5,13 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{% block title %}Stopcast{% endblock %}</title>
         <meta name="description" content="{% block description %}Les prochains passages de votre arrêt de bus, en temps réel, sur un petit écran chez vous.{% endblock %}">
+        {# Nonce de la CSP, lu par Turbo pour sa barre de progression et les scripts qu'il réexécute. #}
+        <meta name="csp-nonce" content="{{ csp_nonce('style') }}">
         {% block meta %}{% endblock %}
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>🚏</text></svg>">
+        {# Seule l'accueil est indexée : robots.txt n'empêche pas l'indexation d'une URL qui reçoit un lien. #}
+        {% block robots %}<meta name="robots" content="noindex">{% endblock %}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="Stopcast">
+        <meta property="og:title" content="{{ block('title') }}">
+        <meta property="og:description" content="{{ block('description') }}">
+        <meta property="og:url" content="{{ app.request.schemeAndHttpHost ~ app.request.baseUrl ~ app.request.pathInfo }}">
+        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
         {% block stylesheets %}
         {% endblock %}
 
         {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
+            {% block importmap %}{{ importmap('app', {nonce: csp_nonce('script')}) }}{% endblock %}
         {% endblock %}
 
         {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}

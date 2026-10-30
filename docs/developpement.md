@@ -92,6 +92,7 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 - `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (navigation de l'espace, messages flash en haut du contenu).
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
+- `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`). Sous `/api`, un client qui demande du JSON garde la réponse d'erreur JSON.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
 
 En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `bin/tailwind-watch` : une compilation complète au démarrage, puis une nouvelle dès que le contenu d'un fichier listé en `@source` dans `app.css` change. Il suffit de recharger la page, une à deux secondes après l'enregistrement. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
@@ -188,7 +189,9 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
 - Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
 - La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
-- Le pool `cache.rate_limiter` est en mémoire et vidé à chaque requête : la limite de la connexion ne s'accumule jamais en test. Le limiteur du mot de passe actuel (`current_password`) a son propre stockage en mémoire, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`).
+- Les limites d'essais (connexion, mot de passe actuel et demandes de réinitialisation) partagent en test un stockage en mémoire, `app.rate_limiter.test_storage`, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`, `ResetPasswordThrottlingTest` et `TrustedProxiesTest`) ; sans lui, chaque requête repart d'un compteur vide.
+- `TRUSTED_PROXIES` est lu au démarrage du noyau et appliqué en statique sur `Request` : pour le fixer dans un test, le définir dans `$_ENV` et `$_SERVER` avant `createClient()`, puis remettre la valeur d'origine et `Request::setTrustedProxies([], 0)` dans `tearDown()` (voir `TrustedProxiesTest`). Le client de test envoie ses requêtes depuis `127.0.0.1`, avec l'hôte `localhost`.
+- Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache de test (`make console c="cache:clear --env=test"`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
 
 ## Mettre à jour les dépendances
@@ -213,6 +216,23 @@ La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`
 Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`stopcast`, le nom du dossier, puis `stopcast-prod`, `stopcast-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
 
 Depuis le renommage du projet en Stopcast, les projets Compose et l'image de dev portent le nouveau nom (`stopcast-prod`, `stopcast-ci`, image `stopcast-dev`, et `stopcast` pour le dev une fois le dossier renommé) : Compose crée de nouveaux conteneurs et de nouveaux volumes, et la base de dev repart vide. `make up`, `make migrate` et `make import` la recréent, puis `make fixtures` la remplit (le compte de dev devient `admin@stopcast.local`). Les conteneurs, volumes et l'image de l'ancien nom restent sur la machine : `docker compose ls -a` et `docker image ls` les montrent, `docker compose -p <ancien projet> down -v` et `docker image rm <ancienne image>` les suppriment.
+
+## Proxy et hôtes de confiance
+
+Deux variables d'environnement disent à Symfony ce qu'il peut croire des en-têtes de la requête (`config/packages/framework.yaml`) :
+
+- `TRUSTED_PROXIES` : adresses IP ou plages CIDR des proxys placés devant l'application, séparées par des virgules. Quand la requête vient de l'un d'eux, Symfony lit l'IP du client, le protocole (HTTPS), l'hôte et le port dans `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` et `X-Forwarded-Port`. Sans cela, il voit l'IP du proxy : la limite d'essais à la connexion (par identifiant + IP) mettrait tous les utilisateurs dans le même compteur, les logs perdraient l'IP réelle et l'application, servie en HTTP derrière le proxy, générerait des liens en `http://`. Vide par défaut : aucun proxy, ces en-têtes sont ignorés. `CF-Connecting-IP` n'est jamais lu.
+- `TRUSTED_HOSTS` : hôtes acceptés dans l'en-tête `Host` (ou `X-Forwarded-Host` venant d'un proxy de confiance), en expressions régulières séparées par des virgules ; tout autre hôte reçoit une 400. Les liens des emails (réinitialisation du mot de passe, invitation) sont construits pendant la requête à partir de cet hôte : sans liste, un `Host` forgé produirait un lien vers un domaine piégé. Ancrer chaque motif (`^…$`) : `localhost` seul accepterait aussi `localhost.piege.example`. Vide, tout hôte est accepté.
+
+Valeurs par environnement :
+
+| Environnement | `TRUSTED_PROXIES` | `TRUSTED_HOSTS` |
+|---|---|---|
+| `.env` (tests compris) | vide | `localhost` et `127.0.0.1` |
+| `.env.dev` | vide | `localhost` et toute adresse IPv4, pour le Raspberry Pi du réseau local |
+| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau du proxy | domaine servi et `localhost`, que le healthcheck interroge (`curl http://localhost/`) |
+
+`compose.prod.yaml` passe les deux variables aux services `app` et `worker` : une valeur vide dans `.env.prod.local` l'emporte sur celle de `.env`, et désactive donc la vérification de l'hôte.
 
 ## Conventions
 
