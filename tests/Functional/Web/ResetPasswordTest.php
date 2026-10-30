@@ -40,7 +40,7 @@ final class ResetPasswordTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
-        self::assertEmailHeaderSame($email, 'From', 'Abribus <no-reply@abribus.local>');
+        self::assertEmailHeaderSame($email, 'From', 'Stopcast <no-reply@stopcast.local>');
         self::assertEmailHtmlBodyContains($email, 'http://localhost/reset-password/reset/');
         self::assertEmailTextBodyContains($email, 'http://localhost/reset-password/reset/');
 

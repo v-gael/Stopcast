@@ -68,6 +68,6 @@ final class ApiSurfaceTest extends WebTestCase
         self::assertIsArray($specification['paths'] ?? null);
         self::assertSame(['/api/next-passages'], array_keys($specification['paths']));
         self::assertIsArray($specification['info'] ?? null);
-        self::assertSame('Abribus API', $specification['info']['title'] ?? null);
+        self::assertSame('Stopcast API', $specification['info']['title'] ?? null);
     }
 }
