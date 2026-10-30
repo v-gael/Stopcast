@@ -11,11 +11,14 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Target;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\ResetPassword\Controller\ResetPasswordControllerTrait;
@@ -38,16 +41,27 @@ final class ResetPasswordController extends AbstractController
     }
 
     #[Route('', name: 'app_forgot_password_request', methods: ['GET', 'POST'])]
-    public function request(Request $request, UserRepository $userRepository, MailerInterface $mailer): Response
-    {
+    public function request(
+        Request $request,
+        UserRepository $userRepository,
+        MailerInterface $mailer,
+        #[Target('reset_password_request')]
+        RateLimiterFactoryInterface $resetPasswordRequestLimiter,
+    ): Response {
         $form = $this->createForm(ResetPasswordRequestType::class);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $email */
-            $email = $form->get('email')->getData();
+            // Chaque demande valide compte, que le compte existe ou non. Au-delà
+            // de la limite, ni recherche du compte ni mail.
+            if ($resetPasswordRequestLimiter->create($request->getClientIp() ?? '')->consume()->isAccepted()) {
+                /** @var string $email */
+                $email = $form->get('email')->getData();
 
-            return $this->sendResetEmail($userRepository->findOneBy(['email' => $email]), $mailer);
+                return $this->sendResetEmail($userRepository->findOneBy(['email' => $email]), $mailer);
+            }
+
+            $form->addError(new FormError('Trop de demandes. Réessayez plus tard.'));
         }
 
         return $this->render('reset_password/request.html.twig', [

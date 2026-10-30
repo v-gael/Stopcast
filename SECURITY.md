@@ -16,7 +16,13 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 - à la connexion, par couple identifiant + adresse IP (`login_throttling`) ;
 - au changement de mot de passe et à la suppression du compte, avec un seul compteur par compte, partagé entre ces deux formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
 
-Limite connue : le compteur n'est pas protégé par un verrou, des envois simultanés peuvent dépasser la limite de quelques essais.
+## Limite des demandes de réinitialisation du mot de passe
+
+« Mot de passe oublié » n'accepte que **5 demandes par 15 minutes** (fenêtre glissante) par adresse IP, que le compte existe ou non. Au-delà, le formulaire affiche une erreur, et ni le compte n'est recherché ni aucun mail n'est envoyé : le message ne révèle rien du compte. Cette limite s'ajoute à celle du bundle de réinitialisation, une demande par heure et par compte.
+
+Derrière un proxy, l'adresse IP retenue est celle du client seulement si `TRUSTED_PROXIES` est configuré ; sinon, tous les visiteurs partagent l'adresse du proxy.
+
+Limite connue : les compteurs ne sont pas protégés par un verrou, des envois simultanés peuvent dépasser les limites de quelques essais.
 
 ## En-têtes de sécurité HTTP
 
