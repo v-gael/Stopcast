@@ -92,6 +92,7 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 - `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (navigation de l'espace, messages flash en haut du contenu).
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
+- `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`). Sous `/api`, un client qui demande du JSON garde la réponse d'erreur JSON.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
 
 En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `bin/tailwind-watch` : une compilation complète au démarrage, puis une nouvelle dès que le contenu d'un fichier listé en `@source` dans `app.css` change. Il suffit de recharger la page, une à deux secondes après l'enregistrement. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
@@ -189,6 +190,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
 - La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
 - Le pool `cache.rate_limiter` est en mémoire et vidé à chaque requête : la limite de la connexion ne s'accumule jamais en test. Le limiteur du mot de passe actuel (`current_password`) a son propre stockage en mémoire, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`).
+- Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache de test (`make console c="cache:clear --env=test"`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
 
 ## Mettre à jour les dépendances
