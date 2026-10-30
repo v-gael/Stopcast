@@ -1,0 +1,4 @@
+Contact: https://github.com/v-gael/Stopcast/security/advisories/new
+Expires: 2027-10-30T00:00:00Z
+Policy: https://github.com/v-gael/Stopcast/security/policy
+Preferred-Languages: fr, en
