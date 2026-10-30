@@ -1,0 +1,13 @@
+# Seule la page d'accueil est publique. Les autres pages portent aussi
+# <meta name="robots" content="noindex"> : robots.txt seul n'empêche pas
+# l'indexation d'une URL qui reçoit un lien.
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /admin
+Disallow: /api
+Disallow: /autocomplete
+Disallow: /devices
+Disallow: /display-configurations
+Disallow: /invitation
+Disallow: /reset-password
