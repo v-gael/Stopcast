@@ -18,4 +18,10 @@ final class LegalController extends AbstractController
     {
         return $this->render('legal/notice.html.twig');
     }
+
+    #[Route('/conditions-utilisation', name: 'app_legal_terms', methods: ['GET'])]
+    public function terms(): Response
+    {
+        return $this->render('legal/terms.html.twig');
+    }
 }
