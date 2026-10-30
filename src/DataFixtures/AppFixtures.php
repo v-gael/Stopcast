@@ -27,9 +27,9 @@ final class AppFixtures extends Fixture
     public const string FIXED_DEVICE_LABEL = 'Écran de développement';
 
     /** Identifiants documentés dans docs/developpement.md. */
-    public const string DEV_USER_EMAIL = 'admin@abribus.local';
+    public const string DEV_USER_EMAIL = 'admin@stopcast.local';
 
-    public const string DEV_USER_PASSWORD = 'abribus-admin';
+    public const string DEV_USER_PASSWORD = 'stopcast-admin';
 
     private const int FIXED_DEVICE_QUAY_COUNT = 3;
 

@@ -12,7 +12,7 @@ final class UserTest extends TestCase
 {
     public function testNewAccountIsPendingUntilItHasAPassword(): void
     {
-        $user = new User('alice@abribus.test');
+        $user = new User('alice@stopcast.test');
 
         self::assertTrue($user->isPending());
         self::assertNull($user->getPassword());
@@ -24,17 +24,17 @@ final class UserTest extends TestCase
 
     public function testPendingAccountCanBeSerializedForTheSession(): void
     {
-        $user = new User('alice@abribus.test');
+        $user = new User('alice@stopcast.test');
 
         $restored = unserialize(serialize($user));
 
         self::assertInstanceOf(User::class, $restored);
-        self::assertSame('alice@abribus.test', $restored->getEmail());
+        self::assertSame('alice@stopcast.test', $restored->getEmail());
     }
 
     public function testUserIsPromotedToAdministrator(): void
     {
-        $user = new User('alice@abribus.test');
+        $user = new User('alice@stopcast.test');
 
         $user->changeRole(Role::Admin);
 
@@ -45,7 +45,7 @@ final class UserTest extends TestCase
 
     public function testAdministratorIsDemotedToUser(): void
     {
-        $user = new User('alice@abribus.test', Role::Admin);
+        $user = new User('alice@stopcast.test', Role::Admin);
 
         $user->changeRole(Role::User);
 

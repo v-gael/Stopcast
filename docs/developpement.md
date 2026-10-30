@@ -35,11 +35,11 @@ La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. 
 
 « Mot de passe oublié ? », sous le formulaire de connexion, envoie par email un lien valable 1 h et utilisable une fois. La page de confirmation est la même que l'email corresponde à un compte ou non, et une seule demande par heure est acceptée pour un même compte. Changer son mot de passe ferme les autres sessions et invalide les cookies « Se souvenir de moi ».
 
-Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs jetons cessent de fonctionner. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé, que la suppression vienne de la personne ou d'un administrateur : « Votre compte Abribus a été supprimé, avec ses écrans d'affichage. Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur. » Un compte en attente ne reçoit rien : le supprimer annule simplement son invitation.
+Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs jetons cessent de fonctionner. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé, que la suppression vienne de la personne ou d'un administrateur : « Votre compte Stopcast a été supprimé, avec ses écrans d'affichage. Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur. » Un compte en attente ne reçoit rien : le supprimer annule simplement son invitation.
 
 Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, statut (« Actif » ou « Invitation en attente »), nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`. « Modifier » change le rôle d'un compte, jamais son email ; ses sessions ouvertes sont alors déconnectées. « Supprimer » supprime un autre compte, avec ses dispositifs et leurs configurations, après une confirmation qui annonce combien de dispositifs partent avec lui ; un administrateur supprime son propre compte depuis « Mon compte », avec son mot de passe.
 
-« Inviter un compte » crée un compte en attente à partir d'un email et d'un rôle, sans mot de passe : il ne peut pas se connecter, et l'échec de connexion ne le révèle pas. L'invité reçoit « Activez votre compte Abribus », avec un lien valable 24 h et utilisable une fois (en dev, dans Mailpit). Le lien mène à « Choisissez votre mot de passe » (`/invitation`), qui active le compte puis renvoie vers la connexion. Un lien expiré ou invalide renvoie vers « Mot de passe oublié ? », d'où l'invité demande lui-même un nouveau lien : choisir un mot de passe par ce chemin active aussi le compte. Une seule demande par heure étant acceptée pour un même compte, ce chemin ne fonctionne qu'une heure après l'invitation. « Renvoyer l'invitation », dans la ligne d'un compte en attente, envoie un nouveau lien de 24 h, même juste après l'invitation : l'ancien lien cesse aussitôt de fonctionner.
+« Inviter un compte » crée un compte en attente à partir d'un email et d'un rôle, sans mot de passe : il ne peut pas se connecter, et l'échec de connexion ne le révèle pas. L'invité reçoit « Activez votre compte Stopcast », avec un lien valable 24 h et utilisable une fois (en dev, dans Mailpit). Le lien mène à « Choisissez votre mot de passe » (`/invitation`), qui active le compte puis renvoie vers la connexion. Un lien expiré ou invalide renvoie vers « Mot de passe oublié ? », d'où l'invité demande lui-même un nouveau lien : choisir un mot de passe par ce chemin active aussi le compte. Une seule demande par heure étant acceptée pour un même compte, ce chemin ne fonctionne qu'une heure après l'invitation. « Renvoyer l'invitation », dans la ligne d'un compte en attente, envoie un nouveau lien de 24 h, même juste après l'invitation : l'ancien lien cesse aussitôt de fonctionner.
 
 ## Emails
 
@@ -65,7 +65,7 @@ Les emails s'appuient sur le layout `templates/email/base.html.twig` (styles en 
 
 Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. Supprimer un compte supprime ses dispositifs et leurs configurations.
 
-Le jeton d'un dispositif (à recopier dans la configuration d'AbribusDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
+Le jeton d'un dispositif (à recopier dans la configuration de StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
 
 Une base qui contient des dispositifs d'avant l'introduction des propriétaires ne peut pas être migrée (la migration `Version20260929175027` échoue). En dev, supprimer les dispositifs de démo, migrer, puis recharger les fixtures :
 
@@ -112,13 +112,13 @@ Les tests (CI GitHub, `make ci-run`) ne compilent pas la CSS. En environnement `
 
 `make fixtures` remplace tous les dispositifs et leurs configurations. Le référentiel importé (quais, lignes, trajets) et les comptes créés par `app:user:create` ne sont pas modifiés. Il crée :
 
-- un compte administrateur de développement, recréé à chaque chargement : `admin@abribus.local`, mot de passe `abribus-admin`. Il possède tous les dispositifs de démo ;
+- un compte administrateur de développement, recréé à chaque chargement : `admin@stopcast.local`, mot de passe `stopcast-admin`. Il possède tous les dispositifs de démo ;
 - 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
-- si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage AbribusDisplay.
+- si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage StopcastDisplay.
 
 Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les renvoie `/api/next-passages`. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
 
-Pour brancher AbribusDisplay, sur la machine de développement comme sur le Raspberry Pi :
+Pour brancher StopcastDisplay, sur la machine de développement comme sur le Raspberry Pi :
 
 1. Générer un jeton (64 caractères max) et le définir dans `.env.local` :
 
@@ -129,7 +129,7 @@ Pour brancher AbribusDisplay, sur la machine de développement comme sur le Rasp
    ```
 
 2. Lancer `make fixtures`. Le jeton reste le même d'un chargement à l'autre.
-3. Dans AbribusDisplay, recopier ce jeton dans `TOKEN`, dans `.env.local` sur la machine et dans `.env.pi.local` sur le Pi. `API_URL` pointe sur l'IP de la machine de développement sur le réseau local (par ex. `http://192.168.1.20`), le Pi ne pouvant pas joindre `localhost`.
+3. Dans StopcastDisplay, recopier ce jeton dans `TOKEN`, dans `.env.local` sur la machine et dans `.env.pi.local` sur le Pi. `API_URL` pointe sur l'IP de la machine de développement sur le réseau local (par ex. `http://192.168.1.20`), le Pi ne pouvant pas joindre `localhost`.
 
 Vérifier que l'écran a des passages :
 
@@ -137,7 +137,7 @@ Vérifier que l'écran a des passages :
 curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
 ```
 
-AbribusDisplay appelle cette route toutes les 10 secondes : le profiler ne la profile pas, pour que ces appels ne noient pas ceux du navigateur. Pour en profiler un, ajouter `?_profile=1` (`http://localhost/api/next-passages?_profile=1`) ; le profil apparaît alors dans `/_profiler`.
+StopcastDisplay appelle cette route toutes les 10 secondes : le profiler ne la profile pas, pour que ces appels ne noient pas ceux du navigateur. Pour en profiler un, ajouter `?_profile=1` (`http://localhost/api/next-passages?_profile=1`) ; le profil apparaît alors dans `/_profiler`.
 
 ## Logs
 
@@ -151,7 +151,7 @@ En dev, trois sources, chacune avec sa commande :
 
 Le fichier Symfony est dans `var/log/`, qui est le volume Docker `app_var` : il n'est pas visible depuis la machine hôte, seulement dans les conteneurs. Monolog écrit un fichier par jour, `dev-AAAA-MM-JJ.log`, et garde les 7 derniers. Il retient le niveau `info` sur tous les canaux (sauf `event`), et tout le canal `app` dès `debug`. `make dev-log` suit le fichier du jour ; après minuit, relancer la commande pour passer au nouveau fichier. Pour lire un autre jour : `make sh`, puis `ls var/log/`.
 
-Le profiler ne garde pas les appels d'AbribusDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
+Le profiler ne garde pas les appels de StopcastDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
 
 ## Qualité de code
 
@@ -210,7 +210,9 @@ La prod locale redirige `http://localhost/` vers HTTPS par une redirection perma
 
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
-Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`abribus`, `abribus-prod`, `abribus-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
+Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`stopcast`, le nom du dossier, puis `stopcast-prod`, `stopcast-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
+
+Depuis le renommage du projet en Stopcast, les projets Compose et l'image de dev portent le nouveau nom (`stopcast-prod`, `stopcast-ci`, image `stopcast-dev`, et `stopcast` pour le dev une fois le dossier renommé) : Compose crée de nouveaux conteneurs et de nouveaux volumes, et la base de dev repart vide. `make up`, `make migrate` et `make import` la recréent, puis `make fixtures` la remplit (le compte de dev devient `admin@stopcast.local`). Les conteneurs, volumes et l'image de l'ancien nom restent sur la machine : `docker compose ls -a` et `docker image ls` les montrent, `docker compose -p <ancien projet> down -v` et `docker image rm <ancienne image>` les suppriment.
 
 ## Conventions
 

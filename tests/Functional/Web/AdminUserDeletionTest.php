@@ -62,7 +62,7 @@ final class AdminUserDeletionTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
-        self::assertEmailHeaderSame($email, 'Subject', 'Votre compte Abribus a été supprimé');
+        self::assertEmailHeaderSame($email, 'Subject', 'Votre compte Stopcast a été supprimé');
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le compte lea@example.com a été supprimé.');
 

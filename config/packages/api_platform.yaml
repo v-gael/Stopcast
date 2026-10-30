@@ -1,5 +1,5 @@
 api_platform:
-    title: Abribus API
+    title: Stopcast API
     version: 1.0.0
     defaults:
         stateless: true

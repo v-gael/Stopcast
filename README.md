@@ -1,6 +1,6 @@
-# Abribus
+# Stopcast
 
-Réplique en temps réel l'affichage d'un panneau d'abribus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
+Réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
 
 <p align="center">
   <img src="docs/demo.gif" alt="Aperçu du panneau : deux arrêts avec leurs prochains passages, puis un arrêt sans passage prévu" width="480">
@@ -11,12 +11,12 @@ Réplique en temps réel l'affichage d'un panneau d'abribus sur un petit écran 
 
 ## En bref
 
-Abribus croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport :
+Stopcast croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport :
 
 - le **GTFS statique** (lignes, arrêts, quais, destinations des trajets), importé en base ;
 - le **GTFS-RT** (horaires en temps réel), interrogé et mis en cache à la volée.
 
-Ce dépôt contient l'**API Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et la sert à un écran Raspberry Pi authentifié par token. Le client d'affichage (Python) vit dans un dépôt séparé : [AbribusDisplay](https://github.com/v-gael/AbribusDisplay).
+Ce dépôt contient l'**API Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et la sert à un écran Raspberry Pi authentifié par token. Le client d'affichage (Python) vit dans un dépôt séparé : [StopcastDisplay](https://github.com/v-gael/StopcastDisplay).
 
 L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de plusieurs quais (un par sens), une ligne peut avoir plusieurs terminus, et les identifiants des flux statique et temps réel doivent concorder. Détails dans [docs/architecture.md](docs/architecture.md).
 
@@ -33,7 +33,7 @@ flowchart LR
     end
     ST -- "à chaque changement d'horaires" --> I
     RT -- "à la demande" --> C
-    A -- "JSON, 1×/min<br/>(X-Device-Token)" --> D["Dispositif<br/>(AbribusDisplay sur Raspberry Pi)"]
+    A -- "JSON, 1×/min<br/>(X-Device-Token)" --> D["Dispositif<br/>(StopcastDisplay sur Raspberry Pi)"]
 ```
 
 ## Exemple de réponse
