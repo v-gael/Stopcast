@@ -24,7 +24,8 @@ services:
       retries: 3
       start_period: 30s
 
-  # Consomme la file async (envoi des emails). Même image que app.
+  # Consomme la file async (envoi des emails) et les tâches planifiées
+  # (scheduler_default). Même image que app.
   worker:
     build:
       context: .
@@ -43,7 +44,7 @@ services:
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true
-    command: ["php", "bin/console", "messenger:consume", "async", "--time-limit=3600", "--memory-limit=128M"]
+    command: ["php", "bin/console", "messenger:consume", "async", "scheduler_default", "--time-limit=3600", "--memory-limit=128M"]
     depends_on:
       database:
         condition: service_healthy
