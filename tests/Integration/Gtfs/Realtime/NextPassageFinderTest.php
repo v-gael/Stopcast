@@ -9,6 +9,7 @@ use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
 use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
+use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
@@ -19,7 +20,6 @@ use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Symfony\Bridge\Doctrine\Middleware\Debug\DebugDataHolder;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -27,6 +27,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class NextPassageFinderTest extends KernelTestCase
 {
+    use QueryCountTrait;
     use RealtimeFeedTrait;
     use ResetDatabase;
 
@@ -301,21 +302,6 @@ final class NextPassageFinderTest extends KernelTestCase
         yield 'page HTML renvoyée avec un statut 200' => ['<html><body>Service indisponible</body></html>'];
         yield 'corps vide' => [''];
         yield 'flux tronqué' => [substr(self::serializedFeed([]), 0, -5)];
-    }
-
-    private function countQueries(callable $callback): int
-    {
-        $debugDataHolder = self::getContainer()->get('doctrine.debug_data_holder');
-        self::assertInstanceOf(DebugDataHolder::class, $debugDataHolder);
-
-        $this->entityManager()->clear();
-        $debugDataHolder->reset();
-        $callback();
-
-        $queries = $debugDataHolder->getData()['default'] ?? [];
-        self::assertIsArray($queries);
-
-        return \count($queries);
     }
 
     /**
