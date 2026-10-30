@@ -18,6 +18,20 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 
 Limite connue : le compteur n'est pas protégé par un verrou, des envois simultanés peuvent dépasser la limite de quelques essais.
 
+## En-têtes de sécurité HTTP
+
+L'application pose elle-même ses en-têtes de sécurité (`nelmio/security-bundle`, configuré dans `config/packages/nelmio_security.yaml`), sur toutes les réponses, API comprise :
+
+- `X-Content-Type-Options: nosniff` ;
+- `X-Frame-Options: DENY` ;
+- `Referrer-Policy: strict-origin-when-cross-origin` ;
+- `Permissions-Policy`, qui coupe la caméra, le micro, la géolocalisation, le paiement et l'USB ;
+- `Cross-Origin-Opener-Policy: same-origin`.
+
+La **Content Security Policy** est stricte et bloquante dans tous les environnements : seules les ressources de la même origine sont chargées, sans `unsafe-inline` ni `unsafe-eval`, et les scripts et styles inline ne passent qu'avec le nonce tiré à chaque réponse (`csp_nonce()` dans Twig). La page ne peut pas être affichée dans un cadre (`frame-ancestors 'none'`) et les formulaires ne s'envoient qu'à la même origine. En développement, `https://cdn.jsdelivr.net` est autorisé en plus pour les scripts du hot reload FrankenPHP. Les violations ne sont pas encore remontées au serveur.
+
+HSTS n'est pas posé par l'application : il revient au serveur qui termine le TLS.
+
 ## Signaler une vulnérabilité
 
 **N'ouvrez pas d'issue publique** pour signaler une faille de sécurité.

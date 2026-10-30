@@ -1,0 +1,57 @@
+nelmio_security:
+    # Interdit l'affichage du site dans un cadre (doublé par frame-ancestors).
+    clickjacking:
+        paths:
+            '^/.*': DENY
+
+    content_type:
+        nosniff: true
+
+    referrer_policy:
+        enabled: true
+        policies:
+            - 'strict-origin-when-cross-origin'
+
+    permissions_policy:
+        enabled: true
+        policies:
+            camera: []
+            microphone: []
+            geolocation: []
+            payment: []
+            usb: []
+
+    cross_origin_isolation:
+        enabled: true
+        paths:
+            '^/': { coop: 'same-origin' }
+
+    # CSP stricte à nonces, bloquante. Le nonce n'est ajouté à script-src et
+    # style-src que sur les pages qui appellent csp_nonce() (base.html.twig).
+    # Le bundle n'envoie pas une directive identique à default-src.
+    csp:
+        enabled: true
+        # Sans l'en-tête X-Content-Security-Policy des navigateurs d'avant CSP 1.0.
+        compat_headers: false
+        enforce:
+            # Pas de 'unsafe-inline' de repli pour les navigateurs sans CSP 2.
+            level1_fallback: false
+            default-src: ['self']
+            script-src: ['self']
+            style-src: ['self']
+            img-src: ['self', 'data:']
+            connect-src: ['self']
+            font-src: ['self']
+            frame-ancestors: ['none']
+            form-action: ['self']
+            base-uri: ['none']
+            object-src: ['none']
+
+when@dev:
+    nelmio_security:
+        csp:
+            enforce:
+                # Ajouté à script-src : scripts du hot reload FrankenPHP
+                # (base.html.twig). Le hub Mercure qu'il écoute est servi par
+                # la même origine.
+                script-src: ['https://cdn.jsdelivr.net']
