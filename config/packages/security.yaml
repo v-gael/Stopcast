@@ -69,3 +69,11 @@ when@test:
                 cost: 4 # Lowest possible value for bcrypt
                 time_cost: 3 # Lowest possible value for argon
                 memory_cost: 10 # Lowest possible value for argon
+
+        firewalls:
+            main:
+                login_throttling:
+                    # Même stockage en mémoire que current_password (voir
+                    # rate_limiter.yaml) : avec disableReboot(), le compteur
+                    # tient le temps d'un test.
+                    storage_service: app.rate_limiter.test_storage
