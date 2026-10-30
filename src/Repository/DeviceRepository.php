@@ -49,4 +49,27 @@ class DeviceRepository extends ServiceEntityRepository
 
         return $devices;
     }
+
+    /**
+     * Dispositifs d'un compte, du plus ancien au plus récent, avec leurs
+     * configurations et leurs quais chargés en une seule requête.
+     *
+     * @return list<Device>
+     */
+    public function findByOwnerWithConfigurationsAndQuays(User $owner): array
+    {
+        /** @var list<Device> $devices */
+        $devices = $this->createQueryBuilder('d')
+            ->addSelect('c', 'q')
+            ->leftJoin('d.displayConfigurations', 'c')
+            ->leftJoin('c.quay', 'q')
+            ->andWhere('d.owner = :owner')
+            ->setParameter('owner', $owner)
+            ->orderBy('d.createdAt', 'ASC')
+            ->addOrderBy('d.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $devices;
+    }
 }

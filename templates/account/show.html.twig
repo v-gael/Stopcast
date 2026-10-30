@@ -13,6 +13,11 @@
 
         <div class="mt-6 flex flex-wrap gap-3">
             <twig:Button href="{{ path('app_account_password') }}" variant="secondary">Modifier mon mot de passe</twig:Button>
+            {# Hors Turbo, pour que le navigateur télécharge le fichier. #}
+            <form method="post" action="{{ path('app_account_export') }}" data-turbo="false">
+                <input type="hidden" name="_token" value="{{ csrf_token('export-account') }}">
+                <twig:Button type="submit" variant="secondary">Télécharger mes données</twig:Button>
+            </form>
             <twig:Button href="{{ path('app_account_delete') }}" variant="danger">Supprimer mon compte</twig:Button>
         </div>
     </twig:Card>
