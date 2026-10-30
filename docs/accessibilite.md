@@ -92,5 +92,3 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Anciennes bordures des champs (corrigées) | slate-300 `#cad5e2` | blanc | 1,49 | 3 |
 
 ## Passe manuelle
-
-À faire dans un navigateur : parcours au clavier, lecteur d'écran, axe DevTools.
