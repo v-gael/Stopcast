@@ -10,7 +10,7 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 /**
- * Pas de profil pour les appels d'StopcastDisplay aux prochains passages
+ * Pas de profil pour les appels de StopcastDisplay aux prochains passages
  * (un toutes les 10 secondes), sauf avec `?_profile=1` pour en examiner un.
  *
  * Priorité 31 : juste après le RouterListener (32), qui renseigne la route,

@@ -65,7 +65,7 @@ Les emails s'appuient sur le layout `templates/email/base.html.twig` (styles en 
 
 Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. Supprimer un compte supprime ses dispositifs et leurs configurations.
 
-Le jeton d'un dispositif (à recopier dans la configuration d'StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
+Le jeton d'un dispositif (à recopier dans la configuration de StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
 
 Une base qui contient des dispositifs d'avant l'introduction des propriétaires ne peut pas être migrée (la migration `Version20260929175027` échoue). En dev, supprimer les dispositifs de démo, migrer, puis recharger les fixtures :
 
@@ -151,7 +151,7 @@ En dev, trois sources, chacune avec sa commande :
 
 Le fichier Symfony est dans `var/log/`, qui est le volume Docker `app_var` : il n'est pas visible depuis la machine hôte, seulement dans les conteneurs. Monolog écrit un fichier par jour, `dev-AAAA-MM-JJ.log`, et garde les 7 derniers. Il retient le niveau `info` sur tous les canaux (sauf `event`), et tout le canal `app` dès `debug`. `make dev-log` suit le fichier du jour ; après minuit, relancer la commande pour passer au nouveau fichier. Pour lire un autre jour : `make sh`, puis `ls var/log/`.
 
-Le profiler ne garde pas les appels d'StopcastDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
+Le profiler ne garde pas les appels de StopcastDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
 
 ## Qualité de code
 
