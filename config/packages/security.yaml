@@ -44,6 +44,8 @@ security:
             remember_me:
                 secret: '%kernel.secret%'
                 lifetime: 2592000 # 30 jours
+                httponly: true
+                samesite: lax
             login_throttling:
                 max_attempts: 5
                 interval: '15 minutes'
@@ -58,6 +60,16 @@ security:
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/(account|devices|display-configurations), roles: ROLE_USER }
         # Le reste est public, dont /api et sa documentation.
+
+when@prod:
+    security:
+        firewalls:
+            main:
+                remember_me:
+                    # Comme le cookie de session : Secure, Path=/, sans Domain.
+                    name: __Host-REMEMBERME
+                    secure: true
+                    path: /
 
 when@test:
     security:
