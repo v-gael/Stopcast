@@ -20,7 +20,7 @@ Limite connue : le compteur n'est pas protégé par un verrou, des envois simult
 
 ## Sessions
 
-- La session dure le temps du navigateur et expire après **2 heures d'inactivité**.
+- La session dure le temps du navigateur et expire après **2 heures d'inactivité** (au plus tôt : le ramasse-miettes des sessions est probabiliste, une session inactive peut survivre un peu plus longtemps quand le trafic est faible).
 - « Se souvenir de moi », sur case à cocher, garde la connexion **30 jours**.
 - Les deux cookies sont `HttpOnly` et `SameSite=Lax` ; en production, ils sont aussi `Secure` et préfixés `__Host-`, ce qui interdit à un autre site du domaine parent de les remplacer.
 - Changer son mot de passe déconnecte les autres sessions ouvertes sur le compte et invalide les cookies « se souvenir de moi » émis avant le changement.
