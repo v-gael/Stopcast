@@ -18,6 +18,10 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 
 Limite connue : le compteur n'est pas protégé par un verrou, des envois simultanés peuvent dépasser la limite de quelques essais.
 
+## Proxy et hôtes de confiance
+
+L'application ne croit les en-têtes `X-Forwarded-*` que venant des proxys listés dans `TRUSTED_PROXIES`, et refuse (400) tout hôte absent de `TRUSTED_HOSTS`, à partir duquel sont construits les liens des emails (voir [docs/developpement.md](docs/developpement.md#proxy-et-hôtes-de-confiance)).
+
 ## Signaler une vulnérabilité
 
 **N'ouvrez pas d'issue publique** pour signaler une faille de sécurité.

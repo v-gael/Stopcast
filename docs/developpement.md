@@ -188,7 +188,8 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
 - Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
 - La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
-- Le pool `cache.rate_limiter` est en mémoire et vidé à chaque requête : la limite de la connexion ne s'accumule jamais en test. Le limiteur du mot de passe actuel (`current_password`) a son propre stockage en mémoire, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`).
+- Les limites d'essais (connexion et mot de passe actuel) partagent en test un stockage en mémoire, `app.rate_limiter.test_storage`, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest` et `TrustedProxiesTest`) ; sans lui, chaque requête repart d'un compteur vide.
+- `TRUSTED_PROXIES` est lu au démarrage du noyau et appliqué en statique sur `Request` : pour le fixer dans un test, le définir dans `$_ENV` et `$_SERVER` avant `createClient()`, puis remettre la valeur d'origine et `Request::setTrustedProxies([], 0)` dans `tearDown()` (voir `TrustedProxiesTest`). Le client de test envoie ses requêtes depuis `127.0.0.1`, avec l'hôte `localhost`.
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
 
 ## Mettre à jour les dépendances
@@ -211,6 +212,23 @@ La prod locale redirige `http://localhost/` vers HTTPS par une redirection perma
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
 Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`abribus`, `abribus-prod`, `abribus-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
+
+## Proxy et hôtes de confiance
+
+Deux variables d'environnement disent à Symfony ce qu'il peut croire des en-têtes de la requête (`config/packages/framework.yaml`) :
+
+- `TRUSTED_PROXIES` : adresses IP ou plages CIDR des proxys placés devant l'application, séparées par des virgules. Quand la requête vient de l'un d'eux, Symfony lit l'IP du client, le protocole (HTTPS), l'hôte et le port dans `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` et `X-Forwarded-Port`. Sans cela, il voit l'IP du proxy : la limite d'essais à la connexion (par identifiant + IP) mettrait tous les utilisateurs dans le même compteur, les logs perdraient l'IP réelle et l'application, servie en HTTP derrière le proxy, générerait des liens en `http://`. Vide par défaut : aucun proxy, ces en-têtes sont ignorés. `CF-Connecting-IP` n'est jamais lu.
+- `TRUSTED_HOSTS` : hôtes acceptés dans l'en-tête `Host` (ou `X-Forwarded-Host` venant d'un proxy de confiance), en expressions régulières séparées par des virgules ; tout autre hôte reçoit une 400. Les liens des emails (réinitialisation du mot de passe, invitation) sont construits pendant la requête à partir de cet hôte : sans liste, un `Host` forgé produirait un lien vers un domaine piégé. Ancrer chaque motif (`^…$`) : `localhost` seul accepterait aussi `localhost.piege.example`. Vide, tout hôte est accepté.
+
+Valeurs par environnement :
+
+| Environnement | `TRUSTED_PROXIES` | `TRUSTED_HOSTS` |
+|---|---|---|
+| `.env` (tests compris) | vide | `localhost` et `127.0.0.1` |
+| `.env.dev` | vide | `localhost` et toute adresse IPv4, pour le Raspberry Pi du réseau local |
+| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau du proxy | domaine servi |
+
+`compose.prod.yaml` passe les deux variables aux services `app` et `worker` : une valeur vide dans `.env.prod.local` l'emporte sur celle de `.env`, et désactive donc la vérification de l'hôte.
 
 ## Conventions
 
