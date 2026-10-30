@@ -11,6 +11,17 @@
 @plugin "@tailwindcss/forms";
 
 /*
+ * Focus clavier visible et contrasté sur tout élément interactif qui n'a pas
+ * le sien : amber-700 fait 5:1 sur le blanc et le slate-50 des pages.
+ */
+@layer base {
+    :focus-visible {
+        outline: 2px solid var(--color-amber-700);
+        outline-offset: 2px;
+    }
+}
+
+/*
  * Tom Select (choix du quai) aux couleurs des champs du thème de formulaire.
  * Le wrapper reprend les classes du <select> d'origine : la bordure passe sur
  * .ts-control seul.
@@ -26,15 +37,15 @@
 
     .ts-wrapper .ts-control {
         border-radius: var(--radius-md);
-        border-color: var(--color-slate-300);
+        border-color: var(--color-slate-500);
         padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
         font-size: var(--text-sm);
         box-shadow: var(--shadow-sm);
     }
 
     .ts-wrapper.focus .ts-control {
-        border-color: var(--color-amber-500);
-        box-shadow: 0 0 0 1px var(--color-amber-500);
+        border-color: var(--color-amber-700);
+        box-shadow: 0 0 0 1px var(--color-amber-700);
     }
 
     .ts-dropdown {

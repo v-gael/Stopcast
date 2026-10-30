@@ -11,27 +11,43 @@
 {%- endblock checkbox_row -%}
 
 {%- block widget_attributes -%}
-    {%- set widget_class = widget_class|default('mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm') -%}
+    {%- set widget_class = widget_class|default('mt-1 block w-full rounded-md border-slate-500 shadow-sm focus:border-amber-700 focus:ring-amber-700 sm:text-sm') -%}
     {%- set widget_disabled_class = widget_disabled_class|default('bg-slate-100 text-slate-500') -%}
     {%- set widget_errors_class = widget_errors_class|default('border-red-600 focus:border-red-600 focus:ring-red-600') -%}
+    {#- form_row relie déjà l'aide et les erreurs ; checkbox_row ne relie que l'aide : compléter sans doublon. -#}
     {%- if errors|length > 0 -%}
-        {%- set attr = attr|merge({'aria-invalid': 'true', 'aria-describedby': (attr['aria-describedby'] is defined ? attr['aria-describedby'] ~ ' ' : '') ~ id ~ '_error1'}) -%}
+        {%- set described_by = attr['aria-describedby'] is defined ? attr['aria-describedby']|split(' ') : [] -%}
+        {%- for index in 1..errors|length -%}
+            {%- if (id ~ '_error' ~ index) not in described_by -%}
+                {%- set described_by = described_by|merge([id ~ '_error' ~ index]) -%}
+            {%- endif -%}
+        {%- endfor -%}
+        {%- set attr = attr|merge({'aria-invalid': 'true', 'aria-describedby': described_by|join(' ')}) -%}
     {%- endif -%}
     {{- parent() -}}
 {%- endblock widget_attributes -%}
 
 {%- block checkbox_widget -%}
-    {%- set widget_class = widget_class|default('mr-2 rounded border-slate-300 text-amber-600 focus:ring-amber-500') -%}
+    {%- set widget_class = widget_class|default('mr-2 rounded border-slate-500 text-amber-600 focus:ring-amber-700') -%}
     {{- parent() -}}
 {%- endblock checkbox_widget -%}
 
 {%- block radio_widget -%}
-    {%- set widget_class = widget_class|default('mr-2 border-slate-300 text-amber-600 focus:ring-amber-500') -%}
+    {%- set widget_class = widget_class|default('mr-2 border-slate-500 text-amber-600 focus:ring-amber-700') -%}
     {{- parent() -}}
 {%- endblock radio_widget -%}
 
+{# Un groupe de cases ou de boutons radio est nommé par le libellé du champ, qui n'a pas de « for ». #}
+{%- block choice_widget_expanded -%}
+    {%- set attr = attr|merge({role: multiple ? 'group' : 'radiogroup'}|merge(label is same as(false) ? {} : {'aria-labelledby': id ~ '_label'})) -%}
+    {{- parent() -}}
+{%- endblock choice_widget_expanded -%}
+
 {%- block form_label -%}
     {%- set label_class = label_class|default('block text-sm font-medium text-slate-800') -%}
+    {%- if compound and expanded|default(false) -%}
+        {%- set label_attr = label_attr|merge({id: id ~ '_label'}) -%}
+    {%- endif -%}
     {{- parent() -}}
 {%- endblock form_label -%}
 

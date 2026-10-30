@@ -4,7 +4,7 @@
 
 {% block content %}
     <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <twig:Card title="Choisissez votre mot de passe" class="max-w-md">
+        <twig:Card title="Choisissez votre mot de passe" :titleLevel="1" class="max-w-md">
             <p class="mb-4 text-sm text-slate-600">Il servira à vous connecter à l'espace de gestion avec votre email.</p>
 
             {{ form_start(form) }}
