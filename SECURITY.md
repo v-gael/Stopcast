@@ -30,4 +30,6 @@ Merci d'indiquer :
 - les étapes pour la reproduire (requête, configuration, version concernée) ;
 - si possible, une piste de correction.
 
+Le site déployé publie ce point de contact dans [`/.well-known/security.txt`](public/.well-known/security.txt) ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)). Sa date `Expires` est renouvelée chaque année ; un test échoue 30 jours avant l'échéance pour le rappeler.
+
 Ce projet est maintenu sur mon temps libre : je m'engage à accuser réception du signalement et à vous tenir informé de sa prise en charge, sans délai garanti.
