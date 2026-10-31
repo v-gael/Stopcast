@@ -95,6 +95,7 @@ make up && make migrate && make import
 - [API et variables d'environnement](docs/api.md)
 - [Développement : installation, outils, conventions](docs/developpement.md)
 - [Accessibilité : revue WCAG 2.2 AA](docs/accessibilite.md)
+- [Données personnelles : registre des traitements et sous-traitants](docs/rgpd.md)
 
 ## État du projet
 
