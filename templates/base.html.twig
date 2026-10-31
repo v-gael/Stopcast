@@ -31,6 +31,8 @@
         {% endif %}
     </head>
     <body class="{% block body_class %}min-h-full bg-slate-50 text-slate-800 antialiased{% endblock %}">
+        {# Premier élément atteint au clavier : saute l'en-tête et la navigation. #}
+        <a href="#contenu" class="sr-only rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50">Aller au contenu</a>
         {% block body %}{% endblock %}
     </body>
 </html>

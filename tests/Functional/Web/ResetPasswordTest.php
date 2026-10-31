@@ -75,6 +75,8 @@ final class ResetPasswordTest extends WebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Votre mot de passe a été modifié, vous pouvez vous connecter.');
         self::assertSelectorExists('input[name="_password"]');
+        // Un compte déjà actif ne date que ses connexions.
+        self::assertNull($this->storedUser(self::EMAIL)->getLastLoginAt());
 
         $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
         self::assertResponseRedirects('/');

@@ -2,33 +2,37 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+    {# Sur fond sombre, le focus prend la couleur du survol : 10:1 sur slate-900. #}
+    {% set nav_link = 'inline-flex min-h-6 items-center rounded-sm hover:text-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400' %}
     <div class="flex min-h-screen flex-col">
         <header class="bg-slate-900 text-white">
             <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-4 py-4 sm:px-6">
-                <a href="{{ path('app_home') }}" class="flex items-center gap-2 text-lg font-bold">
+                <a href="{{ path('app_home') }}" class="flex items-center gap-2 rounded-sm text-lg font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400">
                     <span aria-hidden="true">🚏</span> Stopcast
                 </a>
                 <nav class="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium" aria-label="Navigation principale">
-                    <a href="{{ path('app_device_index') }}" class="hover:text-amber-400"{% if app.current_route starts with 'app_device' %} aria-current="page"{% endif %}>Dispositifs</a>
-                    <a href="{{ path('app_display_configuration_index') }}" class="hover:text-amber-400"{% if app.current_route starts with 'app_display_configuration' %} aria-current="page"{% endif %}>Configurations d'affichage</a>
+                    <a href="{{ path('app_device_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_device' %} aria-current="page"{% endif %}>Dispositifs</a>
+                    <a href="{{ path('app_display_configuration_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_display_configuration' %} aria-current="page"{% endif %}>Configurations d'affichage</a>
                     {% if is_granted('ROLE_ADMIN') %}
-                        <a href="{{ path('app_admin_user_index') }}" class="hover:text-amber-400"{% if app.current_route starts with 'app_admin_user' %} aria-current="page"{% endif %}>Utilisateurs</a>
+                        <a href="{{ path('app_admin_user_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_admin_user' %} aria-current="page"{% endif %}>Utilisateurs</a>
                     {% endif %}
                     <span class="ml-auto flex items-center gap-x-6">
-                        <a href="{{ path('app_account') }}" class="hover:text-amber-400"{% if app.current_route starts with 'app_account' %} aria-current="page"{% endif %}>Mon compte</a>
+                        <a href="{{ path('app_account') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_account' %} aria-current="page"{% endif %}>Mon compte</a>
                         {# POST et non lien : Turbo précharge les liens au survol, ce qui déconnectait. #}
                         <form method="post" action="{{ path('app_logout') }}">
                             <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('logout') }}">
-                            <button type="submit" class="cursor-pointer hover:text-amber-400">Se déconnecter</button>
+                            <button type="submit" class="cursor-pointer {{ nav_link }}">Se déconnecter</button>
                         </form>
                     </span>
                 </nav>
             </div>
         </header>
 
-        <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+        <main id="contenu" class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
             <twig:Flash :floating="true" />
             {% block content %}{% endblock %}
         </main>
+
+        {{ include('layout/_footer.html.twig') }}
     </div>
 {% endblock %}

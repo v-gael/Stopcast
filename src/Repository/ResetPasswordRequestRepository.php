@@ -31,4 +31,29 @@ class ResetPasswordRequestRepository extends ServiceEntityRepository implements 
     {
         return new ResetPasswordRequest($user, $expiresAt, $selector, $hashedToken);
     }
+
+    /**
+     * Supprime les demandes expirées des comptes actifs. Celles d'un compte en
+     * attente restent : elles datent sa dernière invitation.
+     *
+     * @return int le nombre de demandes supprimées
+     */
+    public function removeExpiredRequestsOfActiveUsers(\DateTimeImmutable $now): int
+    {
+        $activeUsers = $this->getEntityManager()->createQueryBuilder()
+            ->select('u.id')
+            ->from(User::class, 'u')
+            ->where('u.password IS NOT NULL');
+
+        /** @var int $deleted */
+        $deleted = $this->createQueryBuilder('r')
+            ->delete()
+            ->where('r.expiresAt <= :now')
+            ->andWhere(\sprintf('r.user IN (%s)', $activeUsers->getDQL()))
+            ->setParameter('now', $now)
+            ->getQuery()
+            ->execute();
+
+        return $deleted;
+    }
 }

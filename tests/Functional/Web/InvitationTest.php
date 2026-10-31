@@ -124,6 +124,19 @@ final class InvitationTest extends WebTestCase
         self::assertSame('Actif', $this->statusOf(self::EMAIL));
     }
 
+    public function testActivationStartsTheActivityPeriodOfTheAccount(): void
+    {
+        self::mockTime('2026-10-31 09:30:00');
+        $link = $this->inviteAndGetLink();
+        self::assertNull($this->storedUser(self::EMAIL)->getLastLoginAt());
+
+        self::mockTime('+2 hours');
+        $this->followInvitationLink($link);
+        $this->choosePassword(self::PASSWORD);
+
+        self::assertEquals(new \DateTimeImmutable('2026-10-31 11:30:00'), $this->storedUser(self::EMAIL)->getLastLoginAt());
+    }
+
     public function testInvitationLinkCannotBeUsedTwice(): void
     {
         $link = $this->inviteAndGetLink();
@@ -182,6 +195,7 @@ final class InvitationTest extends WebTestCase
 
     public function testForgottenPasswordAlsoActivatesAPendingAccount(): void
     {
+        self::mockTime('2026-10-31 09:30:00');
         UserFactory::new()->pending()->create(['email' => self::EMAIL]);
         $this->client->getCookieJar()->clear();
         $crawler = $this->client->request('GET', '/reset-password');
@@ -194,6 +208,7 @@ final class InvitationTest extends WebTestCase
             'reset_password[newPassword][first]' => self::PASSWORD,
             'reset_password[newPassword][second]' => self::PASSWORD,
         ]));
+        self::assertEquals(new \DateTimeImmutable('2026-10-31 09:30:00'), $this->storedUser(self::EMAIL)->getLastLoginAt());
         $this->logIn(self::EMAIL, self::PASSWORD);
 
         self::assertResponseRedirects('/devices');

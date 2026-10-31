@@ -36,7 +36,7 @@ final class HomeTest extends WebTestCase
 
         $crawler = $client->request('GET', '/');
 
-        $steps = $crawler->filter('main ol > li h2')->each(static fn (Crawler $title): string => trim($title->text()));
+        $steps = $crawler->filter('main ol > li h3')->each(static fn (Crawler $title): string => trim($title->text()));
         self::assertSame(['1. Référentiel statique', '2. Flux temps réel', '3. Afficheur'], $steps);
     }
 

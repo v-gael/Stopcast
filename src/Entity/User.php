@@ -55,6 +55,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /**
+     * Dernière connexion, ou activation du compte ; null pour un compte en
+     * attente, ou créé avec son mot de passe et jamais connecté depuis.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastLoginAt = null;
+
+    /**
+     * Envoi de l'avertissement avant suppression pour inactivité ; une
+     * connexion le remet à null.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $inactivityWarnedAt = null;
+
     public function __construct(string $email, Role $role = Role::User)
     {
         $this->email = $email;
@@ -137,6 +151,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getLastLoginAt(): ?\DateTimeImmutable
+    {
+        return $this->lastLoginAt;
+    }
+
+    /**
+     * Une connexion garde le compte : elle annule l'avertissement d'inactivité.
+     */
+    public function recordLogin(\DateTimeImmutable $at): void
+    {
+        $this->lastLoginAt = $at;
+        $this->inactivityWarnedAt = null;
+    }
+
+    public function getInactivityWarnedAt(): ?\DateTimeImmutable
+    {
+        return $this->inactivityWarnedAt;
+    }
+
+    public function markInactivityWarned(\DateTimeImmutable $at): void
+    {
+        $this->inactivityWarnedAt = $at;
     }
 
     /**
