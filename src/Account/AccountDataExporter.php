@@ -25,7 +25,7 @@ final readonly class AccountDataExporter
     /**
      * @return array{
      *     exportedAt: string,
-     *     account: array{email: string, role: string, createdAt: string},
+     *     account: array{email: string, role: string, createdAt: string, lastLoginAt: ?string},
      *     devices: list<array<string, mixed>>,
      * }
      */
@@ -37,6 +37,7 @@ final readonly class AccountDataExporter
                 'email' => $user->getEmail(),
                 'role' => $user->getRole()->value,
                 'createdAt' => $user->getCreatedAt()->format(\DATE_ATOM),
+                'lastLoginAt' => $user->getLastLoginAt()?->format(\DATE_ATOM),
             ],
             'devices' => array_map(
                 $this->device(...),

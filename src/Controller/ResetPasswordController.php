@@ -11,6 +11,7 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -86,6 +87,7 @@ final class ResetPasswordController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         TranslatorInterface $translator,
+        ClockInterface $clock,
         ?string $token = null,
     ): Response {
         if (null !== $token) {
@@ -119,6 +121,11 @@ final class ResetPasswordController extends AbstractController
 
             /** @var string $newPassword */
             $newPassword = $form->get('newPassword')->getData();
+            // Un compte en attente s'active ici : sa période d'activité commence.
+            if ($user->isPending()) {
+                $user->recordLogin($clock->now());
+            }
+
             $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
             $this->entityManager->flush();
 

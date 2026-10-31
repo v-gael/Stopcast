@@ -9,6 +9,7 @@ use App\Form\ResetPasswordType;
 use App\Repository\ResetPasswordRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -38,6 +39,7 @@ final class InvitationController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         ResetPasswordRequestRepository $resetPasswordRequestRepository,
         EntityManagerInterface $entityManager,
+        ClockInterface $clock,
         ?string $token = null,
     ): Response {
         if (null !== $token) {
@@ -76,6 +78,8 @@ final class InvitationController extends AbstractController
             /** @var string $password */
             $password = $form->get('newPassword')->getData();
             $user->setPassword($passwordHasher->hashPassword($user, $password));
+            // L'activation ouvre la période d'activité du compte, sans session.
+            $user->recordLogin($clock->now());
             $entityManager->flush();
 
             // Le compte est actif : aucun de ses liens ne doit encore servir.
