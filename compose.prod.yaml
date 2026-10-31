@@ -13,6 +13,7 @@ services:
       MAILER_FROM: ${MAILER_FROM:-Stopcast <no-reply@stopcast.local>}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
     ports:
       - "80:80"
       - "443:443"
@@ -41,6 +42,7 @@ services:
       MAILER_FROM: ${MAILER_FROM:-Stopcast <no-reply@stopcast.local>}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true
