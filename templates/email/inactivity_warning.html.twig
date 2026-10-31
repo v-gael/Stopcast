@@ -1,0 +1,13 @@
+{% extends 'email/base.html.twig' %}
+
+{% block content %}
+    {% set link = url('app_home') %}
+    <p style="margin: 0 0 16px;">Bonjour,</p>
+    <p style="margin: 0 0 16px;">Personne ne s'est connecté à votre compte Stopcast depuis bientôt 2 ans. Sans connexion d'ici 30 jours, il sera supprimé, avec ses écrans d'affichage.</p>
+    <p style="margin: 0 0 16px;">Pour le garder, il suffit de vous connecter à l'espace de gestion : l'activité de vos écrans ne compte pas.</p>
+    <p style="margin: 0 0 16px;">
+        <a href="{{ link }}" style="display: inline-block; padding: 10px 16px; background-color: #f59e0b; color: #0f172a; font-weight: bold; text-decoration: none; border-radius: 6px;">Me connecter</a>
+    </p>
+    <p style="margin: 0 0 16px; font-size: 13px; color: #64748b; word-break: break-all;">{{ link }}</p>
+    <p style="margin: 0;">Si vous n'utilisez plus Stopcast, vous n'avez rien à faire.</p>
+{% endblock %}

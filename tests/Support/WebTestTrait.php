@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
@@ -95,6 +97,21 @@ trait WebTestTrait
         $requestStack->pop();
 
         return $token;
+    }
+
+    /**
+     * Le compte relu en base, après les écritures des requêtes.
+     */
+    private function storedUser(string $email): User
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->clear();
+
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        self::assertInstanceOf(User::class, $user);
+
+        return $user;
     }
 
     private function browser(): KernelBrowser

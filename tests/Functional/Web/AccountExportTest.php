@@ -29,6 +29,8 @@ final class AccountExportTest extends WebTestCase
 
     private const string NOW = '2026-10-30 14:30:00';
 
+    private const string LAST_LOGIN = '2026-10-01 08:15:00';
+
     private KernelBrowser $client;
 
     private User $user;
@@ -36,7 +38,9 @@ final class AccountExportTest extends WebTestCase
     protected function setUp(): void
     {
         $this->client = self::createClient();
-        $this->user = UserFactory::createOne(['email' => self::EMAIL]);
+        $this->user = UserFactory::new()
+            ->afterInstantiate(static fn (User $user) => $user->recordLogin(new \DateTimeImmutable(self::LAST_LOGIN)))
+            ->create(['email' => self::EMAIL]);
     }
 
     public function testTheAccountOwnerDownloadsTheirDataAsAJsonFile(): void
@@ -59,6 +63,7 @@ final class AccountExportTest extends WebTestCase
             'email' => self::EMAIL,
             'role' => 'ROLE_USER',
             'createdAt' => $this->user->getCreatedAt()->format(\DATE_ATOM),
+            'lastLoginAt' => new \DateTimeImmutable(self::LAST_LOGIN)->format(\DATE_ATOM),
         ], $data['account']);
 
         self::assertIsArray($data['devices']);

@@ -8,16 +8,24 @@ use App\Account\DataPurger;
 use App\Account\UserInviter;
 use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
+use App\Enum\Role;
 use App\Factory\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
+use Monolog\LogRecord;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Mime\Email;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
+use function Symfony\Component\Clock\now;
 use function Zenstruck\Foundry\Persistence\repository;
 
 final class DataPurgerTest extends KernelTestCase
@@ -118,6 +126,103 @@ final class DataPurgerTest extends KernelTestCase
         self::assertSame(1, repository(ResetPasswordRequest::class)->count());
     }
 
+    public function testInactiveAccountIsWarnedOnceAfter23MonthsAndADay(): void
+    {
+        $this->createActiveUser(self::EMAIL, lastLoginAgo: '-2 years +30 days -1 day');
+        $this->createActiveUser('recente@example.com', lastLoginAgo: '-2 years +30 days +1 day');
+
+        $first = $this->service(DataPurger::class)->purge();
+        $second = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $first->inactivityWarnings);
+        self::assertSame(0, $second->inactivityWarnings);
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $email);
+        self::assertEmailAddressContains($email, 'To', self::EMAIL);
+        self::assertEmailHeaderSame($email, 'Subject', 'Votre compte Stopcast va être supprimé');
+        self::assertEmailTextBodyContains($email, 'supprimé, avec ses écrans');
+        self::assertEmailTextBodyContains($email, 'http://localhost/');
+        self::assertEmailHtmlBodyContains($email, 'href="http://localhost/"');
+
+        // La base garde des secondes entières.
+        self::assertEqualsWithDelta(now(), $this->storedUser(self::EMAIL)->getInactivityWarnedAt(), 1);
+        self::assertNull($this->storedUser('recente@example.com')->getInactivityWarnedAt());
+        self::assertTrue($this->userExists(self::EMAIL));
+    }
+
+    public function testInactiveAccountIsDeletedTwoYearsOnWhenItsWarningIsOlderThan30Days(): void
+    {
+        $this->createActiveUser(self::EMAIL, lastLoginAgo: '-2 years -1 day', warnedAgo: '-30 days -1 hour');
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->inactiveAccounts);
+        self::assertFalse($this->userExists(self::EMAIL));
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailHeaderSame($email, 'Subject', 'Votre compte Stopcast a été supprimé');
+    }
+
+    public function testInactiveAccountWarned10DaysAgoStays(): void
+    {
+        $this->createActiveUser(self::EMAIL, lastLoginAgo: '-3 years', warnedAgo: '-10 days');
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(0, $summary->inactiveAccounts);
+        self::assertSame(0, $summary->inactivityWarnings);
+        self::assertTrue($this->userExists(self::EMAIL));
+        self::assertQueuedEmailCount(0);
+    }
+
+    public function testLastAdministratorIsNeverDeletedAndAWarningIsLogged(): void
+    {
+        $admin = $this->createActiveUser('admin@example.com', lastLoginAgo: '-2 years -1 day', warnedAgo: '-31 days', role: Role::Admin);
+        $logs = $this->logs();
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(0, $summary->inactiveAccounts);
+        self::assertTrue($this->userExists('admin@example.com'));
+        self::assertTrue($logs->hasWarning(['message' => 'Purge: inactive account {id} not deleted, it is the last administrator.', 'context' => ['id' => $admin->getId()]]));
+        $warning = array_first(array_filter($logs->getRecords(), static fn ($record): bool => Level::Warning === $record->level));
+        self::assertInstanceOf(LogRecord::class, $warning);
+        self::assertSame('app', $warning->channel);
+    }
+
+    public function testInactiveAdministratorWhoIsNotTheLastIsDeleted(): void
+    {
+        $this->createActiveUser('admin@example.com', lastLoginAgo: '-2 years -1 day', warnedAgo: '-31 days', role: Role::Admin);
+        $this->createActiveUser('autre-admin@example.com', lastLoginAgo: '-1 day', role: Role::Admin);
+        $logs = $this->logs();
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->inactiveAccounts);
+        self::assertFalse($this->userExists('admin@example.com'));
+        self::assertFalse($logs->hasWarningRecords());
+    }
+
+    public function testAccountNeverLoggedInIsWarnedThenDeletedAfterItsCreationDate(): void
+    {
+        $this->createActiveUser(self::EMAIL, createdAgo: '-2 years -1 day');
+
+        $warned = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $warned->inactivityWarnings);
+        self::assertSame(0, $warned->inactiveAccounts);
+        self::assertTrue($this->userExists(self::EMAIL));
+
+        self::mockTime('+29 days');
+        self::assertSame(0, $this->service(DataPurger::class)->purge()->inactiveAccounts);
+
+        self::mockTime('+1 day +1 second');
+        self::assertSame(1, $this->service(DataPurger::class)->purge()->inactiveAccounts);
+        self::assertFalse($this->userExists(self::EMAIL));
+    }
+
     public function testCommandDisplaysTheCounts(): void
     {
         $this->invite(self::EMAIL);
@@ -131,6 +236,8 @@ final class DataPurgerTest extends KernelTestCase
 
         $display = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
         self::assertStringContainsString('Comptes en attente supprimés 1', $display);
+        self::assertStringContainsString('Comptes inactifs avertis 0', $display);
+        self::assertStringContainsString('Comptes inactifs supprimés 0', $display);
         self::assertStringContainsString('Demandes de réinitialisation supprimées 1', $display);
     }
 
@@ -143,20 +250,73 @@ final class DataPurgerTest extends KernelTestCase
     }
 
     /**
+     * Compte activé, connecté pour la dernière fois et averti aux dates
+     * données par rapport à maintenant (null : jamais).
+     */
+    private function createActiveUser(
+        string $email,
+        ?string $lastLoginAgo = null,
+        ?string $warnedAgo = null,
+        string $createdAgo = '-3 years',
+        Role $role = Role::User,
+    ): User {
+        $user = UserFactory::new()
+            ->afterInstantiate(static function (User $user) use ($lastLoginAgo, $warnedAgo): void {
+                if (null !== $lastLoginAgo) {
+                    $user->recordLogin(now($lastLoginAgo));
+                }
+
+                if (null !== $warnedAgo) {
+                    $user->markInactivityWarned(now($warnedAgo));
+                }
+            })
+            ->create(['email' => $email, 'role' => $role]);
+        $this->setCreatedAt($email, now($createdAgo));
+
+        return $user;
+    }
+
+    /**
      * La date de création suit l'horloge système, pas celle des tests : elle s'écrit en base.
      */
     private function createPendingUser(string $email, string $createdAgo): void
     {
         UserFactory::new()->pending()->create(['email' => $email]);
+        $this->setCreatedAt($email, new \DateTimeImmutable($createdAgo));
+    }
 
+    private function setCreatedAt(string $email, \DateTimeImmutable $createdAt): void
+    {
         $this->service(EntityManagerInterface::class)->createQueryBuilder()
             ->update(User::class, 'u')
             ->set('u.createdAt', ':createdAt')
             ->where('u.email = :email')
-            ->setParameter('createdAt', new \DateTimeImmutable($createdAgo))
+            ->setParameter('createdAt', $createdAt)
             ->setParameter('email', $email)
             ->getQuery()
             ->execute();
+    }
+
+    private function storedUser(string $email): User
+    {
+        $this->service(EntityManagerInterface::class)->clear();
+        $user = repository(User::class)->findOneBy(['email' => $email]);
+        self::assertInstanceOf(User::class, $user);
+
+        return $user;
+    }
+
+    /**
+     * Journal du canal app pendant la suite du test.
+     */
+    private function logs(): TestHandler
+    {
+        $logger = self::getContainer()->get(LoggerInterface::class);
+        self::assertInstanceOf(Logger::class, $logger);
+        $handler = new TestHandler();
+        $logger->pushHandler($handler);
+
+        return $handler;
     }
 
     private function userExists(string $email): bool

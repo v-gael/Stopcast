@@ -38,6 +38,8 @@ class PurgeCommand extends Command
 
         $io->definitionList(
             ['Comptes en attente supprimés' => $summary->pendingAccounts],
+            ['Comptes inactifs avertis' => $summary->inactivityWarnings],
+            ['Comptes inactifs supprimés' => $summary->inactiveAccounts],
             ['Demandes de réinitialisation supprimées' => $summary->resetPasswordRequests],
         );
         $io->success('Purge terminée.');
