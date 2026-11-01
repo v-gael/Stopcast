@@ -25,7 +25,7 @@ final class LegalNoticeTest extends WebTestCase
         self::assertSelectorTextContains('h1', 'Mentions légales');
         self::assertSelectorTextContains('main', 'v-gael, particulier non professionnel');
         self::assertSelectorTextContains('main', 'contact@gaelv.com');
-        self::assertSelectorTextContains('main', 'Hetzner Online GmbH');
+        self::assertSelectorTextContains('main', 'OVH SAS');
         self::assertSelectorTextContains('main', 'Cloudflare, Inc.');
         // Aucune session ouverte pour un simple visiteur.
         self::assertResponseNotHasCookie('PHPSESSID');

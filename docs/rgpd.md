@@ -7,7 +7,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 31 octobre 2026.
+Dernière mise à jour : 1er novembre 2026.
 
 ## Traitements
 
@@ -20,7 +20,7 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat ([conditions d'utilisation](../templates/legal/terms.html.twig)). |
 | Durée | Compte : jusqu'à sa suppression par l'utilisateur ou un administrateur, ou après 2 ans sans connexion (voir « Purge des comptes inactifs »). Demandes d'invitation (lien valable 24 heures) et de réinitialisation (1 heure) : supprimées à leur expiration. Compte en attente (invitation jamais acceptée) : supprimé 30 jours après l'expiration de son dernier lien. Session : fin du navigateur, ou 2 heures d'inactivité ; « se souvenir de moi » : 30 jours. |
-| Destinataires et sous-traitants | Administrateurs du service ; Hetzner (hébergement), Cloudflare (proxy, sauvegardes). |
+| Destinataires et sous-traitants | Administrateurs du service ; OVH (hébergement), Cloudflare (proxy, sauvegardes). |
 
 ### Dispositifs et configurations d'affichage
 
@@ -31,7 +31,7 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Jusqu'à la suppression du dispositif ou du compte. |
-| Destinataires et sous-traitants | Hetzner, Cloudflare. |
+| Destinataires et sous-traitants | OVH, Cloudflare. |
 
 ### Mails transactionnels
 
@@ -53,7 +53,7 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Aucune : le fichier est produit à la demande et n'est pas conservé. |
-| Destinataires et sous-traitants | L'utilisateur lui-même ; Hetzner, Cloudflare. |
+| Destinataires et sous-traitants | L'utilisateur lui-même ; OVH, Cloudflare. |
 
 ### Sécurité
 
@@ -64,7 +64,7 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs et visiteurs. |
 | Base légale | Intérêt légitime (sécurité du service). |
 | Durée | Journaux : environ 14 jours (rotation par taille). Compteurs des limites : 15 minutes après le dernier essai. Captcha et contrôle des mots de passe : rien n'est conservé par Stopcast. |
-| Destinataires et sous-traitants | Hetzner, Cloudflare (proxy, Turnstile). Have I Been Pwned est un service tiers, pas un sous-traitant : il ne reçoit aucune donnée personnelle. |
+| Destinataires et sous-traitants | OVH, Cloudflare (proxy, Turnstile). Have I Been Pwned est un service tiers, pas un sous-traitant : il ne reçoit aucune donnée personnelle. |
 
 ### Suivi des erreurs
 
@@ -97,7 +97,7 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Intérêt légitime (continuité du service, effectivité de l'effacement). |
 | Durée | 30 jours pour les sauvegardes comme pour le journal. |
-| Destinataires et sous-traitants | Hetzner, Cloudflare (stockage R2). |
+| Destinataires et sous-traitants | OVH, Cloudflare (stockage R2). |
 
 ### Purge des comptes inactifs
 
@@ -108,15 +108,15 @@ Dernière mise à jour : 31 octobre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Intérêt légitime (limitation de la conservation). |
 | Durée | Avertissement par email 30 jours avant la suppression ; compte supprimé après 2 ans sans connexion. |
-| Destinataires et sous-traitants | Brevo (avertissement), Hetzner, Cloudflare. |
+| Destinataires et sous-traitants | Brevo (avertissement), OVH, Cloudflare. |
 
 ## Sous-traitants
 
-Relevé le 31 octobre 2026. Une information absente des documents publics est notée « non précisé ».
+Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026. Une information absente des documents publics est notée « non précisé ».
 
 | Service | Rôle | Données reçues | Pays de stockage | Transfert hors UE | Source |
 |---|---|---|---|---|---|
-| Hetzner Online GmbH | Hébergement du serveur (VPS) et de la base | Toutes les données de l'application, journaux | Allemagne (Falkenstein ou Nuremberg) | Aucun : les données des produits non cloud restent dans l'UE | [Data Protection at Hetzner](https://docs.hetzner.com/general/company-and-policy/data-protection-at-hetzner) |
+| OVH SAS | Hébergement du serveur (VPS) et de la base | Toutes les données de l'application, journaux | France (Strasbourg) | Aucun : le serveur est dans le datacenter choisi, dans l'UE | [Sécurité juridique et confidentialité](https://www.ovhcloud.com/fr/personal-data-protection/legal-privacy-security/) |
 | Cloudflare, Inc. | DNS, proxy, Tunnel, Turnstile, stockage des sauvegardes (R2), Email Routing (`contact@gaelv.com`) | Trafic du site (IP, requêtes), signaux Turnstile (IP, empreinte TLS, user-agent), sauvegardes chiffrées, mails envoyés à l'adresse de contact | États-Unis et UE (métadonnées et journaux) ; sauvegardes R2 : UE si le bucket est créé avec la juridiction UE | EU-U.S. Data Privacy Framework, clauses contractuelles types à défaut | [DPA](https://www.cloudflare.com/cloudflare-customer-dpa/), [GDPR](https://www.cloudflare.com/trust-hub/gdpr/), [Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/), [R2](https://developers.cloudflare.com/r2/reference/data-location/) |
 | Brevo | Envoi des mails transactionnels | Email du destinataire, contenu du mail | UE : France et Allemagne (OVH), Belgique (Google Cloud) | Non précisé | [Data storage location](https://help.brevo.com/hc/en-us/articles/360001005510-Data-storage-location) |
 | Sentry | Suivi des erreurs | Erreurs sans IP ni email | Allemagne (Francfort) pour les événements ; États-Unis pour les données du compte Sentry | EU-U.S. Data Privacy Framework, clauses contractuelles types à défaut | [Data storage location](https://docs.sentry.io/organization/data-storage-location/), [DPA](https://sentry.io/legal/dpa/) |
