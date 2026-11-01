@@ -30,7 +30,7 @@ final class DisplayConfigurationFactory extends PersistentObjectFactory
         $activeQuays = $this->quayRepository->findAllActive();
 
         if ([] === $activeQuays) {
-            throw new \RuntimeException('Aucun quai actif en base. Lance "make gtfs-import avant de charger les fixtures.');
+            throw new \RuntimeException('Aucun quai actif en base. Lance "make import" avant de charger les fixtures.');
         }
 
         return [

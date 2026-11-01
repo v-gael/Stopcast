@@ -123,9 +123,11 @@ migration: ## Génère une migration à partir des entités
 	docker compose exec app php bin/console make:migration
 
 db-reset: ## Supprime et recrée la base (⚠️ perte de données)
+	docker compose stop worker
 	docker compose exec app php bin/console doctrine:database:drop --force --if-exists
 	docker compose exec app php bin/console doctrine:database:create
 	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+	docker compose start worker
 
 ## —— Aide —————————————————————————————————————————————————————————————————
 help: ## Affiche cette aide
