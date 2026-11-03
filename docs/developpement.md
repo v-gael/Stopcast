@@ -199,6 +199,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `TRUSTED_PROXIES` est lu au démarrage du noyau et appliqué en statique sur `Request` : pour le fixer dans un test, le définir dans `$_ENV` et `$_SERVER` avant `createClient()`, puis remettre la valeur d'origine et `Request::setTrustedProxies([], 0)` dans `tearDown()` (voir `TrustedProxiesTest`). Le client de test envoie ses requêtes depuis `127.0.0.1`, avec l'hôte `localhost`.
 - Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache de test (`make console c="cache:clear --env=test"`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
+- `MockClock` lit une date donnée en texte en UTC, et `mockTime()` sans argument fige l'heure en UTC, alors que PHP tourne en `Europe/Paris` (voir [Fuseau horaire](architecture.md#fuseau-horaire)) : passer le fuseau de PHP (`new MockClock(self::NOW, date_default_timezone_get())`, `mockTime(new \DateTimeImmutable())`), sinon l'horloge simulée est décalée d'une ou deux heures par rapport aux dates des tests et des entités. Les tests du fuseau (`TimezoneTest`, `NextPassagesTimezoneTest`) échouent hors de l'image si `date.timezone` n'est pas réglé.
 
 ## Mettre à jour les dépendances
 

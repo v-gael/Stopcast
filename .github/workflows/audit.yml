@@ -30,6 +30,8 @@ jobs:
           extensions: ctype, iconv, intl, zip, pdo_pgsql
           coverage: none
           tools: composer:v2
+          # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
+          ini-values: date.timezone=Europe/Paris
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
