@@ -1,6 +1,8 @@
 #!/bin/sh
-# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, puis
-# remplace les conteneurs et attend qu'ils soient prêts. Lancé par le job
+# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, passe
+# les migrations Doctrine avec la nouvelle image (après un dump de la base s'il
+# y en a en attente), puis remplace les conteneurs et attend qu'ils soient
+# prêts. Lancé par le job
 # `deploy` de `ci.yml`, sur le serveur, dans ~/stopcast/ (qui ne contient que
 # ce script, compose.yaml, compose.prod.yaml et .env.prod.local).
 #
@@ -61,6 +63,13 @@ export IMAGE_TAG COMPOSE_PROJECT_NAME COMPOSE_FILE
 state_file=.deployed
 previous=$(cat "$state_file" 2>/dev/null || echo 'aucune')
 
+# Dumps pris avant migration : un filet local, pas une sauvegarde hors serveur.
+backup_dir=backups
+backup_keep=5
+backup_file=''
+# Passe à 1 au remplacement des conteneurs : avant, l'ancienne version sert.
+replacing=0
+
 compose() {
     docker compose --env-file .env.prod.local "$@"
 }
@@ -69,6 +78,12 @@ on_exit() {
     status=$?
     if [ "$status" -ne 0 ]; then
         printf '\nÉchec du déploiement de %s (code %s).\nVersion déployée avant : %s\n' "$IMAGE_TAG" "$status" "$previous" >&2
+        if [ "$replacing" -eq 0 ]; then
+            echo "Conteneurs non remplacés : l'ancienne version sert toujours." >&2
+        fi
+        if [ -n "$backup_file" ]; then
+            echo "Dump de la base pris avant migration : $(pwd)/$backup_file" >&2
+        fi
     fi
 }
 trap on_exit EXIT
@@ -81,9 +96,60 @@ echo "Version à déployer : $IMAGE_TAG"
 echo "==> Téléchargement de l'image"
 compose pull --ignore-buildable app worker
 
+# Les migrations tournent dans un conteneur jetable de la nouvelle image,
+# pendant que l'ancienne version sert encore. Pas au démarrage du conteneur :
+# app et worker partagent l'image et les lanceraient tous les deux. La base est
+# démarrée d'abord, pour le premier déploiement.
+echo '==> Base de données'
+compose up -d --wait database
+
+echo '==> Migrations en attente'
+# up-to-date : 0 à jour, 1 migrations en attente, autre code en cas d'erreur.
+if compose run --rm --no-deps app php bin/console doctrine:migrations:up-to-date; then
+    pending=0
+else
+    status=$?
+    if [ "$status" -ne 1 ]; then
+        echo "Impossible de lire l'état des migrations (code $status)." >&2
+        exit "$status"
+    fi
+    pending=1
+fi
+
+if [ "$pending" -eq 1 ]; then
+    # Identifiants lus dans le conteneur database, pas sur la ligne de commande
+    # de l'hôte. pg_dump compresse lui-même (-Z) : son code de sortie n'est pas
+    # masqué par un tube, et le fichier n'est renommé qu'une fois complet.
+    echo '==> Dump de la base avant migration'
+    mkdir -p "$backup_dir"
+    target="$backup_dir/pre-deploy-$IMAGE_TAG.sql.gz"
+    if ! compose exec -T database sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Z 6' > "$target.tmp"; then
+        rm -f "$target.tmp"
+        echo 'Échec du dump : migrations non lancées.' >&2
+        exit 1
+    fi
+    mv "$target.tmp" "$target"
+    backup_file=$target
+    echo "Dump : $(pwd)/$backup_file"
+
+    # Garde les $backup_keep dumps les plus récents (noms sans espace : IMAGE_TAG
+    # est validé plus haut).
+    # shellcheck disable=SC2012
+    ls -1t "$backup_dir"/pre-deploy-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
+        rm -f "$old"
+    done
+
+    # all_or_nothing (config/packages/doctrine_migrations.yaml) : une migration
+    # qui échoue annule tout le lot, et le script s'arrête avant de toucher aux
+    # conteneurs.
+    echo '==> Migrations'
+    compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+fi
+
 # `--wait` refuse un service sans healthcheck : worker n'en a pas (pas de
 # serveur web). On attend qu'app soit healthy, puis on remplace worker.
 echo '==> Mise à jour des conteneurs'
+replacing=1
 compose up -d --wait --wait-timeout 300 --remove-orphans app
 compose up -d worker
 
