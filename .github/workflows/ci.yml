@@ -67,9 +67,10 @@ jobs:
       - name: Contrôles
         run: bin/check
 
-  # Valide les fichiers Compose : `make check` lance le même script sur l'hôte.
+  # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
+  # lance les mêmes scripts sur l'hôte.
   compose:
-    name: Fichiers Compose
+    name: Fichiers Compose, scripts et workflows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -78,6 +79,9 @@ jobs:
 
       - name: Valider les combinaisons
         run: bin/check-compose
+
+      - name: Analyser les scripts et les workflows
+        run: bin/check-scripts
 
   # Release mergée sur main : construit l'image de prod, déjà validée par les
   # deux jobs précédents, la scanne avec Trivy et la publie sur GHCR, étiquetée

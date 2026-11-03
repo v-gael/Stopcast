@@ -1,0 +1,39 @@
+#!/bin/sh
+# Analyse les scripts shell (shellcheck) et les workflows GitHub (actionlint),
+# par leurs images Docker, versions épinglées : ni l'un ni l'autre n'est
+# installé sur le poste ou dans le conteneur app. Les scripts sont ceux de
+# bin/, ops/ et .githooks/ dont la première ligne lance sh ou bash. Le job
+# `compose` de `ci.yml` l'appelle directement, `make check` l'exécute sur
+# l'hôte avant `bin/check`.
+
+cd "$(dirname "$0")/.." || exit 1
+
+SHELLCHECK_IMAGE=koalaman/shellcheck:v0.11.0
+ACTIONLINT_IMAGE=rhysd/actionlint:1.7.12
+
+status=0
+
+scripts=$(for file in bin/* ops/* .githooks/*; do
+    [ -f "$file" ] && head -n 1 "$file" | grep -qE '^#!.*[/ ](sh|bash)$' && echo "$file"
+done)
+
+# shellcheck disable=SC2086 # un chemin par mot, aucun ne contient d'espace
+if docker run --rm -e LC_ALL=C.UTF-8 -v "$PWD:/mnt:ro" -w /mnt "$SHELLCHECK_IMAGE" $scripts; then
+    echo "OK : shellcheck ($(echo $scripts | wc -w | tr -d ' ') scripts)"
+else
+    printf 'Échec : shellcheck\n\n'
+    status=1
+fi
+
+if docker run --rm -v "$PWD:/repo:ro" -w /repo "$ACTIONLINT_IMAGE" -no-color; then
+    echo 'OK : actionlint'
+else
+    printf 'Échec : actionlint\n\n'
+    status=1
+fi
+
+if [ "$status" -eq 0 ]; then
+    echo 'Scripts et workflows valides.'
+fi
+
+exit "$status"
