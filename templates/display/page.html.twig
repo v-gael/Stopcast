@@ -1,0 +1,22 @@
+{#
+ # Page d'affichage d'un dispositif, autonome (sans le layout de l'espace web) :
+ # elle remplit la fenêtre, en paysage. Le contrôleur Stimulus « display » fait
+ # tourner les écrans, tient l'heure à jour et relit les écrans (refresh_url)
+ # à la cadence du dispositif.
+ #}
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noindex">
+        <title>{{ device.label }} · Affichage · Stopcast</title>
+        {{ importmap('display', {nonce: csp_nonce('script')}) }}
+    </head>
+    <body class="display"
+          data-controller="display"
+          data-display-url-value="{{ refresh_url }}"
+          data-display-time-zone-value="{{ 'now'|date('e') }}">
+        {{ include('display/_screens.html.twig') }}
+    </body>
+</html>

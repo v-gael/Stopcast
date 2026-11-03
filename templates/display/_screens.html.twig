@@ -1,0 +1,62 @@
+{#
+ # Écrans d'un dispositif, un seul visible à la fois, et ses cadences (en
+ # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
+ # que la page relit.
+ #}
+{% set no_signal %}
+    <img class="screen__no-signal" src="{{ asset('images/display/no_signal.png') }}" alt="Données non rafraîchies">
+{% endset %}
+{% set clock %}
+    <span class="screen__clock" data-display-target="clock">{{ 'now'|date('H:i') }}</span>
+{% endset %}
+{% set columns %}
+    <div class="screen__columns">
+        <span>N° ligne</span>
+        <span>Dans</span>
+        <span>Direction</span>
+        {{ no_signal }}
+    </div>
+{% endset %}
+<div class="display-content"
+     data-display-target="content"
+     data-screen-duration="{{ device.screenDuration }}"
+     data-refresh-interval="{{ device.refreshInterval }}">
+    {% for screen in screens %}
+        <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
+            <div class="screen__top">
+                <h1 class="screen__stop">{{ screen.quayName }}</h1>
+                {{ clock }}
+            </div>
+            {{ columns }}
+            {% if screen.passages is empty %}
+                <div class="screen__message screen__message--no-bus">
+                    <img class="screen__no-bus" src="{{ asset('images/display/no_bus.png') }}" alt="">
+                    <p>Pas de passage prévu actuellement</p>
+                </div>
+            {% else %}
+                <ol class="screen__passages">
+                    {% for passage in screen.passages %}
+                        <li class="passage">
+                            <span class="passage__route" data-display-target="route"
+                                  {%- if passage.routeColor %} data-route-color="#{{ passage.routeColor }}"{% endif %}
+                                  {%- if passage.routeTextColor %} data-route-text-color="#{{ passage.routeTextColor }}"{% endif %}>{{ passage.routeShortName }}</span>
+                            <span class="passage__minutes"><span data-display-target="minutes" data-expected-at="{{ passage.expectedAt.timestamp }}">{{ passage.minutes }}</span> min</span>
+                            <span class="passage__headsign">{{ passage.headsign }}</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+        </section>
+    {% else %}
+        <section class="screen" data-display-target="screen">
+            <div class="screen__top">
+                <span class="screen__stop"></span>
+                {{ clock }}
+            </div>
+            {{ columns }}
+            <div class="screen__message">
+                <p>Aucune configuration active</p>
+            </div>
+        </section>
+    {% endfor %}
+</div>
