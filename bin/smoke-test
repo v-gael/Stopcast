@@ -1,0 +1,97 @@
+#!/bin/sh
+# Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
+# sert le formulaire de connexion, et l'endpoint des dispositifs refuse une
+# requête sans jeton. Lancé par le job `deploy` de `ci.yml` sur l'URL publique,
+# après bin/deploy ; se lance aussi à la main.
+#
+#   bin/smoke-test https://stopcast.gaelv.com
+#   bin/smoke-test http://localhost              # prod locale (make prod-up)
+#
+# Aucun contrôle n'interroge la base (ni session ni jeton) : ils prouvent que
+# le tunnel, Caddy, PHP et le routage répondent. Chaque contrôle est retenté
+# (SMOKE_ATTEMPTS fois, SMOKE_DELAY secondes d'écart) pour laisser au tunnel le
+# temps de joindre les nouveaux conteneurs. Voir docs/exploitation.md,
+# « Déploiement ».
+
+set -eu
+
+usage() {
+    echo 'Usage : bin/smoke-test <url>'
+}
+
+case ${1:-} in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    http://* | https://*) ;;
+    '')
+        echo "L'URL de l'instance à vérifier est requise." >&2
+        usage >&2
+        exit 2
+        ;;
+    *)
+        echo "URL invalide : « $1 » (http:// ou https://)." >&2
+        usage >&2
+        exit 2
+        ;;
+esac
+
+if [ "$#" -ne 1 ]; then
+    usage >&2
+    exit 2
+fi
+
+base_url=${1%/}
+attempts=${SMOKE_ATTEMPTS:-5}
+delay=${SMOKE_DELAY:-10}
+
+body=$(mktemp)
+trap 'rm -f "$body" "$body.err"' EXIT
+
+failed=0
+
+# check <nom> <chemin> <code attendu> [<texte attendu dans la réponse>]
+check() {
+    name=$1
+    url=$base_url$2
+    expected_code=$3
+    expected_text=${4:-}
+
+    attempt=1
+    while :; do
+        # Code 000 : pas de réponse HTTP (connexion refusée, DNS, délai) ; le
+        # message de curl dit pourquoi.
+        code=$(curl --silent --show-error --max-time 10 --output "$body" --write-out '%{http_code}' "$url" 2>"$body.err") || true
+        error=$(cat "$body.err")
+        rm -f "$body.err"
+
+        if [ "$code" != "$expected_code" ]; then
+            reason="code $code reçu, $expected_code attendu${error:+ ($error)}"
+        elif [ -n "$expected_text" ] && ! grep -qF -- "$expected_text" "$body"; then
+            reason="code $code, mais la réponse ne contient pas « $expected_text »"
+        else
+            echo "OK : $name (GET $url → $code)"
+            return 0
+        fi
+
+        if [ "$attempt" -ge "$attempts" ]; then
+            echo "Échec : $name (GET $url) : $reason, après $attempts essai(s)." >&2
+            failed=1
+            return 0
+        fi
+        echo "Essai $attempt/$attempts raté : $name : $reason. Nouvel essai dans ${delay} s."
+        attempt=$((attempt + 1))
+        sleep "$delay"
+    done
+}
+
+check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
+check 'Endpoint des dispositifs fermé sans jeton' /api/next-passages 401
+
+if [ "$failed" -ne 0 ]; then
+    echo "Contrôles après déploiement en échec sur $base_url." >&2
+    exit 1
+fi
+
+echo "Contrôles après déploiement réussis sur $base_url."

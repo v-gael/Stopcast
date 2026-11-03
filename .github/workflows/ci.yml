@@ -192,12 +192,16 @@ jobs:
       # Le jeton passe par l'entrée standard, jamais sur une ligne de commande.
       # Déconnexion du registre quel que soit le résultat, en gardant le code
       # de sortie de bin/deploy.
+      # La version précédente, affichée par bin/deploy, est gardée pour les
+      # contrôles qui suivent.
       - name: Déployer
+        id: deploy
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -o pipefail
           # $GHCR_USER et $IMAGE_TAG sont développés ici, à dessein (SC2029).
           # shellcheck disable=SC2029
           printf '%s' "$GHCR_TOKEN" | ssh production "
@@ -206,4 +210,32 @@ jobs:
             status=\$?
             docker logout ghcr.io
             exit \$status
-          "
+          " | tee "$RUNNER_TEMP/deploy.log"
+          previous=$(sed -n 's/^Version déployée : //p' "$RUNNER_TEMP/deploy.log")
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+
+      # Contrôles depuis l'extérieur, à travers Cloudflare. Pas de retour
+      # arrière automatique : un échec rend le job rouge et donne la commande.
+      - name: Contrôles après déploiement
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+          PREVIOUS_TAG: ${{ steps.deploy.outputs.previous }}
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo '::error::La variable PRODUCTION_URL (niveau dépôt) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
+            exit 1
+          fi
+          bin/smoke-test "$PRODUCTION_URL" && exit 0
+          echo "::error::Contrôles après déploiement en échec sur $PRODUCTION_URL."
+          echo "Version déployée : $IMAGE_TAG"
+          echo "Version précédente : ${PREVIOUS_TAG:-inconnue}"
+          case $PREVIOUS_TAG in
+            '' | aucune)
+              echo 'Aucune version précédente connue : corriger et redéployer.'
+              ;;
+            *)
+              echo "Retour arrière : gh workflow run rollback.yml -f sha=$PREVIOUS_TAG"
+              ;;
+          esac
+          exit 1
