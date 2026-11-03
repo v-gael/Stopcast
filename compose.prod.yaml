@@ -1,10 +1,15 @@
 # Aucun port publié : le TLS est terminé par Cloudflare, et le trafic arrive
 # par cloudflared sur le réseau Docker externe edge, qui joint app par son alias
 # (voir docs/adr/0006-hebergement.md). Test en local : compose.prod-local.yaml.
+#
+# app et worker tournent sur l'image construite par la CI et publiée sur GHCR,
+# étiquetée par le SHA du commit (IMAGE_TAG, fourni par bin/deploy) : le serveur
+# n'a pas les sources et ne construit rien. La prod locale remet le build.
 services:
   app:
-    build:
-      target: prod
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    # Retire le build hérité de compose.yaml.
+    build: !reset null
     restart: unless-stopped
     environment:
       APP_ENV: prod
@@ -34,9 +39,7 @@ services:
   # Consomme la file async (envoi des emails) et les tâches planifiées
   # (scheduler_default). Même image que app.
   worker:
-    build:
-      context: .
-      target: prod
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
     restart: unless-stopped
     environment:
       APP_ENV: prod

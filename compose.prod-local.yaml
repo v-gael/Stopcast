@@ -1,9 +1,19 @@
 # Prod locale (make prod-up), sans cloudflared : app publie le port 80 et edge
-# devient un réseau local, créé par Compose.
+# devient un réseau local, créé par Compose. L'image est construite sur place
+# depuis les sources, sous l'étiquette IMAGE_TAG (local, fixé par le Makefile),
+# au lieu d'être tirée de GHCR comme en prod.
 services:
   app:
+    build:
+      context: .
+      target: prod
     ports:
       - "80:80"
+
+  worker:
+    build:
+      context: .
+      target: prod
 
 networks:
   edge:

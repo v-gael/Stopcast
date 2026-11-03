@@ -1,0 +1,91 @@
+#!/bin/sh
+# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, puis
+# remplace les conteneurs et attend qu'ils soient prêts. Lancé par le job
+# `deploy` de `ci.yml`, sur le serveur, dans ~/stopcast/ (qui ne contient que
+# ce script, compose.yaml, compose.prod.yaml et .env.prod.local).
+#
+#   IMAGE_TAG=<sha> bin/deploy
+#
+# Le fichier d'état .deployed garde l'étiquette en place : le script l'affiche
+# avant de déployer, pour pouvoir y revenir. Test sur la prod locale (image
+# construite par `make prod-up`) : voir docs/exploitation.md, « Déploiement ».
+
+set -eu
+
+cd "$(dirname "$0")/.."
+
+usage() {
+    echo 'Usage : IMAGE_TAG=<sha> bin/deploy'
+}
+
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Option inconnue : $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ -z "${IMAGE_TAG:-}" ]; then
+    echo "IMAGE_TAG est requis : l'étiquette de l'image à déployer (SHA complet du commit)." >&2
+    usage >&2
+    exit 2
+fi
+
+case $IMAGE_TAG in
+    *[!A-Za-z0-9_.-]*)
+        echo "IMAGE_TAG invalide : « $IMAGE_TAG » (lettres, chiffres, « _ », « . » et « - » seulement)." >&2
+        exit 2
+        ;;
+esac
+
+if [ ! -f .env.prod.local ]; then
+    echo "Fichier .env.prod.local introuvable dans $(pwd) : voir docs/exploitation.md, « Secrets »." >&2
+    exit 1
+fi
+
+# Projet et fichiers Compose de la prod, sauf s'ils sont déjà fixés (la prod
+# locale y ajoute compose.prod-local.yaml). Même nom de projet que la prod
+# locale : lancé par erreur sur un poste de dev, le script ne touche pas au
+# projet de dev (`stopcast`, le nom du dossier).
+: "${COMPOSE_PROJECT_NAME:=stopcast-prod}"
+: "${COMPOSE_FILE:=compose.yaml:compose.prod.yaml}"
+export IMAGE_TAG COMPOSE_PROJECT_NAME COMPOSE_FILE
+
+state_file=.deployed
+previous=$(cat "$state_file" 2>/dev/null || echo 'aucune')
+
+compose() {
+    docker compose --env-file .env.prod.local "$@"
+}
+
+on_exit() {
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        printf '\nÉchec du déploiement de %s (code %s).\nVersion déployée avant : %s\n' "$IMAGE_TAG" "$status" "$previous" >&2
+    fi
+}
+trap on_exit EXIT
+
+echo "Version déployée : $previous"
+echo "Version à déployer : $IMAGE_TAG"
+
+# Les services qui ont un build (prod locale) gardent l'image construite sur
+# place ; en prod, aucun n'en a et tout vient de GHCR.
+echo "==> Téléchargement de l'image"
+compose pull --ignore-buildable app worker
+
+# `--wait` refuse un service sans healthcheck : worker n'en a pas (pas de
+# serveur web). On attend qu'app soit healthy, puis on remplace worker.
+echo '==> Mise à jour des conteneurs'
+compose up -d --wait --wait-timeout 300 --remove-orphans app
+compose up -d worker
+
+printf '%s\n' "$IMAGE_TAG" > "$state_file"
+echo "Déployé : $IMAGE_TAG (version précédente : $previous)"

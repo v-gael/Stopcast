@@ -4,7 +4,9 @@
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
 # (nom du dossier), donc ses conteneurs et sa base (un `down -v` la supprimerait).
-PROD := docker compose -p stopcast-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml -f compose.prod-local.yaml
+# La prod locale construit son image sous l'étiquette `local` ; la vraie prod
+# tire de GHCR l'image du SHA déployé (bin/deploy).
+PROD := IMAGE_TAG=local docker compose -p stopcast-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml -f compose.prod-local.yaml
 CI := docker compose -p stopcast-ci -f compose.yaml -f compose.ci.yaml
 
 ## —— Docker ———————————————————————————————————————————————————————————————
