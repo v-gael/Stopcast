@@ -33,6 +33,14 @@
                     <dt class="font-medium text-slate-500">Créé le</dt>
                     <dd class="mt-1 text-slate-900">{{ device.createdAt|date('d/m/Y à H:i') }}</dd>
                 </div>
+                <div>
+                    <dt class="font-medium text-slate-500">Durée d'un écran</dt>
+                    <dd class="mt-1 text-slate-900" data-screen-duration>{{ device.screenDuration }} s</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-slate-500">Rafraîchissement des données</dt>
+                    <dd class="mt-1 text-slate-900" data-refresh-interval>{{ device.refreshInterval }} s</dd>
+                </div>
             </dl>
 
             <div class="mt-6 flex flex-col gap-3">
@@ -52,4 +60,28 @@
             </div>
         </twig:Card>
     </div>
+
+    <twig:Card title="Aperçu de l'écran" class="mt-6">
+        <p class="mb-4 text-sm text-slate-600">Sur des passages d'exemple, chaque configuration affichée telle que l'écran la montre, avec la durée d'écran et le rafraîchissement du dispositif.</p>
+        {% set active_configurations = device.activeDisplayConfigurations %}
+        <div class="flex flex-wrap gap-6">
+            {% for configuration in active_configurations %}
+                <figure class="w-full max-w-[480px]">
+                    {{ include('display/_preview.html.twig', {
+                        preview_url: path('app_display_configuration_preview', {id: configuration.id}),
+                        preview_title: 'Aperçu de « ' ~ (configuration.label ?: configuration.quay.name) ~ ' »',
+                    }, with_context = false) }}
+                    <figcaption class="mt-2 text-sm font-medium text-slate-900">{{ configuration.label ?: configuration.quay.name }}</figcaption>
+                </figure>
+            {% else %}
+                <figure class="w-full max-w-[480px]">
+                    {{ include('display/_preview.html.twig', {
+                        preview_url: path('app_device_preview', {id: device.id}),
+                        preview_title: 'Aperçu de « ' ~ device.label ~ ' »',
+                    }, with_context = false) }}
+                    <figcaption class="mt-2 text-sm text-slate-600">Aucune configuration affichée : l'écran le signale.</figcaption>
+                </figure>
+            {% endfor %}
+        </div>
+    </twig:Card>
 {% endblock %}

@@ -105,3 +105,5 @@ Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, ge
 ## Licence
 
 [MIT](LICENSE)
+
+Ressources tierces : la police [Roboto Condensed](https://github.com/googlefonts/roboto-classic) de la page d'affichage (`assets/fonts/`, instance statique au poids 700), © The Roboto Project Authors, est distribuée sous [SIL Open Font License 1.1](assets/fonts/OFL.txt).

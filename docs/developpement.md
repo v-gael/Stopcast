@@ -85,6 +85,8 @@ make fixtures
 
 Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 
+Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre un aperçu de l'écran par configuration affichée, sur des passages d'exemple (voir [architecture.md](architecture.md#page-daffichage)).
+
 ## Configurations d'affichage
 
 Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis `/display-configurations` (toutes celles de ses dispositifs) ou depuis le détail d'un dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
@@ -101,6 +103,7 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
 - `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`). Sous `/api`, un client qui demande du JSON garde la réponse d'erreur JSON.
+- `templates/display/` : page d'affichage des écrans, autonome, stylée sans Tailwind par `assets/styles/display.css` et chargée par son propre point d'entrée `display` (`assets/display.js`) ; voir [architecture.md](architecture.md#page-daffichage).
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
 
 En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `bin/tailwind-watch` : une compilation complète au démarrage, puis une nouvelle dès que le contenu d'un fichier listé en `@source` dans `app.css` change. Il suffit de recharger la page, une à deux secondes après l'enregistrement. Pour suivre ses recompilations ou une erreur de syntaxe CSS :

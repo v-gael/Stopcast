@@ -127,6 +127,55 @@ final class DevicesTest extends WebTestCase
         self::assertSame('Chambre', $this->reload($device)?->getLabel());
     }
 
+    public function testNewDeviceHasTheDefaultCadences(): void
+    {
+        $crawler = $this->client->request('GET', '/devices/new');
+        $this->client->submit($crawler->selectButton('Créer')->form(['device[label]' => 'Écran de la cuisine']));
+
+        $device = $this->entityManager()->getRepository(Device::class)->findOneBy(['label' => 'Écran de la cuisine']);
+        self::assertInstanceOf(Device::class, $device);
+        self::assertSame([Device::DEFAULT_SCREEN_DURATION, Device::DEFAULT_REFRESH_INTERVAL], [$device->getScreenDuration(), $device->getRefreshInterval()]);
+    }
+
+    public function testEditingChangesTheCadences(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+
+        $this->edit($device, ['device[screenDuration]' => '12', 'device[refreshInterval]' => '120']);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $device = $this->reload($device);
+        self::assertSame([12, 120], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
+
+        $this->client->followRedirect();
+        self::assertSelectorTextSame('[data-screen-duration]', '12 s');
+        self::assertSelectorTextSame('[data-refresh-interval]', '120 s');
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function cadencesOutOfBounds(): iterable
+    {
+        yield 'écran trop court' => ['screenDuration', '2', '60'];
+        yield 'écran trop long' => ['screenDuration', '61', '60'];
+        yield 'rafraîchissement trop fréquent' => ['refreshInterval', '5', '29'];
+        yield 'rafraîchissement trop espacé' => ['refreshInterval', '5', '301'];
+    }
+
+    #[DataProvider('cadencesOutOfBounds')]
+    public function testCadencesOutOfBoundsAreRefused(string $field, string $screenDuration, string $refreshInterval): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+
+        $this->edit($device, ['device[screenDuration]' => $screenDuration, 'device[refreshInterval]' => $refreshInterval]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists(\sprintf('#device_%s_error1', $field));
+        $device = $this->reload($device);
+        self::assertSame([Device::DEFAULT_SCREEN_DURATION, Device::DEFAULT_REFRESH_INTERVAL], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
+    }
+
     public function testEditingWithAnEmptyLabelIsRefused(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
