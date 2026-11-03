@@ -164,7 +164,7 @@ Le profiler ne garde pas les appels de StopcastDisplay à `/api/next-passages`, 
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. Les contrôles sont dans deux scripts, que la CI GitHub appelle aussi : `bin/check-compose` valide les fichiers Compose, sur l'hôte (le conteneur `app` n'a pas `docker`), puis `bin/check` lance les contrôles du code dans le conteneur `app`. Si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
 
-`bin/check-compose` valide `compose.yaml` avec chacune de ses surcharges (`compose.override.yaml`, `compose.ci.yaml`, `compose.prod.yaml`) par `docker compose config -q`, sans démarrer de conteneur. La combinaison prod est lue avec `--env-file .env.prod.local.example` : une variable ajoutée à `compose.prod.yaml` sans entrée dans ce modèle fait échouer le contrôle, comme toute erreur ou tout avertissement de Compose. Le script valide les trois combinaisons avant de conclure, pour montrer toutes les erreurs d'un coup.
+`bin/check-compose` valide `compose.yaml` avec chacune de ses surcharges (`compose.override.yaml`, `compose.ci.yaml`, `compose.prod.yaml`, puis `compose.prod.yaml` avec `compose.prod-local.yaml`) par `docker compose config -q`, sans démarrer de conteneur. La combinaison prod est lue avec `--env-file .env.prod.local.example` : une variable ajoutée à `compose.prod.yaml` sans entrée dans ce modèle fait échouer le contrôle, comme toute erreur ou tout avertissement de Compose. Le script valide toutes les combinaisons avant de conclure, pour montrer toutes les erreurs d'un coup.
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 
@@ -211,15 +211,17 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 
 ```bash
 cp .env.prod.local.example .env.prod.local   # puis renseigner les valeurs
-make down                                    # libère les ports 80/443 du dev
+make down                                    # libère le port 80 du dev
 make prod-up
 ```
 
-La prod locale redirige `http://localhost/` vers HTTPS par une redirection permanente (308), que le navigateur garde en cache. De retour en dev (HTTP seul), vider le cache du navigateur pour `localhost`, ou passer par `http://127.0.0.1/`.
+Les secrets de la prod réelle (serveur) ne suivent pas ce modèle : voir [exploitation.md](exploitation.md#secrets).
+
+La prod locale tourne sur `http://localhost/`, en HTTP seul, sans TLS ni redirection : sur le serveur, le TLS est terminé par Cloudflare et le trafic arrive par Cloudflare Tunnel (`cloudflared`) sur le réseau Docker externe `edge`, où `app` répond sous l'alias `stopcast-app` sans publier de port (`compose.prod.yaml`, [ADR 0006](adr/0006-hebergement.md)). En local, `compose.prod-local.yaml` publie le port 80 et fait de `edge` un réseau local créé par Compose. La prod locale ne teste donc ni le HTTPS ni le tunnel.
 
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
-Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`stopcast`, le nom du dossier, puis `stopcast-prod`, `stopcast-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient les mêmes ports (80/443) : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
+Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`stopcast`, le nom du dossier, puis `stopcast-prod`, `stopcast-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient tous deux le port 80 : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
 
 Depuis le renommage du projet en Stopcast, les projets Compose et l'image de dev portent le nouveau nom (`stopcast-prod`, `stopcast-ci`, image `stopcast-dev`, et `stopcast` pour le dev une fois le dossier renommé) : Compose crée de nouveaux conteneurs et de nouveaux volumes, et la base de dev repart vide. `make up`, `make migrate` et `make import` la recréent, puis `make fixtures` la remplit (le compte de dev devient `admin@stopcast.local`). Les conteneurs, volumes et l'image de l'ancien nom restent sur la machine : `docker compose ls -a` et `docker image ls` les montrent, `docker compose -p <ancien projet> down -v` et `docker image rm <ancienne image>` les suppriment.
 
@@ -236,7 +238,7 @@ Valeurs par environnement :
 |---|---|---|
 | `.env` (tests compris) | vide | `localhost` et `127.0.0.1` |
 | `.env.dev` | vide | `localhost` et toute adresse IPv4, pour le Raspberry Pi du réseau local |
-| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau du proxy | domaine servi et `localhost`, que le healthcheck interroge (`curl http://localhost/`) |
+| Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau `edge` (`172.30.0.0/24` sur le serveur) | domaine servi (`stopcast.gaelv.com`) et `localhost`, que le healthcheck interroge (`curl http://localhost/`) |
 
 `compose.prod.yaml` passe les deux variables aux services `app` et `worker` : une valeur vide dans `.env.prod.local` l'emporte sur celle de `.env`, et désactive donc la vérification de l'hôte.
 

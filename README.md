@@ -94,6 +94,7 @@ make up && make migrate && make import
 - [Architecture et modèle de données](docs/architecture.md)
 - [API et variables d'environnement](docs/api.md)
 - [Développement : installation, outils, conventions](docs/developpement.md)
+- [Exploitation : secrets de production](docs/exploitation.md)
 - [Accessibilité : revue WCAG 2.2 AA](docs/accessibilite.md)
 - [Données personnelles : registre des traitements et sous-traitants](docs/rgpd.md)
 
