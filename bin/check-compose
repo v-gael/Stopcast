@@ -2,7 +2,7 @@
 # Valide les fichiers Compose : compose.yaml avec chacune de ses surcharges.
 # Une combinaison échoue si `docker compose config -q` renvoie une erreur ou
 # écrit quoi que ce soit (une variable non définie n'est qu'un avertissement,
-# code 0). Valide les trois combinaisons avant de conclure, sans démarrer de
+# code 0). Valide toutes les combinaisons avant de conclure, sans démarrer de
 # conteneur ni demander de démon Docker. Le job `compose` de `ci.yml` l'appelle
 # directement, `make check` l'exécute sur l'hôte avant `bin/check`.
 
@@ -26,6 +26,7 @@ check() {
 check 'compose.yaml + compose.override.yaml' -f compose.override.yaml
 check 'compose.yaml + compose.ci.yaml' -f compose.ci.yaml
 check 'compose.yaml + compose.prod.yaml' -f compose.prod.yaml --env-file .env.prod.local.example
+check 'compose.yaml + compose.prod.yaml + compose.prod-local.yaml' -f compose.prod.yaml -f compose.prod-local.yaml --env-file .env.prod.local.example
 
 if [ "$status" -eq 0 ]; then
     echo 'Fichiers Compose valides.'
