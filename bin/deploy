@@ -1,8 +1,8 @@
 #!/bin/sh
 # Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, puis
-# remplace les conteneurs et attend qu'ils soient prêts. Lancé par le job
-# `deploy` de `ci.yml`, sur le serveur, dans ~/stopcast/ (qui ne contient que
-# ce script, compose.yaml, compose.prod.yaml et .env.prod.local).
+# remplace les conteneurs et attend qu'ils soient prêts. Lancé sur le serveur,
+# dans ~/stopcast/, par ops/ci-deploy (le script imposé à la clé de la CI), qui
+# l'extrait de l'image à déployer avec compose.yaml et compose.prod.yaml.
 #
 #   IMAGE_TAG=<sha> bin/deploy
 #
