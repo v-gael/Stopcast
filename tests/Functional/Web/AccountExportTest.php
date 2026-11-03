@@ -163,7 +163,7 @@ final class AccountExportTest extends WebTestCase
         $kernel->boot();
 
         $this->client->disableReboot();
-        self::getContainer()->set('clock', new MockClock(self::NOW));
+        self::getContainer()->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
 
         $this->client->submit($form);
 
