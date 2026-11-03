@@ -24,6 +24,18 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+    # L'image tourne sous www-data ; le conteneur ne garde que la capacité
+    # d'écouter sur le port 80. no-new-privileges empêche la capacité de
+    # fichier de frankenphp (setcap, voir Dockerfile) de s'appliquer : le port
+    # 80 reste ouvert parce que Docker déclare tous les ports non privilégiés
+    # dans le réseau du conteneur (sysctl ci-dessous, sa valeur par défaut,
+    # rendue explicite). NET_BIND_SERVICE doit rester dans l'ensemble limite :
+    # sans elle, le noyau refuse d'exécuter un binaire qui porte cette capacité.
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
     networks:
       default:
       edge:
@@ -55,6 +67,9 @@ services:
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true
+    # Sous www-data, comme app ; le worker n'écoute sur aucun port.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     command: ["php", "bin/console", "messenger:consume", "async", "scheduler_default", "--time-limit=3600", "--memory-limit=128M"]
     depends_on:
       database:

@@ -11,7 +11,6 @@ ENV COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/tmp/composer
 
 RUN apk add --no-cache \
-        acl \
         file \
         gettext \
         git \
@@ -83,6 +82,14 @@ RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --opt
     && php bin/console cache:clear --env=prod --no-warmup \
     && php bin/console tailwind:build --minify --env=prod \
     && php bin/console asset-map:compile --env=prod \
-    && php bin/console cache:warmup --env=prod \
-    && setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var \
-    && setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var
+    && php bin/console cache:warmup --env=prod
+
+# FrankenPHP tourne sous www-data (doc FrankenPHP, « Running as a non-root
+# user ») : la capacité de fichier lui garde le port 80, et www-data possède
+# var/ (cache, sessions) ainsi que les dossiers de Caddy (XDG_CONFIG_HOME et
+# XDG_DATA_HOME de l'image). Le dev et la CI restent en root (bind mount,
+# Composer).
+RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
+    && chown -R www-data:www-data var /config/caddy /data/caddy
+
+USER www-data
