@@ -1,5 +1,9 @@
 {
-	frankenphp
+	frankenphp {
+		# Vide en dev (mode classique : le code est relu à chaque requête).
+		# La stage prod du Dockerfile y déclare le worker.
+		{$FRANKENPHP_CONFIG}
+	}
 	order php_server before file_server
 }
 
