@@ -3,6 +3,9 @@
 # ré-indexe : le style est corrigé avant le commit plutôt que refusé au push.
 # Activé par `make up` ou `make hooks`. Contournement : git commit --no-verify.
 
+# Un chemin par mot dans $files, découpé exprès plus bas : les chemins PHP du
+# dépôt n'ont pas d'espace.
+# shellcheck disable=SC2086
 files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.php')
 if [ -z "$files" ]; then
     exit 0

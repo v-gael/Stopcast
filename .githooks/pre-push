@@ -16,6 +16,7 @@ if [ "$pushes_code" = false ]; then
 fi
 
 if ! docker compose ps --status running --services 2>/dev/null | grep -qx app; then
+    # shellcheck disable=SC2016 # backticks du message, pas une substitution
     echo 'pre-push : conteneurs arrêtés : lance `make up`, ou pousse avec `--no-verify`.' >&2
     exit 1
 fi

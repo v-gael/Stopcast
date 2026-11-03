@@ -77,6 +77,7 @@ composer: ## Lance composer avec les arguments passés (ex: make composer c="req
 ## —— Qualité de code ——————————————————————————————————————————————————————
 check: ## Lance tous les contrôles de la CI (à faire avant une PR)
 	bin/check-compose
+	bin/check-scripts
 	docker compose exec app bin/check
 
 fix: ## Applique Rector puis PHP CS Fixer (le hook pre-commit le fait sur les fichiers du commit)
