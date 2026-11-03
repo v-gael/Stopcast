@@ -184,7 +184,7 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 
 La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request. Sur `main`, s'ils passent, elle construit l'image de prod et la déploie : voir [exploitation.md](exploitation.md#déploiement).
 
-`make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
+`make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée. Le passage quotidien scanne aussi la dernière image de prod publiée avec Trivy, qui vérifie déjà chaque image avant sa publication : voir [exploitation.md](exploitation.md#scan-des-failles-trivy).
 
 ## Pièges en test
 
@@ -220,6 +220,8 @@ Les secrets de la prod réelle (serveur) ne suivent pas ce modèle : voir [explo
 La prod locale construit l'image depuis les sources (`compose.prod-local.yaml` remet le `build`), sous le nom `ghcr.io/v-gael/stopcast:local` (`IMAGE_TAG=local`, fixé par le `Makefile`). La prod réelle ne construit rien : elle tire de GHCR l'image construite par la CI, étiquetée par le SHA du commit ([exploitation.md](exploitation.md#déploiement)).
 
 La prod locale tourne sur `http://localhost/`, en HTTP seul, sans TLS ni redirection : sur le serveur, le TLS est terminé par Cloudflare et le trafic arrive par Cloudflare Tunnel (`cloudflared`) sur le réseau Docker externe `edge`, où `app` répond sous l'alias `stopcast-app` sans publier de port (`compose.prod.yaml`, [ADR 0006](adr/0006-hebergement.md)). En local, `compose.prod-local.yaml` publie le port 80 et fait de `edge` un réseau local créé par Compose. La prod locale ne teste donc ni le HTTPS ni le tunnel.
+
+Comme en prod, `app` et `worker` tournent sous `www-data`, sans capacités Linux superflues ([exploitation.md](exploitation.md#utilisateur-et-capacités)) : `docker compose exec` y ouvre une session `www-data`, qui n'écrit que dans `var/` et `/tmp`.
 
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
