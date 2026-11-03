@@ -5,10 +5,11 @@
 # le mainteneur (root:root, 755), la CI ne peut pas le modifier : voir
 # docs/exploitation.md, « Installer ou mettre à jour le script de déploiement ».
 #
-# La demande du client SSH arrive dans $SSH_ORIGINAL_COMMAND. Seule demande
-# acceptée :
+# La demande du client SSH arrive dans $SSH_ORIGINAL_COMMAND. Seules demandes
+# acceptées (SHA complet du commit : 40 caractères [0-9a-f]) :
 #
-#   deploy <sha>    (SHA complet du commit : 40 caractères [0-9a-f])
+#   deploy <sha>      IMAGE_TAG=<sha> bin/deploy (job deploy de ci.yml)
+#   rollback <sha>    IMAGE_TAG=<sha> bin/deploy --skip-migrations (rollback.yml)
 #
 # Le jeton GHCR est la seule donnée lue sur l'entrée standard, directement par
 # `docker login --password-stdin`. bin/deploy et les fichiers Compose viennent
@@ -34,7 +35,7 @@ log() {
 
 refuse() {
     log "refusé : $1"
-    echo "Demande refusée : $1. Seule demande acceptée : deploy <sha>." >&2
+    echo "Demande refusée : $1. Demandes acceptées : deploy <sha>, rollback <sha>." >&2
     exit 1
 }
 
@@ -51,7 +52,7 @@ set +f
 
 [ "$#" -gt 0 ] || refuse 'demande absente (session interactive)'
 case $1 in
-    deploy) ;;
+    deploy | rollback) action=$1 ;;
     *) refuse 'verbe inconnu' ;;
 esac
 [ "$#" -ge 2 ] || refuse 'SHA manquant'
@@ -68,7 +69,7 @@ esac
 exec 9>"$dir/.deploy.lock"
 flock -n 9 || refuse 'déploiement déjà en cours'
 
-log "accepté : deploy $sha"
+log "accepté : $action $sha"
 image=$image_name:$sha
 logged_in=
 container=
@@ -89,9 +90,9 @@ on_exit() {
         docker logout ghcr.io >/dev/null || true
     fi
     if [ "$status" -eq 0 ]; then
-        log "terminé : deploy $sha réussi"
+        log "terminé : $action $sha réussi"
     else
-        log "terminé : deploy $sha en échec (code $status)"
+        log "terminé : $action $sha en échec (code $status)"
     fi
     exit "$status"
 }
@@ -126,4 +127,10 @@ mkdir -p "$dir/bin"
 mv -f "$staging/deploy" "$dir/bin/deploy"
 mv -f "$staging/compose.yaml" "$staging/compose.prod.yaml" "$dir/"
 
-IMAGE_TAG=$sha "$dir/bin/deploy"
+# Retour arrière : l'image remise en place tourne sur le schéma actuel, sans
+# dump ni migration.
+if [ "$action" = rollback ]; then
+    IMAGE_TAG=$sha "$dir/bin/deploy" --skip-migrations
+else
+    IMAGE_TAG=$sha "$dir/bin/deploy"
+fi
