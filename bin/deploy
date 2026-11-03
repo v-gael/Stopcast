@@ -102,9 +102,11 @@ echo "Version déployée : $previous"
 echo "Version à déployer : $IMAGE_TAG"
 
 # Les services qui ont un build (prod locale) gardent l'image construite sur
-# place ; en prod, aucun n'en a et tout vient de GHCR.
+# place ; en prod, aucun n'en a et tout vient de GHCR. Une étiquette est le SHA
+# d'un commit et ne change jamais : une image déjà là n'est pas retéléchargée
+# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée).
 echo "==> Téléchargement de l'image"
-compose pull --ignore-buildable app worker
+compose pull --policy missing --ignore-buildable app worker
 
 # Les migrations tournent dans un conteneur jetable de la nouvelle image,
 # pendant que l'ancienne version sert encore. Pas au démarrage du conteneur :
@@ -138,6 +140,7 @@ if [ "$pending" -eq 1 ]; then
     echo '==> Dump de la base avant migration'
     mkdir -p "$backup_dir"
     target="$backup_dir/pre-deploy-$IMAGE_TAG.sql.gz"
+    # shellcheck disable=SC2016 # variables développées dans le conteneur database
     if ! compose exec -T database sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Z 6' > "$target.tmp"; then
         rm -f "$target.tmp"
         echo 'Échec du dump : migrations non lancées.' >&2
