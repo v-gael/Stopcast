@@ -1,3 +1,6 @@
+# Aucun port publié : le TLS est terminé par Cloudflare, et le trafic arrive
+# par cloudflared sur le réseau Docker externe edge, qui joint app par son alias
+# (voir docs/adr/0006-hebergement.md). Test en local : compose.prod-local.yaml.
 services:
   app:
     build:
@@ -5,6 +8,8 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: prod
+      # ":80" : Caddy sert en HTTP seul, sans certificat ni redirection.
+      SERVER_NAME: ":80"
       APP_SECRET: ${APP_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
@@ -14,10 +19,11 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+    networks:
+      default:
+      edge:
+        aliases:
+          - stopcast-app
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost/"]
       interval: 30s
@@ -58,3 +64,8 @@ services:
 
 volumes:
   database_data_prod:
+
+networks:
+  edge:
+    external: true
+    name: edge

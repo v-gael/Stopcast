@@ -1,0 +1,10 @@
+# Prod locale (make prod-up), sans cloudflared : app publie le port 80 et edge
+# devient un réseau local, créé par Compose.
+services:
+  app:
+    ports:
+      - "80:80"
+
+networks:
+  edge:
+    external: false

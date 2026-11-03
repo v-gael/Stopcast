@@ -4,7 +4,7 @@
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
 # (nom du dossier), donc ses conteneurs et sa base (un `down -v` la supprimerait).
-PROD := docker compose -p stopcast-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml
+PROD := docker compose -p stopcast-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml -f compose.prod-local.yaml
 CI := docker compose -p stopcast-ci -f compose.yaml -f compose.ci.yaml
 
 ## —— Docker ———————————————————————————————————————————————————————————————
@@ -34,7 +34,7 @@ worker-logs: ## Suit les logs du worker (envoi des emails)
 	docker compose logs -f worker
 
 ## —— Prod (local, pour tester) ———————————————————————————————————————————
-prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : mêmes ports)
+prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : même port 80)
 	$(PROD) build --pull
 	$(PROD) up -d
 
