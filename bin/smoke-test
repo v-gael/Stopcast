@@ -47,7 +47,7 @@ attempts=${SMOKE_ATTEMPTS:-5}
 delay=${SMOKE_DELAY:-10}
 
 body=$(mktemp)
-trap 'rm -f "$body"' EXIT
+trap 'rm -f "$body" "$body.err"' EXIT
 
 failed=0
 
