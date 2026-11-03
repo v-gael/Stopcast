@@ -95,14 +95,15 @@ RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --opt
     && php bin/console cache:clear --env=prod --no-warmup \
     && php bin/console tailwind:build --minify --env=prod \
     && php bin/console asset-map:compile --env=prod \
-    && php bin/console cache:warmup --env=prod
+    && php bin/console cache:warmup --env=prod \
+    && chown -R www-data:www-data var /config/caddy /data/caddy
 
 # FrankenPHP tourne sous www-data (doc FrankenPHP, « Running as a non-root
-# user ») : la capacité de fichier lui garde le port 80, et www-data possède
-# var/ (cache, sessions) ainsi que les dossiers de Caddy (XDG_CONFIG_HOME et
-# XDG_DATA_HOME de l'image). Le dev et la CI restent en root (bind mount,
-# Composer).
-RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
-    && chown -R www-data:www-data var /config/caddy /data/caddy
+# user ») : l'image de base donne déjà au binaire la capacité de fichier
+# cap_net_bind_service, qui lui garde le port 80, et www-data possède var/
+# (cache, sessions) ainsi que les dossiers de Caddy (XDG_CONFIG_HOME et
+# XDG_DATA_HOME de l'image). Le chown est dans le RUN qui remplit var/ : dans
+# un RUN à part, il recopierait tout var/ dans une nouvelle couche. Le dev et
+# la CI restent en root (bind mount, Composer).
 
 USER www-data
