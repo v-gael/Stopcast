@@ -36,7 +36,7 @@ trait RealtimeFeedTrait
             cache: new ArrayAdapter(),
             routeRepository: $routeRepository,
             tripRepository: $tripRepository,
-            clock: new MockClock(self::NOW),
+            clock: new MockClock(self::NOW, date_default_timezone_get()),
             tripUpdatesUrl: 'https://gtfs-rt.test/trip-updates',
             cacheTtl: 20,
             limit: $limit,

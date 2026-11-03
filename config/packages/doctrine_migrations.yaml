@@ -4,3 +4,7 @@ doctrine_migrations:
         # as migrations classes should NOT be autoloaded
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
+    # Une seule transaction pour tout le lot : PostgreSQL annule aussi les
+    # changements de schéma, donc une migration qui échoue au déploiement
+    # annule les précédentes et l'ancienne version continue de servir.
+    all_or_nothing: true

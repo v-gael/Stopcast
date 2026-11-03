@@ -183,6 +183,6 @@ final class DeviceAccessTest extends WebTestCase
     {
         $container = self::getContainer();
         $container->set('http_client', new MockHttpClient(self::feedResponse($entities)));
-        $container->set('clock', new MockClock(self::NOW));
+        $container->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
     }
 }

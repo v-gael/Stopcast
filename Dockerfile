@@ -11,7 +11,6 @@ ENV COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/tmp/composer
 
 RUN apk add --no-cache \
-        acl \
         file \
         gettext \
         git \
@@ -25,6 +24,8 @@ RUN apk add --no-cache \
         pdo_pgsql \
         zip
 
+# Fuseau horaire commun à toutes les stages.
+COPY frankenphp/conf.d/10-timezone.ini $PHP_INI_DIR/conf.d/
 COPY frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 COPY frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint
@@ -73,7 +74,18 @@ RUN composer install --prefer-dist --no-progress --no-interaction --optimize-aut
 # =============================================================================
 FROM base AS prod
 
-ENV APP_ENV=prod
+# Mode worker : FrankenPHP garde le kernel Symfony en mémoire entre deux
+# requêtes (symfony/runtime choisit FrankenPhpWorkerRunner quand FrankenPHP
+# fixe FRANKENPHP_WORKER). Un service ne garde donc aucune donnée de requête,
+# sinon il implémente ResetInterface (docs/architecture.md).
+# FRANKENPHP_LOOP_MAX : chaque worker redémarre après 500 requêtes (le défaut
+# de symfony/runtime, explicité ici), pour borner une fuite mémoire d'une
+# dépendance. Un redémarrage coûte un démarrage du kernel, payé par une
+# requête sur 500 : négligeable pour un dispositif qui interroge l'API toutes
+# les 10 secondes.
+ENV APP_ENV=prod \
+    FRANKENPHP_CONFIG="worker /app/public/index.php" \
+    FRANKENPHP_LOOP_MAX=500
 
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
 COPY . .
@@ -84,5 +96,14 @@ RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --opt
     && php bin/console tailwind:build --minify --env=prod \
     && php bin/console asset-map:compile --env=prod \
     && php bin/console cache:warmup --env=prod \
-    && setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var \
-    && setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var
+    && chown -R www-data:www-data var /config/caddy /data/caddy
+
+# FrankenPHP tourne sous www-data (doc FrankenPHP, « Running as a non-root
+# user ») : l'image de base donne déjà au binaire la capacité de fichier
+# cap_net_bind_service, qui lui garde le port 80, et www-data possède var/
+# (cache, sessions) ainsi que les dossiers de Caddy (XDG_CONFIG_HOME et
+# XDG_DATA_HOME de l'image). Le chown est dans le RUN qui remplit var/ : dans
+# un RUN à part, il recopierait tout var/ dans une nouvelle couche. Le dev et
+# la CI restent en root (bind mount, Composer).
+
+USER www-data

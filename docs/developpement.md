@@ -21,6 +21,8 @@ La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://
 
 `make help` liste toutes les commandes disponibles.
 
+Les scripts de `bin/` se lancent depuis le dépôt (ou depuis l'image, comme `bin/deploy`). Ceux de `ops/` ne sont jamais lancés par le dépôt : le mainteneur les installe à la main sur le serveur, comme `ops/ci-deploy` ([exploitation.md](exploitation.md#installer-ou-mettre-à-jour-le-script-de-déploiement)).
+
 ## Comptes utilisateurs
 
 L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Un administrateur crée les comptes par invitation (voir plus bas). Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
@@ -184,7 +186,7 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 
 La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request. Sur `main`, s'ils passent, elle construit l'image de prod et la déploie : voir [exploitation.md](exploitation.md#déploiement).
 
-`make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
+`make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée. Le passage quotidien scanne aussi la dernière image de prod publiée avec Trivy, qui vérifie déjà chaque image avant sa publication : voir [exploitation.md](exploitation.md#scan-des-failles-trivy).
 
 ## Pièges en test
 
@@ -199,6 +201,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `TRUSTED_PROXIES` est lu au démarrage du noyau et appliqué en statique sur `Request` : pour le fixer dans un test, le définir dans `$_ENV` et `$_SERVER` avant `createClient()`, puis remettre la valeur d'origine et `Request::setTrustedProxies([], 0)` dans `tearDown()` (voir `TrustedProxiesTest`). Le client de test envoie ses requêtes depuis `127.0.0.1`, avec l'hôte `localhost`.
 - Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache de test (`make console c="cache:clear --env=test"`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
+- `MockClock` lit une date donnée en texte en UTC, et `mockTime()` sans argument fige l'heure en UTC, alors que PHP tourne en `Europe/Paris` (voir [Fuseau horaire](architecture.md#fuseau-horaire)) : passer le fuseau de PHP (`new MockClock(self::NOW, date_default_timezone_get())`, `mockTime(new \DateTimeImmutable())`), sinon l'horloge simulée est décalée d'une ou deux heures par rapport aux dates des tests et des entités. Les tests du fuseau (`TimezoneTest`, `NextPassagesTimezoneTest`) échouent hors de l'image si `date.timezone` n'est pas réglé.
 
 ## Mettre à jour les dépendances
 
@@ -206,6 +209,20 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 2. Lancer la mise à jour sans `--dry-run`. `bump-after-update` est activé : Composer remonte les contraintes de `composer.json` aux versions installées.
 3. `make composer c="recipes"` liste les recipes à mettre à jour. Chacune se met à jour avec `make composer c="recipes:update <paquet>"`. Flex refuse de tourner tant que l'index git contient des changements : committer entre deux.
 4. Finir par `make audit` puis `make check`.
+
+## Migrations
+
+`make migration` génère une migration à partir des entités, `make migrate` l'applique (voir aussi `CODING_STANDARDS.md`).
+
+En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc quelques secondes sur le nouveau schéma. Ce n'est pas une obligation, mais préférer les migrations additives, que l'ancien code supporte :
+
+- ajouter une colonne nullable (ou avec une valeur par défaut), puis la rendre obligatoire dans une release suivante ;
+- renommer en deux temps : ajouter la nouvelle colonne et y recopier les données, puis supprimer l'ancienne dans une release suivante, une fois le code passé à la nouvelle ;
+- supprimer une colonne ou une table seulement quand le code en place ne s'en sert plus.
+
+Toutes les migrations en attente passent dans une seule transaction (`all_or_nothing`) : si l'une échoue, le lot entier est annulé.
+
+Pas de méthode `down()` à maintenir : le schéma ne fait qu'avancer. Un retour arrière qui ne supporte pas le nouveau schéma passe par la restauration du dump pris avant migration ([exploitation.md](exploitation.md#retour-arrière)).
 
 ## Environnement de prod (local)
 
@@ -220,6 +237,10 @@ Les secrets de la prod réelle (serveur) ne suivent pas ce modèle : voir [explo
 La prod locale construit l'image depuis les sources (`compose.prod-local.yaml` remet le `build`), sous le nom `ghcr.io/v-gael/stopcast:local` (`IMAGE_TAG=local`, fixé par le `Makefile`). La prod réelle ne construit rien : elle tire de GHCR l'image construite par la CI, étiquetée par le SHA du commit ([exploitation.md](exploitation.md#déploiement)).
 
 La prod locale tourne sur `http://localhost/`, en HTTP seul, sans TLS ni redirection : sur le serveur, le TLS est terminé par Cloudflare et le trafic arrive par Cloudflare Tunnel (`cloudflared`) sur le réseau Docker externe `edge`, où `app` répond sous l'alias `stopcast-app` sans publier de port (`compose.prod.yaml`, [ADR 0006](adr/0006-hebergement.md)). En local, `compose.prod-local.yaml` publie le port 80 et fait de `edge` un réseau local créé par Compose. La prod locale ne teste donc ni le HTTPS ni le tunnel.
+
+Comme en prod, `app` et `worker` tournent sous `www-data`, sans capacités Linux superflues ([exploitation.md](exploitation.md#utilisateur-et-capacités)) : `docker compose exec` y ouvre une session `www-data`, qui n'écrit que dans `var/` et `/tmp`.
+
+La prod locale sert l'appli en mode worker de FrankenPHP, comme la prod, alors que le dev reste en mode classique : tester en prod locale tout changement qui garde un état dans un service ([architecture.md](architecture.md#mode-worker-en-prod)). Les logs de `app` (`make prod-logs`) montrent au démarrage les workers lancés sur `public/index.php`.
 
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 

@@ -424,7 +424,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->disableReboot();
         $container = self::getContainer();
         $container->set('http_client', new MockHttpClient(self::feedResponse([])));
-        $container->set('clock', new MockClock(self::NOW));
+        $container->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
 
         $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $device->getToken()]);
 

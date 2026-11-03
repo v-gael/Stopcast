@@ -75,7 +75,7 @@ final class NextPassagesProfilerTest extends WebTestCase
 
         $container = self::getContainer();
         $container->set('http_client', new MockHttpClient(self::feedResponse([])));
-        $container->set('clock', new MockClock(self::NOW));
+        $container->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
 
         $this->client->enableProfiler();
         $this->client->request('GET', $uri, server: ['HTTP_X_DEVICE_TOKEN' => $device->getToken()]);
