@@ -160,32 +160,19 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
-      # Sur le runner seulement, pour bin/smoke-test : rien n'est copié sur le
-      # serveur, qui prend ses fichiers dans l'image.
+      # Sur le runner seulement, pour la configuration SSH et bin/smoke-test :
+      # rien n'est copié sur le serveur, qui prend ses fichiers dans l'image.
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
 
-      # Clé d'hôte vérifiée (DEPLOY_KNOWN_HOSTS), jamais acceptée à l'aveugle.
+      # Clé d'hôte vérifiée, partagée avec rollback.yml.
       - name: Configurer SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<CONFIG
-          Host production
-            HostName $DEPLOY_HOST
-            User deploy
-            IdentityFile ~/.ssh/deploy_key
-            IdentitiesOnly yes
-            BatchMode yes
-            StrictHostKeyChecking yes
-          CONFIG
+        uses: ./.github/actions/ssh-production
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
 
       # Le jeton passe par l'entrée standard, jamais sur une ligne de commande ;
       # le serveur s'en sert pour docker login et se déconnecte du registre en

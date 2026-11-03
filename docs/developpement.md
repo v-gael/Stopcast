@@ -222,7 +222,7 @@ En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l
 
 Toutes les migrations en attente passent dans une seule transaction (`all_or_nothing`) : si l'une échoue, le lot entier est annulé.
 
-Pas de méthode `down()` à maintenir : le schéma ne fait qu'avancer. Un retour arrière qui ne supporte pas le nouveau schéma passe par le dump pris avant migration ([exploitation.md](exploitation.md#dumps-avant-migration)).
+Pas de méthode `down()` à maintenir : le schéma ne fait qu'avancer. Un retour arrière qui ne supporte pas le nouveau schéma passe par la restauration du dump pris avant migration ([exploitation.md](exploitation.md#retour-arrière)).
 
 ## Environnement de prod (local)
 

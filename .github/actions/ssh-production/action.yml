@@ -1,0 +1,41 @@
+# Configure l'hôte SSH « production » (utilisateur deploy, clé de la CI) pour
+# le job deploy de ci.yml et pour rollback.yml. Sur le serveur, cette clé ne
+# lance que ops/ci-deploy : voir docs/exploitation.md, « Déploiement ».
+name: SSH vers la production
+description: Configure l'hôte SSH production, clé d'hôte vérifiée.
+
+inputs:
+  host:
+    description: Adresse du serveur (secret DEPLOY_HOST)
+    required: true
+  ssh-key:
+    description: Clé privée de la CI (secret DEPLOY_SSH_KEY)
+    required: true
+  known-hosts:
+    description: Clé(s) d'hôte du serveur (secret DEPLOY_KNOWN_HOSTS)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Clé d'hôte vérifiée (DEPLOY_KNOWN_HOSTS), jamais acceptée à l'aveugle.
+    - name: Configurer SSH
+      shell: bash
+      env:
+        DEPLOY_HOST: ${{ inputs.host }}
+        DEPLOY_SSH_KEY: ${{ inputs.ssh-key }}
+        DEPLOY_KNOWN_HOSTS: ${{ inputs.known-hosts }}
+      run: |
+        install -m 700 -d ~/.ssh
+        printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+        printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+        chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+        cat > ~/.ssh/config <<CONFIG
+        Host production
+          HostName $DEPLOY_HOST
+          User deploy
+          IdentityFile ~/.ssh/deploy_key
+          IdentitiesOnly yes
+          BatchMode yes
+          StrictHostKeyChecking yes
+        CONFIG
