@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs dev-log worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs dev-log worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset prod-verify ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -48,6 +48,9 @@ prod-logs: ## Suit les logs de l'environnement prod (app et worker)
 
 prod-ps: ## État des conteneurs prod (vérifier healthy)
 	$(PROD) ps
+
+prod-verify: ## Vérifie l'image de prod en prod locale (taille, bin/deploy, utilisateur, capacités, smoke tests), puis l'arrête (arrêter le dev avant)
+	bin/prod-verify
 
 prod-reset: ## ⚠️ Supprime volumes + rebuild + remigre à zéro (reset complet du test prod)
 	$(PROD) down -v

@@ -1,0 +1,164 @@
+#!/bin/sh
+# Vérifie l'image de prod en prod locale, sur l'hôte : ce que ni `make check`
+# ni la CI n'exécutent avant main. Construit l'image `local`, contrôle sa
+# taille, la déploie par bin/deploy (migrations comprises), contrôle les
+# conteneurs (utilisateur, capacités, fuseau, mode worker, écriture dans var/)
+# puis lance bin/smoke-test. Tous les contrôles tournent avant de conclure.
+# Arrête la prod locale à la fin (volumes gardés), sauf avec --keep.
+#
+# Usage : bin/prod-verify [--keep]   (make prod-verify)
+#
+# Même projet Compose que `make prod-up` (stopcast-prod) : le dev doit être
+# arrêté, il occupe le même port 80.
+
+cd "$(dirname "$0")/.." || exit 1
+
+# Plafond de taille de l'image, en Mo : somme des couches décompressées
+# (docker history), qui compte deux fois un fichier recopié par une couche
+# suivante. 543 Mo au 03/11/2026 ; un chown -R de var/ dans un RUN à part en
+# ajoutait 172. Le relever dans le commit qui fait grossir l'image, avec la
+# raison.
+MAX_IMAGE_MB=600
+
+keep=0
+case ${1:-} in
+    --keep) keep=1 ;;
+    '') ;;
+    *) echo "Usage : bin/prod-verify [--keep]" >&2; exit 2 ;;
+esac
+
+if [ ! -f .env.prod.local ]; then
+    echo "Fichier .env.prod.local introuvable : cp .env.prod.local.example .env.prod.local (docs/developpement.md, « Environnement de prod (local) »)." >&2
+    exit 1
+fi
+
+# docker compose ne connaît que les variables exportées.
+COMPOSE_FILE=compose.yaml:compose.prod.yaml:compose.prod-local.yaml
+COMPOSE_PROJECT_NAME=stopcast-prod
+IMAGE_TAG=local
+export COMPOSE_FILE COMPOSE_PROJECT_NAME IMAGE_TAG
+
+prod() {
+    docker compose --env-file .env.prod.local "$@"
+}
+
+if docker ps --format '{{.Names}} {{.Ports}}' | grep -v '^stopcast-prod-' | grep -qE ':80->'; then
+    echo "Le port 80 est pris par un autre conteneur (le dev ?) : make down, puis relancer." >&2
+    exit 1
+fi
+
+status=0
+
+ok() {
+    echo "OK : $1"
+}
+
+fail() {
+    printf 'Échec : %s\n' "$1"
+    status=1
+}
+
+# expect <valeur> <attendue> <message OK> <message d'échec>
+expect() {
+    if [ "$1" = "$2" ]; then ok "$3"; else fail "$4"; fi
+}
+
+if [ "$keep" -eq 0 ]; then
+    trap 'prod down >/dev/null 2>&1' EXIT
+fi
+
+echo "==> Construction de l'image"
+if ! prod build --pull app worker; then
+    echo "Échec : construction de l'image, rien d'autre n'est vérifié." >&2
+    exit 1
+fi
+
+size_mb=$(docker history --human=false --format '{{.Size}}' "ghcr.io/v-gael/stopcast:$IMAGE_TAG" | awk '{ total += $1 } END { print int(total / 1000000) }')
+if [ "$size_mb" -le "$MAX_IMAGE_MB" ]; then
+    ok "taille de l'image : $size_mb Mo (plafond $MAX_IMAGE_MB Mo)"
+else
+    fail "taille de l'image : $size_mb Mo, au-delà du plafond de $MAX_IMAGE_MB Mo (MAX_IMAGE_MB dans bin/prod-verify)"
+fi
+
+echo '==> Déploiement par bin/deploy'
+if ! bin/deploy < /dev/null; then
+    echo 'Échec : bin/deploy, conteneurs non vérifiés.' >&2
+    exit 1
+fi
+
+echo '==> Contrôles des conteneurs'
+for service in app worker; do
+    container=$(prod ps -q "$service")
+    if [ -z "$container" ]; then
+        fail "$service ne tourne pas"
+        continue
+    fi
+
+    user=$(prod exec -T "$service" id -un)
+    expect "$user" www-data "$service tourne sous www-data" "$service tourne sous « $user », www-data attendu"
+
+    timezone=$(prod exec -T "$service" php -r 'echo date_default_timezone_get();')
+    expect "$timezone" Europe/Paris "$service : fuseau Europe/Paris" "$service : fuseau « $timezone », Europe/Paris attendu"
+
+    cap_drop=$(docker inspect --format '{{join .HostConfig.CapDrop ","}}' "$container")
+    expect "$cap_drop" ALL "$service : toutes les capacités retirées" "$service : CapDrop « $cap_drop », ALL attendu"
+
+    security=$(docker inspect --format '{{join .HostConfig.SecurityOpt ","}}' "$container")
+    case $security in
+        *no-new-privileges:true*) ok "$service : no-new-privileges" ;;
+        *) fail "$service : SecurityOpt « $security », no-new-privileges:true attendu" ;;
+    esac
+done
+
+app=$(prod ps -q app)
+if [ -n "$app" ]; then
+    cap_add=$(docker inspect --format '{{join .HostConfig.CapAdd ","}}' "$app")
+    case $cap_add in
+        *NET_BIND_SERVICE) ok "app : seule capacité ajoutée, NET_BIND_SERVICE ($cap_add)" ;;
+        *) fail "app : CapAdd « $cap_add », NET_BIND_SERVICE attendu" ;;
+    esac
+
+    if prod exec -T app getcap /usr/local/bin/frankenphp | grep -q cap_net_bind_service; then
+        ok 'app : frankenphp a la capacité de fichier cap_net_bind_service'
+    else
+        fail 'app : frankenphp sans capacité de fichier cap_net_bind_service (port 80 sous www-data)'
+    fi
+
+    if prod logs app 2>/dev/null | grep -qE '"worker_threads":[1-9]'; then
+        ok 'app : mode worker de FrankenPHP actif'
+    else
+        fail 'app : aucun thread worker au démarrage de FrankenPHP (FRANKENPHP_CONFIG)'
+    fi
+
+    if prod exec -T app sh -c 'touch var/cache/.prod-verify && rm var/cache/.prod-verify'; then
+        ok 'app : var/ accessible en écriture'
+    else
+        fail 'app : var/ non accessible en écriture'
+    fi
+fi
+
+worker=$(prod ps -q worker)
+if [ -n "$worker" ]; then
+    sleep 5
+    restarts=$(docker inspect --format '{{.RestartCount}} {{.State.Status}}' "$worker")
+    expect "$restarts" '0 running' 'worker : démarré, aucun redémarrage' "worker : redémarrages et état « $restarts », « 0 running » attendu"
+fi
+
+echo '==> Contrôles après déploiement'
+if bin/smoke-test http://localhost; then
+    ok 'bin/smoke-test'
+else
+    fail 'bin/smoke-test'
+fi
+
+echo
+if [ "$status" -eq 0 ]; then
+    echo 'Prod locale vérifiée.'
+else
+    echo 'Prod locale : des contrôles ont échoué (voir « Échec » plus haut).'
+fi
+if [ "$keep" -eq 1 ]; then
+    echo "Prod locale laissée en marche : make prod-down pour l'arrêter."
+fi
+
+exit "$status"
