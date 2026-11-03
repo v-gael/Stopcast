@@ -74,7 +74,18 @@ RUN composer install --prefer-dist --no-progress --no-interaction --optimize-aut
 # =============================================================================
 FROM base AS prod
 
-ENV APP_ENV=prod
+# Mode worker : FrankenPHP garde le kernel Symfony en mémoire entre deux
+# requêtes (symfony/runtime choisit FrankenPhpWorkerRunner quand FrankenPHP
+# fixe FRANKENPHP_WORKER). Un service ne garde donc aucune donnée de requête,
+# sinon il implémente ResetInterface (docs/architecture.md).
+# FRANKENPHP_LOOP_MAX : chaque worker redémarre après 500 requêtes (le défaut
+# de symfony/runtime, explicité ici), pour borner une fuite mémoire d'une
+# dépendance. Un redémarrage coûte un démarrage du kernel, payé par une
+# requête sur 500 : négligeable pour un dispositif qui interroge l'API toutes
+# les 10 secondes.
+ENV APP_ENV=prod \
+    FRANKENPHP_CONFIG="worker /app/public/index.php" \
+    FRANKENPHP_LOOP_MAX=500
 
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
 COPY . .

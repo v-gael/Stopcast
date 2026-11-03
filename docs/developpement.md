@@ -238,6 +238,8 @@ La prod locale tourne sur `http://localhost/`, en HTTP seul, sans TLS ni redirec
 
 Comme en prod, `app` et `worker` tournent sous `www-data`, sans capacités Linux superflues ([exploitation.md](exploitation.md#utilisateur-et-capacités)) : `docker compose exec` y ouvre une session `www-data`, qui n'écrit que dans `var/` et `/tmp`.
 
+La prod locale sert l'appli en mode worker de FrankenPHP, comme la prod, alors que le dev reste en mode classique : tester en prod locale tout changement qui garde un état dans un service ([architecture.md](architecture.md#mode-worker-en-prod)). Les logs de `app` (`make prod-logs`) montrent au démarrage les workers lancés sur `public/index.php`.
+
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
 Dev, prod locale et CI locale sont trois projets Docker Compose distincts (`stopcast`, le nom du dossier, puis `stopcast-prod`, `stopcast-ci`), avec chacun leurs conteneurs et leur base : `make prod-reset` ou `make ci-down` ne touchent jamais aux données de dev. Le dev et la prod locale publient tous deux le port 80 : arrêter l'un (`make down` ou `make prod-down`) avant de lancer l'autre. La CI locale (`make ci-run`) ne publie aucun port et peut tourner pendant le dev ; elle repart à chaque fois d'une base vierge.
