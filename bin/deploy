@@ -6,7 +6,12 @@
 # imposé à la clé de la CI), qui l'extrait de l'image à déployer avec
 # compose.yaml et compose.prod.yaml.
 #
-#   IMAGE_TAG=<sha> bin/deploy
+#   IMAGE_TAG=<sha> bin/deploy [--skip-migrations]
+#
+# --skip-migrations sert au retour arrière (`rollback <sha>` d'ops/ci-deploy) :
+# ni lecture de l'état des migrations, ni dump, ni migration ; seulement le pull
+# et le remplacement des conteneurs. Le schéma ne fait qu'avancer : l'image
+# remise en place tourne sur le schéma en place.
 #
 # Le fichier d'état .deployed garde l'étiquette en place : le script l'affiche
 # avant de déployer, pour pouvoir y revenir. Test sur la prod locale (image
@@ -17,14 +22,19 @@ set -eu
 cd "$(dirname "$0")/.."
 
 usage() {
-    echo 'Usage : IMAGE_TAG=<sha> bin/deploy'
+    echo 'Usage : IMAGE_TAG=<sha> bin/deploy [--skip-migrations]'
 }
 
+skip_migrations=0
 while [ "$#" -gt 0 ]; do
     case $1 in
         -h | --help)
             usage
             exit 0
+            ;;
+        --skip-migrations)
+            skip_migrations=1
+            shift
             ;;
         *)
             echo "Option inconnue : $1" >&2
@@ -100,20 +110,25 @@ compose pull --ignore-buildable app worker
 # pendant que l'ancienne version sert encore. Pas au démarrage du conteneur :
 # app et worker partagent l'image et les lanceraient tous les deux. La base est
 # démarrée d'abord, pour le premier déploiement.
-echo '==> Base de données'
-compose up -d --wait database
-
-echo '==> Migrations en attente'
-# up-to-date : 0 à jour, 1 migrations en attente, autre code en cas d'erreur.
-if compose run --rm --no-deps app php bin/console doctrine:migrations:up-to-date; then
+if [ "$skip_migrations" -eq 1 ]; then
+    echo '==> Migrations ignorées (--skip-migrations) : la base reste telle quelle'
     pending=0
 else
-    status=$?
-    if [ "$status" -ne 1 ]; then
-        echo "Impossible de lire l'état des migrations (code $status)." >&2
-        exit "$status"
+    echo '==> Base de données'
+    compose up -d --wait database
+
+    echo '==> Migrations en attente'
+    # up-to-date : 0 à jour, 1 migrations en attente, autre code en cas d'erreur.
+    if compose run --rm --no-deps app php bin/console doctrine:migrations:up-to-date; then
+        pending=0
+    else
+        status=$?
+        if [ "$status" -ne 1 ]; then
+            echo "Impossible de lire l'état des migrations (code $status)." >&2
+            exit "$status"
+        fi
+        pending=1
     fi
-    pending=1
 fi
 
 if [ "$pending" -eq 1 ]; then
