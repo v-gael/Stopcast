@@ -36,6 +36,7 @@ Thumbs.db
 /core
 /.ua/
 /.githooks/commit-msg
+/.deployed
 /.worktreeinclude
 
 ###> phpstan/phpstan ###

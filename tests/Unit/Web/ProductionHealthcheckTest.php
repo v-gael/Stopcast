@@ -31,7 +31,9 @@ final class ProductionHealthcheckTest extends TestCase
 
     private function healthcheckHost(): string
     {
-        $test = $this->at(Yaml::parseFile(self::ROOT.'/compose.prod.yaml'), 'services', 'app', 'healthcheck', 'test');
+        // PARSE_CUSTOM_TAGS : compose.prod.yaml utilise le tag Compose !reset.
+        $compose = Yaml::parseFile(self::ROOT.'/compose.prod.yaml', Yaml::PARSE_CUSTOM_TAGS);
+        $test = $this->at($compose, 'services', 'app', 'healthcheck', 'test');
         self::assertIsArray($test);
 
         $urls = array_values(array_filter($test, static fn (mixed $arg): bool => \is_string($arg) && str_starts_with($arg, 'http')));

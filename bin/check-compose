@@ -8,6 +8,11 @@
 
 cd "$(dirname "$0")/.." || exit 1
 
+# compose.prod.yaml exige l'étiquette de l'image (bin/deploy la fournit) : une
+# valeur factice suffit pour valider.
+IMAGE_TAG=check
+export IMAGE_TAG
+
 status=0
 
 check() {
@@ -27,6 +32,16 @@ check 'compose.yaml + compose.override.yaml' -f compose.override.yaml
 check 'compose.yaml + compose.ci.yaml' -f compose.ci.yaml
 check 'compose.yaml + compose.prod.yaml' -f compose.prod.yaml --env-file .env.prod.local.example
 check 'compose.yaml + compose.prod.yaml + compose.prod-local.yaml' -f compose.prod.yaml -f compose.prod-local.yaml --env-file .env.prod.local.example
+
+# Le serveur n'a pas les sources : en prod, aucun service ne doit se construire
+# (le build de compose.yaml est retiré par compose.prod.yaml). Dans la sortie
+# de `config`, les propriétés d'un service sont indentées de 4 espaces.
+if docker compose -f compose.yaml -f compose.prod.yaml --env-file .env.prod.local.example config 2>/dev/null | grep -q '^    build:'; then
+    printf 'Échec : compose.yaml + compose.prod.yaml construit une image, la prod doit la tirer de GHCR\n\n'
+    status=1
+else
+    echo 'OK : la prod ne construit aucune image'
+fi
 
 if [ "$status" -eq 0 ]; then
     echo 'Fichiers Compose valides.'

@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 .env.test.local
+.deployed
 .DS_Store
 
 /var/

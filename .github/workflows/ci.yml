@@ -8,9 +8,11 @@ on:
 permissions:
   contents: read
 
+# Un nouveau push annule l'exécution en cours sur la même branche, sauf sur
+# main, où elle peut être en train de déployer : la suivante attend son tour.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   quality:
@@ -74,3 +76,107 @@ jobs:
 
       - name: Valider les combinaisons
         run: bin/check-compose
+
+  # Release mergée sur main : construit l'image de prod, déjà validée par les
+  # deux jobs précédents, et la publie sur GHCR, étiquetée par le SHA du commit.
+  image:
+    name: Image de production
+    needs: [quality, compose]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: prod
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/v-gael/stopcast:${{ github.sha }}
+            ghcr.io/v-gael/stopcast:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Déploie l'image du commit sur le serveur : bin/deploy y tire l'image et
+  # remplace les conteneurs. Le serveur s'authentifie sur GHCR avec le jeton de
+  # ce job, qui expire avec lui : aucun secret du registre n'y reste.
+  # Procédure et secrets : docs/exploitation.md, « Déploiement ».
+  deploy:
+    name: Déploiement
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    # Jamais annulé : un déploiement interrompu laisserait la prod à moitié
+    # mise à jour. Les suivants attendent.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # Clé d'hôte vérifiée (DEPLOY_KNOWN_HOSTS), jamais acceptée à l'aveugle.
+      - name: Configurer SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<CONFIG
+          Host production
+            HostName $DEPLOY_HOST
+            User deploy
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+          CONFIG
+
+      - name: Copier le script et les fichiers Compose
+        run: |
+          ssh production 'mkdir -p ~/stopcast/bin'
+          scp -p compose.yaml compose.prod.yaml production:stopcast/
+          scp -p bin/deploy production:stopcast/bin/
+
+      # Le jeton passe par l'entrée standard, jamais sur une ligne de commande.
+      # Déconnexion du registre quel que soit le résultat, en gardant le code
+      # de sortie de bin/deploy.
+      - name: Déployer
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # $GHCR_USER et $IMAGE_TAG sont développés ici, à dessein (SC2029).
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh production "
+            docker login ghcr.io --username '$GHCR_USER' --password-stdin || exit
+            cd ~/stopcast && IMAGE_TAG='$IMAGE_TAG' bin/deploy
+            status=\$?
+            docker logout ghcr.io
+            exit \$status
+          "
