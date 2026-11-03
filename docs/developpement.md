@@ -21,6 +21,8 @@ La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://
 
 `make help` liste toutes les commandes disponibles.
 
+Les scripts de `bin/` se lancent depuis le dépôt (ou depuis l'image, comme `bin/deploy`). Ceux de `ops/` ne sont jamais lancés par le dépôt : le mainteneur les installe à la main sur le serveur, comme `ops/ci-deploy` ([exploitation.md](exploitation.md#installer-ou-mettre-à-jour-le-script-de-déploiement)).
+
 ## Comptes utilisateurs
 
 L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Un administrateur crée les comptes par invitation (voir plus bas). Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
