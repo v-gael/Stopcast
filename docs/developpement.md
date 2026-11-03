@@ -164,7 +164,7 @@ Le profiler ne garde pas les appels de StopcastDisplay à `/api/next-passages`, 
 
 `make check` lance tous les contrôles de la CI et s'arrête au premier échec. Les contrôles sont dans deux scripts, que la CI GitHub appelle aussi : `bin/check-compose` valide les fichiers Compose, sur l'hôte (le conteneur `app` n'a pas `docker`), puis `bin/check` lance les contrôles du code dans le conteneur `app`. Si `make check` passe, la CI passe. C'est le contrôle à faire avant une pull request.
 
-`bin/check-compose` valide `compose.yaml` avec chacune de ses surcharges (`compose.override.yaml`, `compose.ci.yaml`, `compose.prod.yaml`, puis `compose.prod.yaml` avec `compose.prod-local.yaml`) par `docker compose config -q`, sans démarrer de conteneur. La combinaison prod est lue avec `--env-file .env.prod.local.example` : une variable ajoutée à `compose.prod.yaml` sans entrée dans ce modèle fait échouer le contrôle, comme toute erreur ou tout avertissement de Compose. Le script valide toutes les combinaisons avant de conclure, pour montrer toutes les erreurs d'un coup.
+`bin/check-compose` valide `compose.yaml` avec chacune de ses surcharges (`compose.override.yaml`, `compose.ci.yaml`, `compose.prod.yaml`, puis `compose.prod.yaml` avec `compose.prod-local.yaml`) par `docker compose config -q`, sans démarrer de conteneur. La combinaison prod est lue avec `--env-file .env.prod.local.example` : une variable ajoutée à `compose.prod.yaml` sans entrée dans ce modèle fait échouer le contrôle, comme toute erreur ou tout avertissement de Compose. `IMAGE_TAG`, que `bin/deploy` fournit en prod, y reçoit une valeur factice. Le script vérifie aussi qu'en prod aucun service n'a de `build` : le serveur n'a pas les sources. Il valide toutes les combinaisons avant de conclure, pour montrer toutes les erreurs d'un coup.
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
 
@@ -182,7 +182,7 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 | `make rector` / `make rector-fix` | Rector |
 | `make audit` | Failles connues des dépendances (`composer audit`, `importmap:audit`) |
 
-La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request.
+La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develop` et sur chaque pull request. Sur `main`, s'ils passent, elle construit l'image de prod et la déploie : voir [exploitation.md](exploitation.md#déploiement).
 
 `make audit` lance `bin/audit`, qui cherche les failles connues dans les dépendances PHP et JS. Il interroge les bases de failles en ligne : il n'est donc pas dans `make check`, pour que le hook `pre-push` fonctionne hors ligne et qu'une faille publiée du jour au lendemain ne bloque pas une pull request sans rapport. Le workflow GitHub `audit.yml` lance le même script à chaque push sur `main` et `develop`, sur chaque pull request, tous les jours à 6 h UTC et à la demande. Un échec du passage quotidien arrive par email : c'est le signal pour mettre à jour la dépendance concernée.
 
@@ -216,6 +216,8 @@ make prod-up
 ```
 
 Les secrets de la prod réelle (serveur) ne suivent pas ce modèle : voir [exploitation.md](exploitation.md#secrets).
+
+La prod locale construit l'image depuis les sources (`compose.prod-local.yaml` remet le `build`), sous le nom `ghcr.io/v-gael/stopcast:local` (`IMAGE_TAG=local`, fixé par le `Makefile`). La prod réelle ne construit rien : elle tire de GHCR l'image construite par la CI, étiquetée par le SHA du commit ([exploitation.md](exploitation.md#déploiement)).
 
 La prod locale tourne sur `http://localhost/`, en HTTP seul, sans TLS ni redirection : sur le serveur, le TLS est terminé par Cloudflare et le trafic arrive par Cloudflare Tunnel (`cloudflared`) sur le réseau Docker externe `edge`, où `app` répond sous l'alias `stopcast-app` sans publier de port (`compose.prod.yaml`, [ADR 0006](adr/0006-hebergement.md)). En local, `compose.prod-local.yaml` publie le port 80 et fait de `edge` un réseau local créé par Compose. La prod locale ne teste donc ni le HTTPS ni le tunnel.
 
