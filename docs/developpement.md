@@ -215,6 +215,8 @@ make down                                    # libère les ports 80/443 du dev
 make prod-up
 ```
 
+Les secrets de la prod réelle (serveur) ne suivent pas ce modèle : voir [exploitation.md](exploitation.md#secrets).
+
 La prod locale redirige `http://localhost/` vers HTTPS par une redirection permanente (308), que le navigateur garde en cache. De retour en dev (HTTP seul), vider le cache du navigateur pour `localhost`, ou passer par `http://127.0.0.1/`.
 
 La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
