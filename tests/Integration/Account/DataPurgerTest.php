@@ -38,7 +38,8 @@ final class DataPurgerTest extends KernelTestCase
 
     protected function setUp(): void
     {
-        self::mockTime();
+        // Sans argument, l'horloge simulée serait en UTC et non dans le fuseau de PHP.
+        self::mockTime(new \DateTimeImmutable());
     }
 
     public function testPendingAccountIsDeleted31DaysAfterItsInvitationExpired(): void

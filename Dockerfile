@@ -24,6 +24,8 @@ RUN apk add --no-cache \
         pdo_pgsql \
         zip
 
+# Fuseau horaire commun à toutes les stages.
+COPY frankenphp/conf.d/10-timezone.ini $PHP_INI_DIR/conf.d/
 COPY frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 COPY frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint

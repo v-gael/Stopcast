@@ -47,6 +47,8 @@ jobs:
           extensions: ctype, iconv, intl, zip, pdo_pgsql
           coverage: none
           tools: composer:v2
+          # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
+          ini-values: date.timezone=Europe/Paris
 
       - name: Get Composer cache directory
         id: composer-cache
