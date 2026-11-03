@@ -207,6 +207,20 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 3. `make composer c="recipes"` liste les recipes à mettre à jour. Chacune se met à jour avec `make composer c="recipes:update <paquet>"`. Flex refuse de tourner tant que l'index git contient des changements : committer entre deux.
 4. Finir par `make audit` puis `make check`.
 
+## Migrations
+
+`make migration` génère une migration à partir des entités, `make migrate` l'applique (voir aussi `CODING_STANDARDS.md`).
+
+En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc quelques secondes sur le nouveau schéma. Ce n'est pas une obligation, mais préférer les migrations additives, que l'ancien code supporte :
+
+- ajouter une colonne nullable (ou avec une valeur par défaut), puis la rendre obligatoire dans une release suivante ;
+- renommer en deux temps : ajouter la nouvelle colonne et y recopier les données, puis supprimer l'ancienne dans une release suivante, une fois le code passé à la nouvelle ;
+- supprimer une colonne ou une table seulement quand le code en place ne s'en sert plus.
+
+Toutes les migrations en attente passent dans une seule transaction (`all_or_nothing`) : si l'une échoue, le lot entier est annulé.
+
+Pas de méthode `down()` à maintenir : le schéma ne fait qu'avancer. Un retour arrière qui ne supporte pas le nouveau schéma passe par le dump pris avant migration ([exploitation.md](exploitation.md#dumps-avant-migration)).
+
 ## Environnement de prod (local)
 
 ```bash
