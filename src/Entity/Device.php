@@ -20,6 +20,18 @@ class Device
 {
     public const int TOKEN_MAX_LENGTH = 64;
 
+    public const int DEFAULT_SCREEN_DURATION = 5;
+
+    public const int MIN_SCREEN_DURATION = 3;
+
+    public const int MAX_SCREEN_DURATION = 60;
+
+    public const int DEFAULT_REFRESH_INTERVAL = 60;
+
+    public const int MIN_REFRESH_INTERVAL = 30;
+
+    public const int MAX_REFRESH_INTERVAL = 300;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER)]
@@ -52,6 +64,20 @@ class Device
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $active = true;
+
+    /**
+     * Durée d'un écran de la page d'affichage, en secondes, avant de passer au suivant.
+     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => self::DEFAULT_SCREEN_DURATION])]
+    #[Assert\Range(min: self::MIN_SCREEN_DURATION, max: self::MAX_SCREEN_DURATION)]
+    private int $screenDuration = self::DEFAULT_SCREEN_DURATION;
+
+    /**
+     * Intervalle, en secondes, entre deux rafraîchissements des données de la page d'affichage.
+     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => self::DEFAULT_REFRESH_INTERVAL])]
+    #[Assert\Range(min: self::MIN_REFRESH_INTERVAL, max: self::MAX_REFRESH_INTERVAL)]
+    private int $refreshInterval = self::DEFAULT_REFRESH_INTERVAL;
 
     /**
      * Configurations d'affichage jouées par ce dispositif, en rotation si plusieurs.
@@ -139,6 +165,30 @@ class Device
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function getScreenDuration(): int
+    {
+        return $this->screenDuration;
+    }
+
+    public function setScreenDuration(int $screenDuration): static
+    {
+        $this->screenDuration = $screenDuration;
+
+        return $this;
+    }
+
+    public function getRefreshInterval(): int
+    {
+        return $this->refreshInterval;
+    }
+
+    public function setRefreshInterval(int $refreshInterval): static
+    {
+        $this->refreshInterval = $refreshInterval;
 
         return $this;
     }
