@@ -1,0 +1,129 @@
+#!/bin/sh
+# Seule commande que la clé SSH de la CI peut lancer sur le serveur : la ligne
+# de cette clé dans ~deploy/.ssh/authorized_keys l'impose par
+# `restrict,command="/usr/local/bin/stopcast-ci-deploy"`. Installé à la main par
+# le mainteneur (root:root, 755), la CI ne peut pas le modifier : voir
+# docs/exploitation.md, « Installer ou mettre à jour le script de déploiement ».
+#
+# La demande du client SSH arrive dans $SSH_ORIGINAL_COMMAND. Seule demande
+# acceptée :
+#
+#   deploy <sha>    (SHA complet du commit : 40 caractères [0-9a-f])
+#
+# Le jeton GHCR est la seule donnée lue sur l'entrée standard, directement par
+# `docker login --password-stdin`. bin/deploy et les fichiers Compose viennent
+# de l'image du SHA, jamais du client : un fichier Compose fourni par le porteur
+# de la clé pourrait monter / dans un conteneur privilégié.
+#
+# Dossier de déploiement : ~/stopcast, ou $STOPCAST_DEPLOY_DIR pour un test en
+# prod locale. Le client SSH ne peut pas fixer cette variable (AcceptEnv du
+# serveur limité à LANG, LC_*, COLORTERM et NO_COLOR, PermitUserEnvironment à
+# no). Chaque appel est tracé : journalctl -t stopcast-ci-deploy.
+
+set -eu
+
+tag=stopcast-ci-deploy
+image_name=ghcr.io/v-gael/stopcast
+dir=${STOPCAST_DEPLOY_DIR:-$HOME/stopcast}
+request=${SSH_ORIGINAL_COMMAND:-}
+client=${SSH_CLIENT:-inconnu}
+
+log() {
+    logger -t "$tag" -- "$1"
+}
+
+refuse() {
+    log "refusé : $1"
+    echo "Demande refusée : $1. Seule demande acceptée : deploy <sha>." >&2
+    exit 1
+}
+
+# Demande tracée sur une ligne, caractères non imprimables remplacés, tronquée :
+# elle vient du client.
+printable=$(printf '%s' "$request" | tr -c '[:print:]' '?' | cut -c 1-200)
+log "demande « $printable » depuis ${client%% *}"
+
+# Découpage en mots, sans expansion des motifs (* ou ?) de la demande.
+set -f
+# shellcheck disable=SC2086
+set -- $request
+set +f
+
+[ "$#" -gt 0 ] || refuse 'demande absente (session interactive)'
+case $1 in
+    deploy) ;;
+    *) refuse 'verbe inconnu' ;;
+esac
+[ "$#" -ge 2 ] || refuse 'SHA manquant'
+[ "$#" -eq 2 ] || refuse 'argument en trop'
+sha=$2
+case $sha in
+    *[!0-9a-f]*) refuse 'SHA non hexadécimal (attendu : [0-9a-f])' ;;
+esac
+[ "${#sha}" -eq 40 ] || refuse "SHA de ${#sha} caractères (attendu : 40)"
+[ -d "$dir" ] || refuse "dossier $dir introuvable"
+
+# Un déploiement à la fois, sans attente : le suivant est refusé. Le verrou est
+# levé à la fin du processus, quelle qu'en soit la cause.
+exec 9>"$dir/.deploy.lock"
+flock -n 9 || refuse 'déploiement déjà en cours'
+
+log "accepté : deploy $sha"
+image=$image_name:$sha
+logged_in=
+container=
+staging=
+
+# Sortie, réussie ou non : suppression du conteneur d'extraction et des
+# fichiers temporaires, déconnexion du registre, trace du résultat. Le code de
+# sortie (celui de bin/deploy s'il a tourné) est conservé.
+on_exit() {
+    status=$?
+    if [ -n "$container" ]; then
+        docker rm "$container" >/dev/null || true
+    fi
+    if [ -n "$staging" ]; then
+        rm -rf "$staging" || true
+    fi
+    if [ -n "$logged_in" ]; then
+        docker logout ghcr.io >/dev/null || true
+    fi
+    if [ "$status" -eq 0 ]; then
+        log "terminé : deploy $sha réussi"
+    else
+        log "terminé : deploy $sha en échec (code $status)"
+    fi
+    exit "$status"
+}
+trap on_exit EXIT
+# Coupure de la connexion ou interruption : passer quand même par on_exit.
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Le jeton ne passe ni en argument ni dans une variable : docker login lit
+# l'entrée standard du script. Marqué avant l'appel pour qu'un login à moitié
+# fait soit défait.
+logged_in=1
+docker login ghcr.io --username v-gael --password-stdin
+
+# bin/deploy relance un pull, qui ne retélécharge rien si l'image est là.
+if ! docker image inspect "$image" >/dev/null 2>&1; then
+    docker pull --quiet "$image"
+fi
+
+# Extraction dans un dossier temporaire, puis remplacement : un échec en cours
+# de route ne laisse pas un mélange de deux versions.
+staging=$(mktemp -d "$dir/.extract.XXXXXX")
+container=$(docker create "$image")
+docker cp "$container:/app/bin/deploy" "$staging/deploy"
+docker cp "$container:/app/compose.yaml" "$staging/compose.yaml"
+docker cp "$container:/app/compose.prod.yaml" "$staging/compose.prod.yaml"
+docker rm "$container" >/dev/null
+container=
+
+mkdir -p "$dir/bin"
+mv -f "$staging/deploy" "$dir/bin/deploy"
+mv -f "$staging/compose.yaml" "$staging/compose.prod.yaml" "$dir/"
+
+IMAGE_TAG=$sha "$dir/bin/deploy"

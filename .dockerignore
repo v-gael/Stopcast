@@ -12,7 +12,11 @@
 /public/build/
 /public/bundles/
 
+# compose.yaml et compose.prod.yaml entrent dans l'image : ops/ci-deploy les
+# en extrait sur le serveur, avec bin/deploy.
 compose*.yaml
+!compose.yaml
+!compose.prod.yaml
 .dockerignore
 
 *.md

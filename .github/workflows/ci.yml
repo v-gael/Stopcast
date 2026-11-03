@@ -113,9 +113,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Déploie l'image du commit sur le serveur : bin/deploy y tire l'image et
-  # remplace les conteneurs. Le serveur s'authentifie sur GHCR avec le jeton de
-  # ce job, qui expire avec lui : aucun secret du registre n'y reste.
+  # Déploie l'image du commit sur le serveur. La clé de la CI n'y ouvre pas de
+  # shell : authorized_keys lui impose ops/ci-deploy, qui n'accepte que
+  # `deploy <sha>` et prend bin/deploy et les fichiers Compose dans l'image du
+  # SHA. Le serveur s'authentifie sur GHCR avec le jeton de ce job, qui expire
+  # avec lui : aucun secret du registre n'y reste.
   # Procédure et secrets : docs/exploitation.md, « Déploiement ».
   deploy:
     name: Déploiement
@@ -131,10 +133,6 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
       # Clé d'hôte vérifiée (DEPLOY_KNOWN_HOSTS), jamais acceptée à l'aveugle.
       - name: Configurer SSH
         env:
@@ -156,27 +154,14 @@ jobs:
             StrictHostKeyChecking yes
           CONFIG
 
-      - name: Copier le script et les fichiers Compose
-        run: |
-          ssh production 'mkdir -p ~/stopcast/bin'
-          scp -p compose.yaml compose.prod.yaml production:stopcast/
-          scp -p bin/deploy production:stopcast/bin/
-
-      # Le jeton passe par l'entrée standard, jamais sur une ligne de commande.
-      # Déconnexion du registre quel que soit le résultat, en gardant le code
-      # de sortie de bin/deploy.
+      # Le jeton passe par l'entrée standard, jamais sur une ligne de commande ;
+      # le serveur s'en sert pour docker login et se déconnecte du registre en
+      # fin de déploiement, quel qu'en soit le résultat.
       - name: Déployer
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # $GHCR_USER et $IMAGE_TAG sont développés ici, à dessein (SC2029).
+          # $IMAGE_TAG est développé ici, à dessein (SC2029).
           # shellcheck disable=SC2029
-          printf '%s' "$GHCR_TOKEN" | ssh production "
-            docker login ghcr.io --username '$GHCR_USER' --password-stdin || exit
-            cd ~/stopcast && IMAGE_TAG='$IMAGE_TAG' bin/deploy
-            status=\$?
-            docker logout ghcr.io
-            exit \$status
-          "
+          printf '%s' "$GHCR_TOKEN" | ssh production deploy "$IMAGE_TAG"
