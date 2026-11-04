@@ -187,6 +187,23 @@ final class DevicesTest extends WebTestCase
         self::assertSame('Salon', $this->reload($device)?->getLabel());
     }
 
+    public function testTimingsAreASliderAndPresets(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'screenDuration' => 8, 'refreshInterval' => 120]);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
+
+        $slider = $crawler->filter('#device_screenDuration');
+        self::assertSame(['range', '3', '60', '8'], [$slider->attr('type'), $slider->attr('min'), $slider->attr('max'), $slider->attr('value')]);
+        self::assertSame('8 s', $crawler->filter('output[for="device_screenDuration"]')->text());
+
+        $group = $crawler->filter('[role="group"][aria-labelledby="device_refreshInterval_label"]');
+        self::assertSame(['30 s', '1 min', '2 min', '5 min', 'Autre'], $group->filter('button')->each(static fn (Crawler $button): string => $button->text()));
+        self::assertSame(['30', '60', '120', '300'], $group->filter('button[data-value]')->each(static fn (Crawler $button): ?string => $button->attr('data-value')));
+        // Le champ nombre reste la donnée envoyée, et la seule commande sans JavaScript.
+        self::assertSame(['number', '120'], [$crawler->filter('#device_refreshInterval')->attr('type'), $crawler->filter('#device_refreshInterval')->attr('value')]);
+    }
+
     public function testEditFormShowsATestScreenFollowingTheInput(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon', 'screenDuration' => 8]);

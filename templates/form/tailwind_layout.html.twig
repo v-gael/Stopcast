@@ -39,6 +39,59 @@
     {{- block('checkbox_widget') -}}
 {%- endblock switch_widget -%}
 
+{# Durée au curseur (SecondsSliderType) : la valeur en gros à droite du libellé, les bornes sous le curseur. #}
+{%- block seconds_slider_row -%}
+    <div class="mb-5" data-controller="seconds-slider">
+        <div class="flex items-baseline justify-between gap-3">
+            {{- form_label(form) -}}
+            <output for="{{ id }}" class="text-lg font-bold text-slate-900 tabular-nums" data-seconds-slider-target="output">{{ value }} s</output>
+        </div>
+        {{- form_errors(form) -}}
+        {{- form_widget(form) -}}
+        <div class="flex justify-between text-xs text-slate-500" aria-hidden="true">
+            <span>{{ attr.min }} s</span>
+            <span>{{ attr.max }} s</span>
+        </div>
+        {{- form_help(form) -}}
+    </div>
+{%- endblock seconds_slider_row -%}
+
+{%- block seconds_slider_widget -%}
+    {%- set type = 'range' -%}
+    {%- set widget_class = 'mt-2 block w-full cursor-pointer accent-amber-600' -%}
+    {%- set attr = attr|merge({
+        'data-seconds-slider-target': 'input',
+        'data-action': (attr['data-action'] ?? '') ~ ' input->seconds-slider#update',
+        'aria-valuetext': value ~ ' secondes',
+    }) -%}
+    {{- block('form_widget_simple') -}}
+{%- endblock seconds_slider_widget -%}
+
+{#
+ # Durée parmi des valeurs préréglées (SecondsPresetsType) : des boutons accolés et « Autre », qui montre
+ # le champ nombre. Le groupe de boutons n'apparaît qu'avec JavaScript ; sans lui, seul le champ s'affiche.
+ #}
+{%- block seconds_presets_row -%}
+    {%- set segment = 'px-3 py-1.5 text-sm font-semibold ring-1 ring-inset ring-slate-300 -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 aria-pressed:relative aria-pressed:z-10 aria-pressed:bg-slate-900 aria-pressed:text-white aria-pressed:ring-slate-900 not-aria-pressed:bg-white not-aria-pressed:text-slate-700 not-aria-pressed:hover:bg-slate-50' -%}
+    <div class="mb-5" data-controller="seconds-presets">
+        {{- form_label(form, null, {label_attr: {id: id ~ '_label'}}) -}}
+        {{- form_errors(form) -}}
+        <div class="mt-1 flex flex-wrap" role="group" aria-labelledby="{{ id }}_label" data-seconds-presets-target="group" hidden>
+            {%- for seconds in presets -%}
+                <button type="button" class="{{ segment }}" aria-pressed="false" data-seconds-presets-target="preset" data-value="{{ seconds }}" data-action="seconds-presets#choose">
+                    {{- seconds < 60 ? seconds ~ ' s' : (seconds // 60) ~ ' min' ~ (seconds % 60 ? ' ' ~ (seconds % 60) ~ ' s' : '') -}}
+                </button>
+            {%- endfor -%}
+            <button type="button" class="{{ segment }}" aria-pressed="false" data-seconds-presets-target="other" data-action="seconds-presets#other">Autre</button>
+        </div>
+        {{- form_widget(form, {attr: attr|merge({
+            'data-seconds-presets-target': 'input',
+            'data-action': (attr['data-action'] ?? '') ~ ' input->seconds-presets#sync',
+        })}) -}}
+        {{- form_help(form) -}}
+    </div>
+{%- endblock seconds_presets_row -%}
+
 {%- block radio_widget -%}
     {%- set widget_class = widget_class|default('mr-2 border-slate-500 text-amber-600 focus:ring-amber-700') -%}
     {{- parent() -}}

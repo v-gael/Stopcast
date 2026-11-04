@@ -7,7 +7,6 @@ namespace App\Form;
 use App\Entity\Device;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -29,19 +28,19 @@ final class DeviceType extends AbstractType
             'empty_data' => '',
         ]);
 
-        $builder->add('screenDuration', IntegerType::class, [
-            'label' => 'Durée d\'un écran (secondes)',
-            'help' => \sprintf('Temps passé sur chaque écran avant le suivant, de %d à %d secondes (%d par défaut).', Device::MIN_SCREEN_DURATION, Device::MAX_SCREEN_DURATION, Device::DEFAULT_SCREEN_DURATION),
+        $builder->add('screenDuration', SecondsSliderType::class, [
+            'label' => 'Durée d\'affichage d\'un écran',
             'attr' => ['min' => Device::MIN_SCREEN_DURATION, 'max' => Device::MAX_SCREEN_DURATION],
             // Un champ vidé reprend la valeur par défaut au lieu d'une erreur de type.
             'empty_data' => (string) Device::DEFAULT_SCREEN_DURATION,
         ]);
 
-        $builder->add('refreshInterval', IntegerType::class, [
-            'label' => 'Rafraîchissement des données (secondes)',
-            'help' => \sprintf('Intervalle entre deux mises à jour des passages, de %d à %d secondes (%d par défaut).', Device::MIN_REFRESH_INTERVAL, Device::MAX_REFRESH_INTERVAL, Device::DEFAULT_REFRESH_INTERVAL),
+        $builder->add('refreshInterval', SecondsPresetsType::class, [
+            'label' => 'Rafraîchissement des données',
+            'help' => 'Fréquence à laquelle l\'écran récupère les horaires à jour.',
             'attr' => ['min' => Device::MIN_REFRESH_INTERVAL, 'max' => Device::MAX_REFRESH_INTERVAL],
             'empty_data' => (string) Device::DEFAULT_REFRESH_INTERVAL,
+            'presets' => [30, 60, 120, 300],
         ]);
 
         if ($options['include_active']) {
