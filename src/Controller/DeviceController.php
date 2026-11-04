@@ -15,6 +15,7 @@ use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -29,11 +30,39 @@ final class DeviceController extends AbstractController
      */
     private const string NEW_TOKEN_FLASH = 'device_token';
 
+    /**
+     * Dispositifs par page, le bloc d'ajout complétant la grille de trois colonnes.
+     */
+    public const int PER_PAGE = 5;
+
+    /**
+     * La recherche ne sert qu'au-delà d'une page : en deçà, « q » est ignoré.
+     * Une page au-delà de la dernière renvoie vers la dernière.
+     */
     #[Route('', name: 'app_device_index', methods: ['GET'])]
-    public function index(#[CurrentUser] User $user, DeviceRepository $deviceRepository): Response
-    {
+    public function index(
+        #[CurrentUser] User $user,
+        DeviceRepository $deviceRepository,
+        #[MapQueryParameter] int $page = 1,
+        #[MapQueryParameter] string $q = '',
+    ): Response {
+        $searchable = $deviceRepository->countByOwner($user) > self::PER_PAGE;
+        $search = $searchable ? trim($q) : '';
+        $page = max(1, $page);
+
+        $devices = $deviceRepository->findPageByOwner($user, $search, $page, self::PER_PAGE);
+        $pages = max(1, (int) ceil(\count($devices) / self::PER_PAGE));
+
+        if ($page > $pages) {
+            return $this->redirectToRoute('app_device_index', array_filter(['page' => $pages, 'q' => $search]));
+        }
+
         return $this->render('device/index.html.twig', [
-            'devices' => $deviceRepository->findByOwner($user),
+            'devices' => $devices,
+            'searchable' => $searchable,
+            'search' => $search,
+            'page' => $page,
+            'pages' => $pages,
         ]);
     }
 

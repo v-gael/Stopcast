@@ -71,7 +71,7 @@ Les emails s'appuient sur le layout `templates/email/base.html.twig` (styles en 
 
 ## Dispositifs
 
-Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. Supprimer un compte supprime ses dispositifs et leurs configurations.
+Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. La liste montre 5 dispositifs par page, plus le bloc d'ajout. Au-delà de 5 dispositifs, une recherche sur le libellé apparaît : elle filtre en direct, dans un cadre Turbo, et la pagination garde le terme cherché. Supprimer un compte supprime ses dispositifs et leurs configurations.
 
 Le jeton d'un dispositif (à recopier dans la configuration de StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
 

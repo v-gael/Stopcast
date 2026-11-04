@@ -3,7 +3,26 @@
 {% block title %}Mes dispositifs · Stopcast{% endblock %}
 
 {% block content %}
-    <h1 class="mb-6 text-2xl font-bold text-slate-900">Mes dispositifs</h1>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-bold text-slate-900">Mes dispositifs</h1>
+        {% if searchable %}
+            {# Filtre en direct : le formulaire recharge seulement le cadre « devices ». #}
+            <form role="search" method="get" action="{{ path('app_device_index') }}" class="relative w-full sm:w-72"
+                  data-controller="search-form" data-turbo-frame="devices" data-turbo-action="advance">
+                <label for="device-search" class="sr-only">Rechercher un dispositif</label>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-500" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="search" id="device-search" name="q" value="{{ search }}" placeholder="Rechercher un dispositif" autocomplete="off"
+                       class="block w-full rounded-md border-slate-300 py-2 pl-9 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                       data-action="search-form#search">
+            </form>
+        {% endif %}
+    </div>
+
+    {# Les liens du cadre ouvrent la page entière ; seule la pagination le recharge. #}
+    <turbo-frame id="devices" target="_top" data-turbo-action="advance">
+    {% if search and devices is empty %}
+        <p class="mb-6 text-slate-600">Aucun dispositif ne correspond à « {{ search }} ».</p>
+    {% endif %}
 
     {% set card = 'group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-amber-500/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-amber-500' %}
     <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
@@ -46,4 +65,29 @@
             </div>
         </li>
     </ul>
+
+    {% if pages > 1 %}
+        {% set page_link = 'inline-flex min-w-9 items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium' %}
+        <nav aria-label="Pagination" class="mt-8 flex flex-wrap items-center justify-center gap-1">
+            {% if page > 1 %}
+                <a href="{{ path('app_device_index', {page: page - 1, q: search ?: null}) }}" class="{{ page_link }} text-slate-700 hover:bg-white hover:text-amber-700" data-turbo-frame="devices" rel="prev">← Précédent</a>
+            {% endif %}
+            {% for number in 1..pages %}
+                {# Première, dernière, voisines de la page en cours ; « … » seulement s'il cache au moins deux numéros. #}
+                {% if number == 1 or number == pages or (number - page)|abs <= 1 or ((number - page)|abs == 2 and number in [2, pages - 1]) %}
+                    {% if number == page %}
+                        <span class="{{ page_link }} bg-slate-900 text-white" aria-current="page"><span class="sr-only">Page </span>{{ number }}</span>
+                    {% else %}
+                        <a href="{{ path('app_device_index', {page: number, q: search ?: null}) }}" class="{{ page_link }} text-slate-700 hover:bg-white hover:text-amber-700" data-turbo-frame="devices"><span class="sr-only">Page </span>{{ number }}</a>
+                    {% endif %}
+                {% elseif (number - page)|abs == 2 %}
+                    <span class="{{ page_link }} text-slate-500" aria-hidden="true">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if page < pages %}
+                <a href="{{ path('app_device_index', {page: page + 1, q: search ?: null}) }}" class="{{ page_link }} text-slate-700 hover:bg-white hover:text-amber-700" data-turbo-frame="devices" rel="next">Suivant →</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+    </turbo-frame>
 {% endblock %}

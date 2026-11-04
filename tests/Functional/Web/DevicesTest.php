@@ -79,6 +79,84 @@ final class DevicesTest extends WebTestCase
         self::assertSame('/devices/new', $crawler->selectLink('Ajouter un dispositif')->attr('href'));
     }
 
+    public function testFiveDevicesFitOnePageWithoutSearchNorPagination(): void
+    {
+        $this->createDevices(5);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertCount(5, $crawler->filter('main [data-device-card]'));
+        self::assertCount(0, $crawler->filter('main [role=search]'));
+        self::assertCount(0, $crawler->filter('main nav[aria-label=Pagination]'));
+    }
+
+    public function testSixDevicesSpreadOverTwoPagesWithTheAddBlockOnEach(): void
+    {
+        $this->createDevices(6);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertSame(['Écran 6', 'Écran 5', 'Écran 4', 'Écran 3', 'Écran 2'], $this->cardLabels($crawler));
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertCount(1, $crawler->filter('main [role=search]'));
+        self::assertSame('Page 1', $crawler->filter('nav[aria-label=Pagination] [aria-current=page]')->text());
+        self::assertSame('/devices?page=2', $crawler->selectLink('Page 2')->attr('href'));
+
+        $crawler = $this->client->click($crawler->selectLink('Suivant →')->link());
+
+        self::assertSame(['Écran 1'], $this->cardLabels($crawler));
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertSame('Page 2', $crawler->filter('nav[aria-label=Pagination] [aria-current=page]')->text());
+        self::assertCount(0, $crawler->selectLink('Suivant →'));
+    }
+
+    public function testSearchFiltersOnTheLabelAndKeepsItAcrossPages(): void
+    {
+        $this->createDevices(7);
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+        DeviceFactory::createOne(['label' => 'Écran du voisin']);
+
+        $crawler = $this->client->request('GET', '/devices?q=%20ÉCRAN%20');
+
+        self::assertSame(['Écran 7', 'Écran 6', 'Écran 5', 'Écran 4', 'Écran 3'], $this->cardLabels($crawler));
+        self::assertSame('ÉCRAN', $crawler->filter('#device-search')->attr('value'));
+        self::assertSame('/devices?page=2&q=%C3%89CRAN', $crawler->selectLink('Suivant →')->attr('href'));
+
+        $crawler = $this->client->request('GET', '/devices?q=salon');
+
+        self::assertSame(['Salon'], $this->cardLabels($crawler));
+        self::assertCount(0, $crawler->filter('main nav[aria-label=Pagination]'));
+    }
+
+    public function testSearchWithoutMatchSaysSoAndKeepsTheAddBlock(): void
+    {
+        $this->createDevices(6);
+
+        $crawler = $this->client->request('GET', '/devices?q=100%25');
+
+        self::assertSelectorTextContains('main', 'Aucun dispositif ne correspond à « 100% ».');
+        self::assertCount(0, $crawler->filter('main [data-device-card]'));
+        self::assertSame('/devices/new', $crawler->selectLink('Ajouter un dispositif')->attr('href'));
+    }
+
+    public function testSearchIsIgnoredWhileEverythingFitsOnePage(): void
+    {
+        $this->createDevices(2);
+
+        $crawler = $this->client->request('GET', '/devices?q=introuvable');
+
+        self::assertCount(2, $crawler->filter('main [data-device-card]'));
+    }
+
+    public function testPageBeyondTheLastRedirectsToTheLast(): void
+    {
+        $this->createDevices(6);
+
+        $this->client->request('GET', '/devices?page=9&q=cran');
+
+        self::assertResponseRedirects('/devices?page=2&q=cran');
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */
@@ -364,6 +442,21 @@ final class DevicesTest extends WebTestCase
     private function callApi(string $token): void
     {
         $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
+    }
+
+    private function createDevices(int $count): void
+    {
+        for ($number = 1; $number <= $count; ++$number) {
+            DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Écran '.$number]);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function cardLabels(Crawler $crawler): array
+    {
+        return $crawler->filter('main [data-device-card]')->each(static fn (Crawler $card): string => $card->filter('a')->text());
     }
 
     private function configure(Device $device, ?string $label = null, int $position = 0, bool $active = true): void
