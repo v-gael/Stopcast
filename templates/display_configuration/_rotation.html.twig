@@ -3,7 +3,7 @@
 {% set icon_button = 'flex size-7 items-center justify-center rounded-md ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700' %}
 {% set icon = 'viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"' %}
 {% if configurations is empty %}
-    <p class="text-slate-600">Aucune configuration : le dispositif n'a rien à afficher.</p>
+    <p class="text-slate-600">Aucun quai : le dispositif n'a rien à afficher.</p>
 {% else %}
     <ol class="divide-y divide-slate-200">
         {% for configuration in configurations %}
@@ -51,7 +51,7 @@
                         <span class="sr-only">Modifier {{ name }}</span>
                     </a>
                     <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
-                          data-turbo-confirm="Supprimer la configuration « {{ name }} » ? Cette action est définitive.">
+                          data-turbo-confirm="Supprimer le quai « {{ name }} » ? Cette action est définitive.">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
                         <button type="submit" title="Supprimer" class="{{ icon_button }} text-slate-500 hover:text-red-700">
                             <svg {{ icon|raw }}><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
@@ -64,5 +64,5 @@
     </ol>
 {% endif %}
 <div class="mt-4">
-    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary" class="w-full">Ajouter une configuration<span class="sr-only"> à {{ device.label }}</span></twig:Button>
+    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary" class="w-full">Ajouter un quai<span class="sr-only"> à {{ device.label }}</span></twig:Button>
 </div>

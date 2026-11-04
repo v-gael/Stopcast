@@ -22,7 +22,7 @@
 
     {# Un tiers pour la rotation, deux pour le dispositif : son écran, et à côté ses réglages, à la hauteur de l'écran. #}
     <div class="grid items-start gap-6 lg:grid-cols-3">
-        <twig:Card title="Configurations d'affichage">
+        <twig:Card title="Quais">
             {{ include('display_configuration/_rotation.html.twig') }}
         </twig:Card>
 
@@ -67,7 +67,7 @@
                         </form>
 
                         <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
-                              data-turbo-confirm="Supprimer « {{ device.label }} » et ses configurations d'affichage ? Cette action est définitive.">
+                              data-turbo-confirm="Supprimer « {{ device.label }} » et ses quais ? Cette action est définitive.">
                             <input type="hidden" name="_token" value="{{ csrf_token('delete-device-' ~ device.id) }}">
                             <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
                         </form>

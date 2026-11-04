@@ -52,9 +52,9 @@ final class DevicesTest extends WebTestCase
         $cards = $crawler->filter('main [data-device-card]');
         self::assertSame(['Cuisine', 'Entrée', 'Salon'], $cards->each(static fn (Crawler $card): string => $card->filter('a')->text()));
         self::assertSame(['Inactif', 'Actif', 'Actif'], $cards->each(static fn (Crawler $card): string => $card->filter('[data-device-state]')->text()));
-        self::assertStringContainsString('Aucune configuration', $cards->eq(0)->text());
+        self::assertStringContainsString('Aucun quai', $cards->eq(0)->text());
         self::assertStringContainsString('Tout est masqué', $cards->eq(1)->text());
-        self::assertStringNotContainsString('Aucune configuration', $cards->eq(2)->text());
+        self::assertStringNotContainsString('Aucun quai', $cards->eq(2)->text());
         self::assertStringNotContainsString('Tout est masqué', $cards->eq(2)->text());
         self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
         self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
@@ -325,6 +325,16 @@ final class DevicesTest extends WebTestCase
         self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
         self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
         self::assertSame('/devices', $crawler->selectLink('Annuler')->attr('href'));
+    }
+
+    public function testDetailWithoutQuaySaysItHasNothingToShow(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        self::assertSelectorTextContains('main', "Aucun quai : le dispositif n'a rien à afficher.");
+        self::assertSame(\sprintf('/display-configurations/new?device=%d', $device->getId()), $crawler->selectLink('Ajouter un quai à Salon')->attr('href'));
     }
 
     public function testDetailShowsTheStateWithTheCreationDateOnHover(): void

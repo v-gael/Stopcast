@@ -83,7 +83,7 @@ final class DisplayPreviewTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertCount(1, $crawler->filter('.screen'));
-        self::assertSelectorTextSame('.screen__message', 'Aucune configuration active');
+        self::assertSelectorTextSame('.screen__message', 'Aucun quai affiché');
     }
 
     public function testConfigurationPreviewShowsThatConfigurationEvenHidden(): void

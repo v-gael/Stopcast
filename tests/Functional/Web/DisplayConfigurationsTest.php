@@ -83,12 +83,12 @@ final class DisplayConfigurationsTest extends WebTestCase
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         $form = $crawler->filter('main li')->eq(0)->selectButton('Supprimer')->form();
-        self::assertStringContainsString('Premier', $form->getFormNode()->getAttribute('data-turbo-confirm'));
+        self::assertSame('Supprimer le quai « Premier » ? Cette action est définitive.', $form->getFormNode()->getAttribute('data-turbo-confirm'));
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'La configuration « Premier » a été supprimée.');
+        self::assertSelectorTextContains('[role="status"]', 'Le quai « Premier » a été supprimé.');
         self::assertSame(['Deuxième'], $this->displayedLabels($device));
     }
 
@@ -322,6 +322,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         $crawler = $this->client->click($crawler->filter('main li')->eq(1)->selectLink('Modifier')->link());
         self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Modifier le quai');
         $form = $crawler->selectButton('Enregistrer')->form();
         self::assertArrayNotHasKey('display_configuration[device]', $form->all());
         self::assertInstanceOf(ChoiceFormField::class, $form['display_configuration[active]']);
@@ -334,7 +335,7 @@ final class DisplayConfigurationsTest extends WebTestCase
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'La configuration a été modifiée.');
+        self::assertSelectorTextContains('[role="status"]', 'Le quai a été modifié.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
         self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
         self::assertSame(['Premier'], $this->displayedLabels($device));

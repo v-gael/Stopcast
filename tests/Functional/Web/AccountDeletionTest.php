@@ -60,7 +60,7 @@ final class AccountDeletionTest extends WebTestCase
         $this->client->request('GET', '/account/delete');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', 'votre compte et vos 2 dispositifs, avec leurs configurations');
+        self::assertSelectorTextContains('main', 'votre compte et vos 2 dispositifs, avec leurs quais');
         self::assertSelectorExists('form[data-turbo-confirm]');
     }
 

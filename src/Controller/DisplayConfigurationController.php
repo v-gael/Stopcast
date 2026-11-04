@@ -71,7 +71,7 @@ final class DisplayConfigurationController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            $this->addFlash('success', 'La configuration a été modifiée.');
+            $this->addFlash('success', 'Le quai a été modifié.');
 
             return $this->redirectToDevice($configuration);
         }
@@ -91,7 +91,7 @@ final class DisplayConfigurationController extends AbstractController
         $entityManager->remove($configuration);
         $entityManager->flush();
 
-        $this->addFlash('success', \sprintf('La configuration « %s » a été supprimée.', $configuration->getLabel() ?: $configuration->getQuay()->getName()));
+        $this->addFlash('success', \sprintf('Le quai « %s » a été supprimé.', $configuration->getLabel() ?: $configuration->getQuay()->getName()));
 
         return $this->redirectToDevice($configuration);
     }
