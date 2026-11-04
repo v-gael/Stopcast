@@ -32,27 +32,23 @@
                     {% endfor %}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate font-medium text-slate-900" data-label>{{ name }}</p>
+                    {# Masquée : nom en gris moyen, qui garde un contraste AA. #}
+                    <p class="truncate font-medium {{ configuration.active ? 'text-slate-900' : 'text-slate-500' }}" data-label>{{ name }}</p>
                     <p class="truncate text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
                     {{ include('display_configuration/_deprecated_quay.html.twig') }}
                 </div>
                 <div class="flex shrink-0 gap-1">
-                    {# Œil ouvert : affichée, le bouton la masque ; œil barré, en ambre : masquée, le bouton l'affiche. #}
+                    {# Interrupteur : vert, affichée ; gris, masquée. Son nom ne change pas, aria-checked porte l'état. #}
                     <form method="post" action="{{ path('app_display_configuration_visibility', {id: configuration.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('display-configuration-visibility-' ~ configuration.id) }}">
                         <input type="hidden" name="active" value="{{ configuration.active ? 0 : 1 }}">
                         {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
-                        {% if configuration.active %}
-                            <button type="submit" title="Affichée : la masquer de la rotation" class="{{ icon_button }} text-slate-500 hover:text-slate-900" data-visibility="active">
-                                <svg {{ icon|raw }}><path d="M1.5 10s3-6 8.5-6 8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.5"/></svg>
-                                <span class="sr-only">Masquer {{ name }}</span>
-                            </button>
-                        {% else %}
-                            <button type="submit" title="Masquée : l'afficher dans la rotation" class="{{ icon_button }} text-amber-700 hover:text-amber-800" data-visibility="hidden">
-                                <svg {{ icon|raw }}><path d="M3 3l14 14"/><path d="M8.2 4.2A8 8 0 0 1 10 4c5.5 0 8.5 6 8.5 6a14 14 0 0 1-2.3 3.1M5.6 5.6C3 7.3 1.5 10 1.5 10s3 6 8.5 6a8 8 0 0 0 4.4-1.4"/><path d="M8.2 8.2a2.5 2.5 0 0 0 3.6 3.6"/></svg>
-                                <span class="sr-only">Afficher {{ name }}</span>
-                            </button>
-                        {% endif %}
+                        <button type="submit" role="switch" aria-checked="{{ configuration.active ? 'true' : 'false' }}"
+                                title="{{ configuration.active ? 'Affichée : la masquer de la rotation' : 'Masquée : l\'afficher dans la rotation' }}"
+                                class="relative mt-1 inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 {{ configuration.active ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-100 ring-1 ring-inset ring-slate-500 hover:bg-slate-200' }}">
+                            <span class="absolute top-0.5 size-4 rounded-full shadow transition-all {{ configuration.active ? 'left-[18px] bg-white' : 'left-0.5 bg-slate-500' }}" aria-hidden="true"></span>
+                            <span class="sr-only">Afficher {{ name }}</span>
+                        </button>
                     </form>
                     <a href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" title="Modifier" class="{{ icon_button }} text-slate-500 hover:text-slate-900">
                         <svg {{ icon|raw }}><path d="M13.5 3.5l3 3L7 16H4v-3z"/></svg>

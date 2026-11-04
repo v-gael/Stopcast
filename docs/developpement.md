@@ -85,7 +85,7 @@ make fixtures
 
 Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 
-Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre l'aperçu de l'écran, qui fait tourner les configurations affichées sur des passages d'exemple, à côté de ses réglages ; un bouton œil y masque ou affiche chaque configuration (voir [architecture.md](architecture.md#page-daffichage)).
+Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre l'aperçu de l'écran, qui fait tourner les configurations affichées sur des passages d'exemple, à côté de ses réglages ; un interrupteur y masque ou affiche chaque configuration, et une configuration masquée a son nom grisé (voir [architecture.md](architecture.md#page-daffichage)).
 
 ## Configurations d'affichage
 

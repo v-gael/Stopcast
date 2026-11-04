@@ -124,7 +124,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame('morph', $crawler->filter('head meta[name="turbo-refresh-method"]')->attr('content'));
         self::assertSame('preserve', $crawler->filter('head meta[name="turbo-refresh-scroll"]')->attr('content'));
         $items = $crawler->filter('main li');
-        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Masquer'), $items->eq(0)->selectButton('Supprimer')] as $button) {
+        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Afficher'), $items->eq(0)->selectButton('Supprimer')] as $button) {
             self::assertSame($return, $button->form()->getValues()['_return'] ?? null);
         }
     }
@@ -136,7 +136,7 @@ final class DisplayConfigurationsTest extends WebTestCase
     {
         yield 'montée' => ['Monter'];
         yield 'descente' => ['Descendre'];
-        yield 'masquage' => ['Masquer'];
+        yield 'masquage' => ['Afficher'];
         yield 'suppression' => ['Supprimer'];
     }
 
@@ -338,28 +338,28 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'La configuration a été modifiée.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
-        self::assertCount(1, $crawler->filter('main li')->eq(1)->selectButton('Afficher Vers la gare'));
+        self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
         self::assertSame(['Premier'], $this->displayedLabels($device));
     }
 
-    public function testEyeButtonHidesThenShowsTheConfiguration(): void
+    public function testSwitchHidesThenShowsTheConfiguration(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $this->configure($device, 'Premier');
         $this->configure($device, 'Deuxième');
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        self::assertCount(0, $crawler->filter('main li')->eq(1)->selectButton('Afficher'));
-        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Masquer')->form());
+        $switch = $crawler->filter('main li')->eq(1)->filter('[role="switch"]');
+        self::assertSame('true', $switch->attr('aria-checked'));
+        self::assertStringContainsString('Afficher Deuxième', $switch->text());
+        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form());
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $crawler = $this->client->followRedirect();
-        $item = $crawler->filter('main li')->eq(1);
-        self::assertCount(0, $item->selectButton('Masquer'));
-        self::assertSame('hidden', $item->filter('[data-visibility]')->attr('data-visibility'));
-        $this->client->submit($item->selectButton('Afficher')->form());
-        $this->client->followRedirect();
-        self::assertSame('active', $this->client->getCrawler()->filter('main li')->eq(1)->filter('[data-visibility]')->attr('data-visibility'));
+        self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
+        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form());
+        $crawler = $this->client->followRedirect();
+        self::assertSame('true', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
 
         self::assertSame(['Premier', 'Deuxième'], $this->displayedLabels($device));
     }
@@ -371,7 +371,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->configure($device, 'Deuxième');
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        $form = $crawler->filter('main li')->eq(1)->selectButton('Masquer')->form();
+        $form = $crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form();
         $this->client->submit($form);
         $this->client->submit($form);
 
