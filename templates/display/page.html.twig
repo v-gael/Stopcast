@@ -11,6 +11,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
         <title>{{ device.label }} · Affichage · Stopcast</title>
+        <link rel="stylesheet" href="{{ asset('styles/display.css') }}">
         {{ importmap('display', {nonce: csp_nonce('script')}) }}
     </head>
     <body class="display"

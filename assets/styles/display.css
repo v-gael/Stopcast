@@ -80,6 +80,9 @@ body {
 .screen__stop {
     flex: 1;
     min-width: 0;
+    margin: 0;
+    /* Un <h1> : sans cela, la taille par défaut du navigateur (2em) l'emporte sur celle de la barre. */
+    font-size: inherit;
     overflow: hidden;
     color: var(--display-stop-text);
     text-overflow: ellipsis;
