@@ -9,7 +9,7 @@ Revue au regard du [WCAG 2.2](https://www.w3.org/TR/WCAG22/), niveau AA. Le RGAA
 | Espace | Pages | Templates |
 |---|---|---|
 | Public | accueil et connexion, mot de passe oublié, email envoyé, nouveau mot de passe, activation d'un compte invité, pages d'erreur (403, 404, autres) | `home/`, `reset_password/`, `invitation/`, `bundles/TwigBundle/Exception/` |
-| Connecté | mes dispositifs, ajout, fiche et modification d'un dispositif, configurations d'affichage (liste, ajout, modification), mon compte, changement de mot de passe, suppression du compte | `device/`, `display_configuration/`, `account/` |
+| Connecté | mes dispositifs, ajout, fiche et modification d'un dispositif, configurations d'affichage (ajout, modification), mon compte, changement de mot de passe, suppression du compte | `device/`, `display_configuration/`, `account/` |
 | Administration | utilisateurs, invitation, modification d'un compte | `admin/user/` |
 | Communs | layouts, composants, thème de formulaire | `base.html.twig`, `layout/`, `components/`, `form/tailwind_layout.html.twig`, `assets/styles/app.css` |
 

@@ -3,39 +3,47 @@
 {% block title %}Mes dispositifs · Stopcast{% endblock %}
 
 {% block content %}
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 class="text-2xl font-bold text-slate-900">Mes dispositifs</h1>
-        <twig:Button href="{{ path('app_device_new') }}">Ajouter un dispositif</twig:Button>
-    </div>
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Mes dispositifs</h1>
 
-    {% if devices is empty %}
-        <twig:Card>
-            <p class="text-slate-600">Aucun dispositif pour l'instant. Ajoutez-en un pour obtenir le jeton à configurer sur l'afficheur.</p>
-        </twig:Card>
-    {% else %}
-        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50 text-left font-semibold text-slate-700">
-                    <tr>
-                        <th scope="col" class="px-4 py-3">Libellé</th>
-                        <th scope="col" class="px-4 py-3">État</th>
-                        <th scope="col" class="px-4 py-3">Configurations</th>
-                        <th scope="col" class="px-4 py-3">Créé le</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for device in devices %}
-                        <tr>
-                            <td class="px-4 py-3 font-medium">
-                                <a href="{{ path('app_device_show', {id: device.id}) }}" class="text-slate-900 underline-offset-2 hover:text-amber-700 hover:underline">{{ device.label }}</a>
-                            </td>
-                            <td class="px-4 py-3">{{ include('device/_state.html.twig') }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ device.displayConfigurations|length }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ device.createdAt|date('d/m/Y') }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
+    {% set card = 'group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-amber-500/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-amber-500' %}
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list">
+        {% for device in devices %}
+            <li class="{{ card }}" data-device-card>
+                {# L'écran tel qu'il tourne, grisé si le dispositif est inactif. Le lien étiré du nom couvre toute la carte, l'iframe comprise. #}
+                <div class="bg-slate-100 p-4">
+                    <iframe src="{{ path('app_device_preview', {id: device.id}) }}" title="Aperçu de « {{ device.label }} »" width="480" height="320" loading="lazy" tabindex="-1"
+                            class="pointer-events-none block aspect-[3/2] h-auto w-full rounded-md bg-slate-900{{ device.active ? '' : ' brightness-[.55] grayscale' }}"></iframe>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <a href="{{ path('app_device_show', {id: device.id}) }}" class="truncate font-semibold text-slate-900 outline-none after:absolute after:inset-0 group-hover:text-amber-700">{{ device.label }}</a>
+                        <span class="flex shrink-0 items-center gap-1.5 text-sm font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" data-device-state>
+                            <span class="size-2 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
+                            {{ device.active ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </div>
+                    {% if device.displayConfigurations is empty %}
+                        <twig:Badge variant="warning" class="mt-2">Aucune configuration</twig:Badge>
+                    {% elseif device.activeDisplayConfigurations is empty %}
+                        <twig:Badge variant="warning" class="mt-2">Tout est masqué</twig:Badge>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+
+        {# Le bloc d'ajout, dessiné comme un écran neuf. #}
+        <li class="{{ card }}">
+            <div class="bg-slate-100 p-4" aria-hidden="true">
+                <div class="flex aspect-[3/2] flex-col items-center justify-center gap-2 rounded-md bg-[#05203c] bg-[repeating-linear-gradient(0deg,rgb(255_255_255/.04)_0_2px,transparent_2px_4px)] text-[#7baee2] transition group-hover:text-white">
+                    <span class="flex size-14 items-center justify-center rounded-full border-2 border-current">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="size-7"><path d="M12 5v14M5 12h14"/></svg>
+                    </span>
+                    <span class="font-['Roboto_Condensed','Arial_Narrow',sans-serif] font-semibold tracking-wide uppercase">Nouvel écran</span>
+                </div>
+            </div>
+            <div class="p-4">
+                <a href="{{ path('app_device_new') }}" class="font-semibold text-slate-900 outline-none after:absolute after:inset-0 group-hover:text-amber-700">Ajouter un dispositif</a>
+            </div>
+        </li>
+    </ul>
 {% endblock %}

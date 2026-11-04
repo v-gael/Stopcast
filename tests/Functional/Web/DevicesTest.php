@@ -39,26 +39,43 @@ final class DevicesTest extends WebTestCase
     public function testListShowsOnlyOwnDevicesNewestFirst(): void
     {
         $older = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+        $hidden = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Entrée']);
         DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Cuisine', 'active' => false]);
         DeviceFactory::createOne(['label' => "Chez quelqu'un d'autre"]);
         $this->configure($older);
         $this->configure($older);
+        $this->configure($hidden, active: false);
 
         $crawler = $this->client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        $rows = $crawler->filter('main tbody tr')->each(static fn (Crawler $row): array => $row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())));
-        self::assertSame(['Cuisine', 'Salon'], array_column($rows, 0));
-        self::assertSame(['Désactivé', 'Actif'], array_column($rows, 1));
-        self::assertSame(['0', '2'], array_column($rows, 2));
+        $cards = $crawler->filter('main [data-device-card]');
+        self::assertSame(['Cuisine', 'Entrée', 'Salon'], $cards->each(static fn (Crawler $card): string => $card->filter('a')->text()));
+        self::assertSame(['Inactif', 'Actif', 'Actif'], $cards->each(static fn (Crawler $card): string => $card->filter('[data-device-state]')->text()));
+        self::assertStringContainsString('Aucune configuration', $cards->eq(0)->text());
+        self::assertStringContainsString('Tout est masqué', $cards->eq(1)->text());
+        self::assertStringNotContainsString('Aucune configuration', $cards->eq(2)->text());
+        self::assertStringNotContainsString('Tout est masqué', $cards->eq(2)->text());
+        self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
+        self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
     }
 
-    public function testListWithoutDevicesInvitesToAddOne(): void
+    public function testListAlwaysEndsWithTheAddBlock(): void
+    {
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertSame('Ajouter un dispositif', $crawler->filter('main ul > li')->last()->filter('a')->text());
+    }
+
+    public function testListWithoutDevicesShowsOnlyTheAddBlock(): void
     {
         $crawler = $this->client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', "Aucun dispositif pour l'instant.");
+        self::assertCount(0, $crawler->filter('main [data-device-card]'));
         self::assertSame('/devices/new', $crawler->selectLink('Ajouter un dispositif')->attr('href'));
     }
 
@@ -349,7 +366,7 @@ final class DevicesTest extends WebTestCase
         $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
     }
 
-    private function configure(Device $device, ?string $label = null, int $position = 0): void
+    private function configure(Device $device, ?string $label = null, int $position = 0, bool $active = true): void
     {
         $device = $this->reload($device);
         self::assertInstanceOf(Device::class, $device);
@@ -357,7 +374,7 @@ final class DevicesTest extends WebTestCase
         $entityManager = $this->entityManager();
         $quay = $entityManager->getRepository(Quay::class)->findOneBy([]) ?? new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1');
         $entityManager->persist($quay);
-        $entityManager->persist(new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position));
+        $entityManager->persist(new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position)->setActive($active));
         $entityManager->flush();
     }
 
