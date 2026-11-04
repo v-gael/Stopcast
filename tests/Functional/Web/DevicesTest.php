@@ -187,6 +187,23 @@ final class DevicesTest extends WebTestCase
         self::assertSame('Salon', $this->reload($device)?->getLabel());
     }
 
+    public function testEditFormShowsATestScreenFollowingTheInput(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon', 'screenDuration' => 8]);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('iframe'));
+        $bench = $crawler->filter('[data-controller="device-bench"]');
+        self::assertSame('8', $bench->attr('data-device-bench-saved-duration-value'));
+        self::assertSame('Salon', $bench->filter('[data-device-bench-target="labelOutput"]')->text());
+        self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
+        self::assertCount(2, $bench->filter('[data-device-bench-target="screen"][hidden]'));
+        self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSame('durationInput', $crawler->filter('#device_screenDuration')->attr('data-device-bench-target'));
+    }
+
     public function testDisabledDeviceIsRejectedByTheApi(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);

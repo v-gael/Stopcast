@@ -1,0 +1,42 @@
+{#
+ # Écran de test du formulaire d'un dispositif : trois écrans fictifs, écrits
+ # ici, que le contrôleur Stimulus « device-bench » fait tourner selon la durée
+ # saisie. Séparé de la page d'affichage (templates/display/), il en reprend
+ # seulement l'allure (assets/styles/device_bench.css).
+ #}
+{% set passages = [
+    {route: '1', color: 'red', minutes: 2, headsign: 'GARE CENTRALE'},
+    {route: '12', color: 'blue', minutes: 4, headsign: 'HÔPITAL NORD - PARC DES EXPOSITIONS'},
+    {route: 'A', color: 'orange', minutes: 7, headsign: 'CAMPUS UNIVERSITAIRE'},
+    {route: '5', color: 'green', minutes: 11, headsign: 'HÔTEL DE VILLE'},
+    {route: 'N2', color: 'purple', minutes: 18, headsign: 'ZONE ARTISANALE DES PRÉS - CENTRE COMMERCIAL'},
+] %}
+<div class="bench" role="img" aria-label="Écran de test : trois écrans fictifs qui tournent à la durée d'écran saisie" data-bench>
+    <div class="bench__screens" aria-hidden="true">
+        {% for stop in ['Arrêt A', 'Arrêt B', 'Arrêt C'] %}
+            {# Chaque écran décale la liste, pour qu'on voie bien le changement d'écran. #}
+            {% set shift = loop.index0 %}
+            <section class="bench__screen" data-device-bench-target="screen"{% if not loop.first %} hidden{% endif %}>
+                <div class="bench__top">
+                    <span class="bench__stop">{{ stop }}</span>
+                    <span class="bench__clock" data-device-bench-target="clock">{{ 'now'|date('H:i') }}</span>
+                </div>
+                <div class="bench__columns">
+                    <span>N° ligne</span>
+                    <span>Dans</span>
+                    <span>Direction</span>
+                </div>
+                <ol class="bench__passages">
+                    {% for index in 0..4 %}
+                        {% set passage = passages[(index + shift) % 5] %}
+                        <li class="bench__passage">
+                            <span class="bench__route bench__route--{{ passage.color }}">{{ passage.route }}</span>
+                            <span class="bench__minutes">{{ passage.minutes + shift * 3 }} min</span>
+                            <span class="bench__headsign">{{ passage.headsign }}</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </section>
+        {% endfor %}
+    </div>
+</div>
