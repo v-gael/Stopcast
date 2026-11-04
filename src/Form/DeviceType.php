@@ -49,6 +49,8 @@ final class DeviceType extends AbstractType
                 'label' => 'Actif',
                 'help' => 'Désactivé, le dispositif est refusé par l\'API jusqu\'à sa réactivation.',
                 'required' => false,
+                // Dessinée en interrupteur (templates/form/tailwind_layout.html.twig).
+                'block_prefix' => 'switch',
             ]);
         }
     }

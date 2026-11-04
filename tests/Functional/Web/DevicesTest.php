@@ -196,6 +196,7 @@ final class DevicesTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
         $form = $crawler->selectButton('Enregistrer')->form();
         self::assertInstanceOf(ChoiceFormField::class, $form['device[active]']);
+        self::assertSame('switch', $crawler->filter('#device_active')->attr('role'));
         $form['device[active]']->untick();
         $this->client->submit($form);
 
