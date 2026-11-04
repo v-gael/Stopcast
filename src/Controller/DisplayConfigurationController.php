@@ -24,14 +24,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/display-configurations')]
 final class DisplayConfigurationController extends AbstractController
 {
-    #[Route('', name: 'app_display_configuration_index', methods: ['GET'])]
-    public function index(#[CurrentUser] User $user, DeviceRepository $deviceRepository): Response
-    {
-        return $this->render('display_configuration/index.html.twig', [
-            'devices' => $deviceRepository->findByOwner($user),
-        ]);
-    }
-
     /**
      * « ?device={id} » présélectionne l'un de ses dispositifs ; celui d'un autre compte est ignoré.
      */
@@ -92,7 +84,7 @@ final class DisplayConfigurationController extends AbstractController
     #[Route('/{id}/delete', name: 'app_display_configuration_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(DisplayConfigurationVoter::DELETE, 'configuration')]
     #[IsCsrfTokenValid(new Expression('"delete-display-configuration-" ~ args["configuration"].getId()'))]
-    public function delete(Request $request, DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
+    public function delete(DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
     {
         $configuration->getDevice()->getDisplayConfigurations()->removeElement($configuration);
         $entityManager->remove($configuration);
@@ -100,29 +92,29 @@ final class DisplayConfigurationController extends AbstractController
 
         $this->addFlash('success', \sprintf('La configuration « %s » a été supprimée.', $configuration->getLabel() ?: $configuration->getQuay()->getName()));
 
-        return $this->redirectBack($request, $configuration);
+        return $this->redirectToDevice($configuration);
     }
 
     #[Route('/{id}/move-up', name: 'app_display_configuration_move_up', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(DisplayConfigurationVoter::EDIT, 'configuration')]
     #[IsCsrfTokenValid(new Expression('"move-display-configuration-" ~ args["configuration"].getId()'))]
-    public function moveUp(Request $request, DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
+    public function moveUp(DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
     {
         $configuration->getDevice()->moveDisplayConfigurationUp($configuration);
         $entityManager->flush();
 
-        return $this->redirectBack($request, $configuration);
+        return $this->redirectToDevice($configuration);
     }
 
     #[Route('/{id}/move-down', name: 'app_display_configuration_move_down', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsGranted(DisplayConfigurationVoter::EDIT, 'configuration')]
     #[IsCsrfTokenValid(new Expression('"move-display-configuration-" ~ args["configuration"].getId()'))]
-    public function moveDown(Request $request, DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
+    public function moveDown(DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
     {
         $configuration->getDevice()->moveDisplayConfigurationDown($configuration);
         $entityManager->flush();
 
-        return $this->redirectBack($request, $configuration);
+        return $this->redirectToDevice($configuration);
     }
 
     /**
@@ -136,19 +128,6 @@ final class DisplayConfigurationController extends AbstractController
     {
         $configuration->setActive($request->getPayload()->getBoolean('active'));
         $entityManager->flush();
-
-        return $this->redirectBack($request, $configuration);
-    }
-
-    /**
-     * Retour à la page du formulaire : « _return=index » pour la liste, le dispositif sinon.
-     * Aucune autre destination n'est acceptée.
-     */
-    private function redirectBack(Request $request, DisplayConfiguration $configuration): Response
-    {
-        if ('index' === $request->getPayload()->getString('_return')) {
-            return $this->redirectToRoute('app_display_configuration_index', status: Response::HTTP_SEE_OTHER);
-        }
 
         return $this->redirectToDevice($configuration);
     }

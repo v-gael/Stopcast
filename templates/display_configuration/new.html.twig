@@ -11,7 +11,9 @@
 
             <div class="flex flex-wrap gap-3">
                 <twig:Button type="submit">Créer</twig:Button>
-                <twig:Button href="{{ path('app_display_configuration_index') }}" variant="secondary">Annuler</twig:Button>
+                {# Vers le dispositif présélectionné (?device={id}), sinon vers la liste des dispositifs. #}
+                {% set device_id = form.device.vars.value %}
+                <twig:Button href="{{ device_id ? path('app_device_show', {id: device_id}) : path('app_device_index') }}" variant="secondary">Annuler</twig:Button>
             </div>
         {{ form_end(form) }}
     </twig:Card>

@@ -97,7 +97,7 @@ final class AccessibilityTest extends WebTestCase
         $device = DeviceFactory::createOne(['owner' => $this->admin]);
         $this->client->loginUser($this->admin);
 
-        foreach (['/devices', \sprintf('/devices/%d', $device->getId()), '/display-configurations', '/account', '/admin/users'] as $path) {
+        foreach (['/devices', \sprintf('/devices/%d', $device->getId()), '/display-configurations/new', '/account', '/admin/users'] as $path) {
             $this->assertHeadingOutline($path);
         }
     }

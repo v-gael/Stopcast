@@ -30,7 +30,7 @@ final class AccessControlTest extends KernelTestCase
         yield 'utilisateur sur son compte' => ['/account', Role::User, true];
         yield 'administrateur sur son compte' => ['/account', Role::Admin, true];
         yield 'utilisateur sur ses dispositifs' => ['/devices', Role::User, true];
-        yield 'utilisateur sur ses configurations' => ['/display-configurations', Role::User, true];
+        yield 'utilisateur sur ses configurations' => ['/display-configurations/new', Role::User, true];
         yield 'utilisateur sur /api/next-passages' => ['/api/next-passages', Role::Admin, false];
     }
 

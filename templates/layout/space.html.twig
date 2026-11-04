@@ -11,8 +11,7 @@
                     <span aria-hidden="true">🚏</span> Stopcast
                 </a>
                 <nav class="flex flex-1 flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium" aria-label="Navigation principale">
-                    <a href="{{ path('app_device_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_device' %} aria-current="page"{% endif %}>Dispositifs</a>
-                    <a href="{{ path('app_display_configuration_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_display_configuration' %} aria-current="page"{% endif %}>Configurations d'affichage</a>
+                    <a href="{{ path('app_device_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_device' or app.current_route starts with 'app_display_configuration' %} aria-current="page"{% endif %}>Dispositifs</a>
                     {% if is_granted('ROLE_ADMIN') %}
                         <a href="{{ path('app_admin_user_index') }}" class="{{ nav_link }}"{% if app.current_route starts with 'app_admin_user' %} aria-current="page"{% endif %}>Utilisateurs</a>
                     {% endif %}
