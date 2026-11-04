@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Display\Pairing\PairingCode;
 use App\Display\Pairing\PairingConfirmation;
 use App\Display\Pairing\ScreenPairing;
 use App\Entity\Device;
 use App\Entity\User;
 use App\Form\DeviceType;
 use App\Form\PairScreenType;
+use App\Form\ScannedPairingType;
 use App\Repository\DeviceRepository;
 use App\Security\Voter\DeviceVoter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -70,9 +72,18 @@ final class DeviceController extends AbstractController
         ]);
     }
 
+    /**
+     * « pair » porte le code d'un écran scanné par un compte sans dispositif :
+     * la création revient alors sur le choix du dispositif pour ce code. Ce
+     * n'est jamais une adresse de retour ; un code invalide est ignoré.
+     */
     #[Route('/new', name: 'app_device_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, #[CurrentUser] User $user, EntityManagerInterface $entityManager): Response
-    {
+    public function new(
+        Request $request,
+        #[CurrentUser] User $user,
+        EntityManagerInterface $entityManager,
+        #[MapQueryParameter] string $pair = '',
+    ): Response {
         $device = new Device($user, '');
         $form = $this->createForm(DeviceType::class, $device);
         $form->handleRequest($request);
@@ -82,12 +93,77 @@ final class DeviceController extends AbstractController
             $entityManager->flush();
 
             $this->addFlash('success', 'Le dispositif a été créé.');
+            $pairingCode = PairingCode::normalize($pair);
+
+            if (null !== $pairingCode) {
+                // Le jeton reste en flash : la fiche le montrera après l'appairage.
+                $this->addFlash(self::NEW_TOKEN_FLASH, $device->getToken());
+
+                return $this->redirectToRoute('app_device_pair_scanned', ['code' => $pairingCode, 'device' => $device->getId()], Response::HTTP_SEE_OTHER);
+            }
 
             return $this->redirectToShowWithNewToken($device);
         }
 
         return $this->render('device/new.html.twig', [
             'form' => $form,
+        ]);
+    }
+
+    /**
+     * Page ouverte en scannant le QR code d'un écran : choix du dispositif,
+     * puis le même appairage que la saisie du code sur la fiche. Le code n'est
+     * vérifié qu'à l'envoi : ouvrir l'adresse n'apprend rien sur sa validité.
+     * « device » présélectionne un dispositif, comme après sa création.
+     */
+    #[Route('/pair', name: 'app_device_pair_scanned', methods: ['GET', 'POST'])]
+    public function pairScanned(
+        Request $request,
+        #[CurrentUser] User $user,
+        DeviceRepository $deviceRepository,
+        ScreenPairing $screenPairing,
+        #[MapQueryParameter] string $code = '',
+        #[MapQueryParameter] ?int $device = null,
+    ): Response {
+        $pairingCode = PairingCode::normalize($code);
+
+        if (null === $pairingCode) {
+            return $this->render('device/pair_scanned.html.twig', ['code' => null, 'form' => null]);
+        }
+
+        $devices = $deviceRepository->findBy(['owner' => $user], ['label' => 'ASC', 'id' => 'ASC']);
+        $preselected = 1 === \count($devices) ? $devices[0] : null;
+
+        foreach ($devices as $candidate) {
+            if ($candidate->getId() === $device) {
+                $preselected = $candidate;
+            }
+        }
+
+        $form = $this->createForm(ScannedPairingType::class, ['device' => $preselected], ['devices' => $devices]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $chosen = $form->get('device')->getData();
+            \assert($chosen instanceof Device);
+            $this->denyAccessUnlessGranted(DeviceVoter::EDIT, $chosen);
+
+            $error = $this->pairingError(
+                $screenPairing->confirm($pairingCode, $chosen),
+                "Ce code est inconnu ou a expiré. Scannez le nouveau code affiché sur l'écran.",
+            );
+
+            if (null === $error) {
+                return $this->redirectToPairedDevice($chosen);
+            }
+
+            $form->addError(new FormError($error));
+        }
+
+        return $this->render('device/pair_scanned.html.twig', [
+            'code' => PairingCode::format($pairingCode),
+            'pair_code' => $pairingCode,
+            'form' => [] === $devices ? null : $form,
         ]);
     }
 
@@ -150,16 +226,13 @@ final class DeviceController extends AbstractController
             /** @var string $code */
             $code = $form->get('code')->getData();
 
-            $error = match ($screenPairing->confirm($code, $device)) {
-                PairingConfirmation::Confirmed => null,
-                PairingConfirmation::UnknownCode => "Ce code est inconnu ou a expiré. Saisissez le code affiché en ce moment sur l'écran.",
-                PairingConfirmation::TooManyAttempts => "Trop d'essais. Réessayez plus tard.",
-            };
+            $error = $this->pairingError(
+                $screenPairing->confirm($code, $device),
+                "Ce code est inconnu ou a expiré. Saisissez le code affiché en ce moment sur l'écran.",
+            );
 
             if (null === $error) {
-                $this->addFlash('success', \sprintf("Code accepté : l'écran affichera « %s » dans quelques secondes.", $device->getLabel()));
-
-                return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
+                return $this->redirectToPairedDevice($device);
             }
 
             $form->get('code')->addError(new FormError($error));
@@ -198,6 +271,25 @@ final class DeviceController extends AbstractController
         $this->addFlash('success', 'Un nouveau jeton a été généré. L\'ancien ne fonctionne plus.');
 
         return $this->redirectToShowWithNewToken($device);
+    }
+
+    /**
+     * Message d'erreur d'un appairage refusé, null s'il est accepté.
+     */
+    private function pairingError(PairingConfirmation $confirmation, string $unknownCode): ?string
+    {
+        return match ($confirmation) {
+            PairingConfirmation::Confirmed => null,
+            PairingConfirmation::UnknownCode => $unknownCode,
+            PairingConfirmation::TooManyAttempts => "Trop d'essais. Réessayez plus tard.",
+        };
+    }
+
+    private function redirectToPairedDevice(Device $device): Response
+    {
+        $this->addFlash('success', \sprintf("Code accepté : l'écran affichera « %s » dans quelques secondes.", $device->getLabel()));
+
+        return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
     }
 
     private function redirectToShowWithNewToken(Device $device): Response
