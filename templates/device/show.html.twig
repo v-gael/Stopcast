@@ -9,10 +9,8 @@
 {% endblock %}
 
 {% block content %}
-    <div class="mb-6 flex flex-wrap items-center gap-3">
-        <h1 class="text-2xl font-bold text-slate-900">{{ device.label }}</h1>
-        {{ include('device/_state.html.twig') }}
-    </div>
+    {# L'état du dispositif est dans la colonne « Dispositif », pas en badge à côté du titre. #}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ device.label }}</h1>
 
     {% if new_token %}
         <div class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-6" data-new-token>
@@ -40,9 +38,14 @@
 
                 <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
                     <dl class="space-y-2 text-sm">
+                        {# L'état, et la date de création au survol (et pour les lecteurs d'écran). #}
+                        {% set created = 'Créé le ' ~ device.createdAt|date('d/m/Y à H:i') %}
                         <div>
-                            <dt class="font-medium text-slate-500">Créé le</dt>
-                            <dd class="mt-0.5 text-slate-900">{{ device.createdAt|date('d/m/Y à H:i') }}</dd>
+                            <dt class="font-medium text-slate-500">État</dt>
+                            <dd class="mt-0.5 flex cursor-help items-center gap-1.5 font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" title="{{ created }}" data-device-state>
+                                <span class="size-2 shrink-0 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
+                                {{ device.active ? 'Actif' : 'Inactif' }}<span class="sr-only">, {{ created|lower }}</span>
+                            </dd>
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>

@@ -221,6 +221,24 @@ final class DevicesTest extends WebTestCase
         self::assertSame('durationInput', $crawler->filter('#device_screenDuration')->attr('data-device-bench-target'));
     }
 
+    public function testDetailShowsTheStateWithTheCreationDateOnHover(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $created = 'Créé le '.$device->getCreatedAt()->format('d/m/Y à H:i');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $state = $crawler->filter('[data-device-state]');
+        self::assertSame($created, $state->attr('title'));
+        self::assertStringStartsWith('Actif', $state->text());
+        self::assertStringContainsString(mb_strtolower($created), $state->text());
+
+        $entityManager = $this->entityManager();
+        $entityManager->find(Device::class, $device->getId())?->setActive(false);
+        $entityManager->flush();
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
+    }
+
     public function testDisabledDeviceIsRejectedByTheApi(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
@@ -235,8 +253,8 @@ final class DevicesTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('main h1 + *', 'Désactivé');
+        $crawler = $this->client->followRedirect();
+        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
 
         $this->callApi($device->getToken());
         self::assertResponseStatusCodeSame(401);
