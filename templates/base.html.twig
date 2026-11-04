@@ -16,7 +16,10 @@
         <meta property="og:description" content="{{ block('description') }}">
         <meta property="og:url" content="{{ app.request.schemeAndHttpHost ~ app.request.baseUrl ~ app.request.pathInfo }}">
         <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+        {# Feuilles de style liées ici, jamais importées en JavaScript : la CSP bloque le module data: qu'AssetMapper substitue à un import de CSS. #}
         {% block stylesheets %}
+            <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+            <link rel="stylesheet" href="{{ asset('vendor/tom-select/dist/css/tom-select.default.css') }}">
         {% endblock %}
 
         {% block javascripts %}
