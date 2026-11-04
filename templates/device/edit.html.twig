@@ -2,17 +2,16 @@
 
 {% block title %}Modifier {{ device.label }} · Stopcast{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/device_bench.css') }}">
+{% endblock %}
+
 {% block content %}
     <h1 class="mb-6 text-2xl font-bold text-slate-900">Modifier le dispositif</h1>
 
-    <twig:Card class="max-w-md">
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
-
-            <div class="flex flex-wrap gap-3">
-                <twig:Button type="submit">Enregistrer</twig:Button>
-                <twig:Button href="{{ path('app_device_show', {id: device.id}) }}" variant="secondary">Annuler</twig:Button>
-            </div>
-        {{ form_end(form) }}
-    </twig:Card>
+    {{ include('device/_form.html.twig', {
+        submit_label: 'Enregistrer',
+        cancel_url: path('app_device_show', {id: device.id}),
+    }) }}
 {% endblock %}

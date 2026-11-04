@@ -1,22 +1,64 @@
 {% extends 'layout/space.html.twig' %}
 
-{% block title %}Modifier une configuration d'affichage · Stopcast{% endblock %}
+{% block title %}Modifier un quai · Stopcast{% endblock %}
 
 {% block content %}
+    {% set name = configuration.label ?: configuration.quay.name %}
+    {% set device = configuration.device %}
+
     <div class="mb-6 flex flex-wrap items-center gap-3">
-        <h1 class="text-2xl font-bold text-slate-900">Modifier la configuration</h1>
+        <h1 class="text-2xl font-bold text-slate-900">Modifier le quai</h1>
         {{ include('display_configuration/_deprecated_quay.html.twig') }}
     </div>
-    <p class="mb-6 text-slate-600">Dispositif <a href="{{ path('app_device_show', {id: configuration.device.id}) }}" class="font-medium text-slate-900 underline hover:text-amber-700">{{ configuration.device.label }}</a></p>
 
-    <twig:Card class="max-w-xl">
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
+    {# Même disposition que la page d'un dispositif : le formulaire sur un tiers, l'écran et ses informations sur deux. #}
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <twig:Card title="Quai">
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
 
-            <div class="flex flex-wrap gap-3">
-                <twig:Button type="submit">Enregistrer</twig:Button>
-                <twig:Button href="{{ path('app_device_show', {id: configuration.device.id}) }}" variant="secondary">Annuler</twig:Button>
+                <div class="flex flex-wrap gap-3">
+                    <twig:Button type="submit">Enregistrer</twig:Button>
+                    <twig:Button href="{{ path('app_device_show', {id: device.id}) }}" variant="secondary">Annuler</twig:Button>
+                </div>
+            {{ form_end(form) }}
+        </twig:Card>
+
+        <twig:Card title="Aperçu de l'écran" class="lg:col-span-2">
+            <div class="flex flex-col gap-6 xl:flex-row">
+                <div class="min-w-0 flex-1">
+                    {# La configuration enregistrée, même masquée, sur des passages d'exemple. #}
+                    {{ include('display/_preview.html.twig', {
+                        preview_url: path('app_display_configuration_preview', {id: configuration.id}),
+                        preview_title: 'Aperçu de « ' ~ name ~ ' »',
+                    }, with_context = false) }}
+                </div>
+
+                <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
+                    <dl class="space-y-2 text-sm">
+                        <div>
+                            <dt class="font-medium text-slate-500">Dispositif</dt>
+                            <dd class="mt-0.5"><a href="{{ path('app_device_show', {id: device.id}) }}" class="font-medium text-slate-900 underline hover:text-amber-700">{{ device.label }}</a></dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Quai</dt>
+                            <dd class="mt-0.5 text-slate-900">{{ configuration.quay.name }}</dd>
+                        </div>
+                        {% if configuration.quay.destinationsServed %}
+                            <div>
+                                <dt class="font-medium text-slate-500">Destinations desservies</dt>
+                                <dd class="mt-0.5 line-clamp-3 text-slate-900">{{ configuration.quay.destinationsServed|join(', ') }}</dd>
+                            </div>
+                        {% endif %}
+                    </dl>
+
+                    <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
+                          data-turbo-confirm="Supprimer le quai « {{ name }} » ? Cette action est définitive.">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
+                        <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
+                    </form>
+                </div>
             </div>
-        {{ form_end(form) }}
-    </twig:Card>
+        </twig:Card>
+    </div>
 {% endblock %}

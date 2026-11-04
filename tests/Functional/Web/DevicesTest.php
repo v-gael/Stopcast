@@ -39,27 +39,122 @@ final class DevicesTest extends WebTestCase
     public function testListShowsOnlyOwnDevicesNewestFirst(): void
     {
         $older = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+        $hidden = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Entrée']);
         DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Cuisine', 'active' => false]);
         DeviceFactory::createOne(['label' => "Chez quelqu'un d'autre"]);
         $this->configure($older);
         $this->configure($older);
+        $this->configure($hidden, active: false);
 
         $crawler = $this->client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        $rows = $crawler->filter('main tbody tr')->each(static fn (Crawler $row): array => $row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())));
-        self::assertSame(['Cuisine', 'Salon'], array_column($rows, 0));
-        self::assertSame(['Désactivé', 'Actif'], array_column($rows, 1));
-        self::assertSame(['0', '2'], array_column($rows, 2));
+        $cards = $crawler->filter('main [data-device-card]');
+        self::assertSame(['Cuisine', 'Entrée', 'Salon'], $cards->each(static fn (Crawler $card): string => $card->filter('a')->text()));
+        self::assertSame(['Inactif', 'Actif', 'Actif'], $cards->each(static fn (Crawler $card): string => $card->filter('[data-device-state]')->text()));
+        self::assertStringContainsString('Aucun quai', $cards->eq(0)->text());
+        self::assertStringContainsString('Tout est masqué', $cards->eq(1)->text());
+        self::assertStringNotContainsString('Aucun quai', $cards->eq(2)->text());
+        self::assertStringNotContainsString('Tout est masqué', $cards->eq(2)->text());
+        self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
+        self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
     }
 
-    public function testListWithoutDevicesInvitesToAddOne(): void
+    public function testListAlwaysEndsWithTheAddBlock(): void
+    {
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertSame('Ajouter un dispositif', $crawler->filter('main ul > li')->last()->filter('a')->text());
+    }
+
+    public function testListWithoutDevicesShowsOnlyTheAddBlock(): void
     {
         $crawler = $this->client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('main', "Aucun dispositif pour l'instant.");
+        self::assertCount(0, $crawler->filter('main [data-device-card]'));
         self::assertSame('/devices/new', $crawler->selectLink('Ajouter un dispositif')->attr('href'));
+    }
+
+    public function testFiveDevicesFitOnePageWithoutSearchNorPagination(): void
+    {
+        $this->createDevices(5);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertCount(5, $crawler->filter('main [data-device-card]'));
+        self::assertCount(0, $crawler->filter('main [role=search]'));
+        self::assertCount(0, $crawler->filter('main nav[aria-label=Pagination]'));
+    }
+
+    public function testSixDevicesSpreadOverTwoPagesWithTheAddBlockOnEach(): void
+    {
+        $this->createDevices(6);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertSame(['Écran 6', 'Écran 5', 'Écran 4', 'Écran 3', 'Écran 2'], $this->cardLabels($crawler));
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertCount(1, $crawler->filter('main [role=search]'));
+        self::assertSame('Page 1', $crawler->filter('nav[aria-label=Pagination] [aria-current=page]')->text());
+        self::assertSame('/devices?page=2', $crawler->selectLink('Page 2')->attr('href'));
+
+        $crawler = $this->client->click($crawler->selectLink('Suivant →')->link());
+
+        self::assertSame(['Écran 1'], $this->cardLabels($crawler));
+        self::assertSame('/devices/new', $crawler->filter('main ul > li')->last()->filter('a')->attr('href'));
+        self::assertSame('Page 2', $crawler->filter('nav[aria-label=Pagination] [aria-current=page]')->text());
+        self::assertCount(0, $crawler->selectLink('Suivant →'));
+    }
+
+    public function testSearchFiltersOnTheLabelAndKeepsItAcrossPages(): void
+    {
+        $this->createDevices(7);
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+        DeviceFactory::createOne(['label' => 'Écran du voisin']);
+
+        $crawler = $this->client->request('GET', '/devices?q=%20ÉCRAN%20');
+
+        self::assertSame(['Écran 7', 'Écran 6', 'Écran 5', 'Écran 4', 'Écran 3'], $this->cardLabels($crawler));
+        self::assertSame('ÉCRAN', $crawler->filter('#device-search')->attr('value'));
+        self::assertSame('/devices?page=2&q=%C3%89CRAN', $crawler->selectLink('Suivant →')->attr('href'));
+
+        $crawler = $this->client->request('GET', '/devices?q=salon');
+
+        self::assertSame(['Salon'], $this->cardLabels($crawler));
+        self::assertCount(0, $crawler->filter('main nav[aria-label=Pagination]'));
+    }
+
+    public function testSearchWithoutMatchSaysSoAndKeepsTheAddBlock(): void
+    {
+        $this->createDevices(6);
+
+        $crawler = $this->client->request('GET', '/devices?q=100%25');
+
+        self::assertSelectorTextContains('main', 'Aucun dispositif ne correspond à « 100% ».');
+        self::assertCount(0, $crawler->filter('main [data-device-card]'));
+        self::assertSame('/devices/new', $crawler->selectLink('Ajouter un dispositif')->attr('href'));
+    }
+
+    public function testSearchIsIgnoredWhileEverythingFitsOnePage(): void
+    {
+        $this->createDevices(2);
+
+        $crawler = $this->client->request('GET', '/devices?q=introuvable');
+
+        self::assertCount(2, $crawler->filter('main [data-device-card]'));
+    }
+
+    public function testPageBeyondTheLastRedirectsToTheLast(): void
+    {
+        $this->createDevices(6);
+
+        $this->client->request('GET', '/devices?page=9&q=cran');
+
+        self::assertResponseRedirects('/devices?page=2&q=cran');
     }
 
     /**
@@ -127,6 +222,55 @@ final class DevicesTest extends WebTestCase
         self::assertSame('Chambre', $this->reload($device)?->getLabel());
     }
 
+    public function testNewDeviceHasTheDefaultCadences(): void
+    {
+        $crawler = $this->client->request('GET', '/devices/new');
+        $this->client->submit($crawler->selectButton('Créer')->form(['device[label]' => 'Écran de la cuisine']));
+
+        $device = $this->entityManager()->getRepository(Device::class)->findOneBy(['label' => 'Écran de la cuisine']);
+        self::assertInstanceOf(Device::class, $device);
+        self::assertSame([Device::DEFAULT_SCREEN_DURATION, Device::DEFAULT_REFRESH_INTERVAL], [$device->getScreenDuration(), $device->getRefreshInterval()]);
+    }
+
+    public function testEditingChangesTheCadences(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+
+        $this->edit($device, ['device[screenDuration]' => '12', 'device[refreshInterval]' => '120']);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $device = $this->reload($device);
+        self::assertSame([12, 120], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
+
+        $this->client->followRedirect();
+        self::assertSelectorTextSame('[data-screen-duration]', '12 s');
+        self::assertSelectorTextSame('[data-refresh-interval]', '120 s');
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function cadencesOutOfBounds(): iterable
+    {
+        yield 'écran trop court' => ['screenDuration', '2', '60'];
+        yield 'écran trop long' => ['screenDuration', '61', '60'];
+        yield 'rafraîchissement trop fréquent' => ['refreshInterval', '5', '29'];
+        yield 'rafraîchissement trop espacé' => ['refreshInterval', '5', '301'];
+    }
+
+    #[DataProvider('cadencesOutOfBounds')]
+    public function testCadencesOutOfBoundsAreRefused(string $field, string $screenDuration, string $refreshInterval): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+
+        $this->edit($device, ['device[screenDuration]' => $screenDuration, 'device[refreshInterval]' => $refreshInterval]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists(\sprintf('#device_%s_error1', $field));
+        $device = $this->reload($device);
+        self::assertSame([Device::DEFAULT_SCREEN_DURATION, Device::DEFAULT_REFRESH_INTERVAL], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
+    }
+
     public function testEditingWithAnEmptyLabelIsRefused(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
@@ -138,6 +282,79 @@ final class DevicesTest extends WebTestCase
         self::assertSame('Salon', $this->reload($device)?->getLabel());
     }
 
+    public function testTimingsAreASliderAndPresets(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'screenDuration' => 8, 'refreshInterval' => 120]);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
+
+        $slider = $crawler->filter('#device_screenDuration');
+        self::assertSame(['range', '3', '60', '8'], [$slider->attr('type'), $slider->attr('min'), $slider->attr('max'), $slider->attr('value')]);
+        self::assertSame('8 s', $crawler->filter('output[for="device_screenDuration"]')->text());
+
+        $group = $crawler->filter('[role="group"][aria-labelledby="device_refreshInterval_label"]');
+        self::assertSame(['30 s', '1 min', '2 min', '5 min', 'Autre'], $group->filter('button')->each(static fn (Crawler $button): string => $button->text()));
+        self::assertSame(['30', '60', '120', '300'], $group->filter('button[data-value]')->each(static fn (Crawler $button): ?string => $button->attr('data-value')));
+        // Le champ nombre reste la donnée envoyée, et la seule commande sans JavaScript.
+        self::assertSame(['number', '120'], [$crawler->filter('#device_refreshInterval')->attr('type'), $crawler->filter('#device_refreshInterval')->attr('value')]);
+    }
+
+    public function testEditFormShowsATestScreenFollowingTheInput(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon', 'screenDuration' => 8]);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('iframe'));
+        $bench = $crawler->filter('[data-controller="device-bench"]');
+        self::assertSame('8', $bench->attr('data-device-bench-saved-duration-value'));
+        self::assertSame('Salon', $bench->filter('[data-device-bench-target="labelOutput"]')->text());
+        self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
+        self::assertCount(2, $bench->filter('[data-device-bench-target="screen"][hidden]'));
+        self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSame('durationInput', $crawler->filter('#device_screenDuration')->attr('data-device-bench-target'));
+    }
+
+    public function testNewFormShowsTheTestScreenAtTheDefaultDuration(): void
+    {
+        $crawler = $this->client->request('GET', '/devices/new');
+
+        $bench = $crawler->filter('[data-controller="device-bench"]');
+        self::assertSame((string) Device::DEFAULT_SCREEN_DURATION, $bench->attr('data-device-bench-saved-duration-value'));
+        self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
+        self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSame('/devices', $crawler->selectLink('Annuler')->attr('href'));
+    }
+
+    public function testDetailWithoutQuaySaysItHasNothingToShow(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        self::assertSelectorTextContains('main', "Aucun quai : le dispositif n'a rien à afficher.");
+        self::assertSame(\sprintf('/display-configurations/new?device=%d', $device->getId()), $crawler->selectLink('Ajouter un quai à Salon')->attr('href'));
+    }
+
+    public function testDetailShowsTheStateWithTheCreationDateOnHover(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $created = 'Créé le '.$device->getCreatedAt()->format('d/m/Y à H:i');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $state = $crawler->filter('[data-device-state]');
+        self::assertSame($created, $state->attr('title'));
+        self::assertStringStartsWith('Actif', $state->text());
+        self::assertStringContainsString(mb_strtolower($created), $state->text());
+
+        $entityManager = $this->entityManager();
+        $entityManager->find(Device::class, $device->getId())?->setActive(false);
+        $entityManager->flush();
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
+    }
+
     public function testDisabledDeviceIsRejectedByTheApi(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
@@ -147,12 +364,13 @@ final class DevicesTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
         $form = $crawler->selectButton('Enregistrer')->form();
         self::assertInstanceOf(ChoiceFormField::class, $form['device[active]']);
+        self::assertSame('switch', $crawler->filter('#device_active')->attr('role'));
         $form['device[active]']->untick();
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('main h1 + *', 'Désactivé');
+        $crawler = $this->client->followRedirect();
+        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
 
         $this->callApi($device->getToken());
         self::assertResponseStatusCodeSame(401);
@@ -247,7 +465,22 @@ final class DevicesTest extends WebTestCase
         $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
     }
 
-    private function configure(Device $device, ?string $label = null, int $position = 0): void
+    private function createDevices(int $count): void
+    {
+        for ($number = 1; $number <= $count; ++$number) {
+            DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Écran '.$number]);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function cardLabels(Crawler $crawler): array
+    {
+        return $crawler->filter('main [data-device-card]')->each(static fn (Crawler $card): string => $card->filter('a')->text());
+    }
+
+    private function configure(Device $device, ?string $label = null, int $position = 0, bool $active = true): void
     {
         $device = $this->reload($device);
         self::assertInstanceOf(Device::class, $device);
@@ -255,7 +488,7 @@ final class DevicesTest extends WebTestCase
         $entityManager = $this->entityManager();
         $quay = $entityManager->getRepository(Quay::class)->findOneBy([]) ?? new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1');
         $entityManager->persist($quay);
-        $entityManager->persist(new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position));
+        $entityManager->persist(new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position)->setActive($active));
         $entityManager->flush();
     }
 

@@ -97,7 +97,7 @@ final class AccessibilityTest extends WebTestCase
         $device = DeviceFactory::createOne(['owner' => $this->admin]);
         $this->client->loginUser($this->admin);
 
-        foreach (['/devices', \sprintf('/devices/%d', $device->getId()), '/display-configurations', '/account', '/admin/users'] as $path) {
+        foreach (['/devices', \sprintf('/devices/%d', $device->getId()), \sprintf('/display-configurations/new?device=%d', $device->getId()), '/account', '/admin/users'] as $path) {
             $this->assertHeadingOutline($path);
         }
     }
@@ -111,7 +111,7 @@ final class AccessibilityTest extends WebTestCase
         yield 'mot de passe oublié' => ['/reset-password'];
         yield 'ajout de dispositif' => ['/devices/new'];
         yield 'modification de dispositif' => ['/devices/%device%/edit'];
-        yield 'ajout de configuration' => ['/display-configurations/new?device=%device%'];
+        yield 'ajout de quai' => ['/display-configurations/new?device=%device%'];
         yield 'changement de mot de passe' => ['/account/password'];
         yield 'suppression de compte' => ['/account/delete'];
         yield 'invitation' => ['/admin/users/invite'];

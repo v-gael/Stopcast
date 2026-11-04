@@ -71,7 +71,7 @@ Les emails s'appuient sur le layout `templates/email/base.html.twig` (styles en 
 
 ## Dispositifs
 
-Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. Supprimer un compte supprime ses dispositifs et leurs configurations.
+Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. La liste montre 5 dispositifs par page, plus le bloc d'ajout. Au-delà de 5 dispositifs, une recherche sur le libellé apparaît : elle filtre en direct, dans un cadre Turbo, et la pagination garde le terme cherché. Supprimer un compte supprime ses dispositifs et leurs configurations.
 
 Le jeton d'un dispositif (à recopier dans la configuration de StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
 
@@ -85,9 +85,11 @@ make fixtures
 
 Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 
+Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre l'aperçu de l'écran, qui fait tourner les configurations affichées sur des passages d'exemple, à côté de ses réglages ; un interrupteur y masque ou affiche chaque configuration, et une configuration masquée a son nom grisé (voir [architecture.md](architecture.md#page-daffichage)).
+
 ## Configurations d'affichage
 
-Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis `/display-configurations` (toutes celles de ses dispositifs) ou depuis le détail d'un dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
+Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis le détail de leur dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
 
 - Le quai se choisit par son nom dans un champ à autocomplétion qui ne propose que les quais actifs, suivis de leurs destinations desservies (« MAIRIE → Centre-ville, Hôtel de ville ») pour distinguer les deux sens de circulation.
 - Une nouvelle configuration se place en fin de rotation. Les boutons « Monter » et « Descendre » changent l'ordre dans lequel `/api/next-passages` renvoie les quais. Une configuration masquée garde sa place, mais sort de la réponse de l'API.
@@ -99,10 +101,14 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 
 - `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (navigation de l'espace, messages flash en haut du contenu).
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
-- `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`.
+- `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`. Il ajoute trois commandes : l'interrupteur (option `'block_prefix' => 'switch'` d'une case à cocher), le curseur de durée (`SecondsSliderType`, bornes en attributs `min` et `max`) et les durées préréglées avec « Autre » (`SecondsPresetsType`, option `presets`), chacune avec son contrôleur Stimulus (`seconds-slider`, `seconds-presets`). Sans JavaScript, les durées préréglées se réduisent au champ nombre.
 - `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`). Sous `/api`, un client qui demande du JSON garde la réponse d'erreur JSON.
+- `templates/display/` : page d'affichage des écrans, autonome, stylée sans Tailwind par `assets/styles/display.css` et chargée par son propre point d'entrée `display` (`assets/display.js`) ; voir [architecture.md](architecture.md#page-daffichage).
+- `templates/device/_bench.html.twig` : écran de test du formulaire d'un dispositif, avec sa CSS (`assets/styles/device_bench.css`) et son contrôleur Stimulus (`device-bench`). Il fait tourner trois écrans fictifs à la durée saisie et recopie le libellé tapé, sans rien enregistrer. Volontairement séparé de la page d'affichage, dont il ne reprend que l'allure : les réglages à essayer en direct (plus tard, les thèmes) n'y ajoutent aucune contrainte.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
 - Feuilles de style liées par un `<link href="{{ asset(…) }}">` dans les templates (`app.css` et le CSS de tom-select dans `base.html.twig`), jamais importées en JavaScript, contrairement à ce que font les recettes Symfony (`import './styles/app.css'`, `autoimport` de `assets/controllers.json`). AssetMapper remplace un import de CSS par un module `data:` que la CSP (`script-src 'self'`) bloque : tout l'import échoue, et le JavaScript de la page avec lui. `NoCssImportedFromJavaScriptTest` échoue si un module JavaScript importe une CSS.
+- Scripts en ligne et visites Turbo : un script en ligne apporté par une page que Turbo affiche ne tourne pas. Le morphing (`<meta name="turbo-refresh-method" content="morph">`, sur la page d'un dispositif) ne l'exécute pas ; un remplacement de page (lien, retour) l'exécute sous la CSP de la première page chargée, qui refuse le nonce de la nouvelle : la console signale la violation. En dev, la barre de debug, chargée par un tel script, restait donc sur « Loading… » ; `assets/app.js` la charge à l'événement `turbo:render`. Tout script en ligne de l'espace web a le même problème : passer par un contrôleur Stimulus.
+- Pages affichées dans une iframe (routes `_frameable`, soit les aperçus de la page d'affichage) : en dev, elles n'ont pas de barre de debug, que `FramedPageToolbarListener` retire. Ses liens ouvriraient le profiler dans l'iframe, et le profiler refuse d'être affiché dans un cadre. La barre de la page principale ne voit pas non plus ces requêtes, l'iframe étant une autre fenêtre : leurs profils se trouvent dans `/_profiler`, en filtrant sur l'URL (`/devices/{id}/preview`).
 
 En dev, le service `tailwind` (même image que `app`) démarre avec `make up` et lance `bin/tailwind-watch` : une compilation complète au démarrage, puis une nouvelle dès que le contenu d'un fichier listé en `@source` dans `app.css` change. Il suffit de recharger la page, une à deux secondes après l'enregistrement. Pour suivre ses recompilations ou une erreur de syntaxe CSS :
 

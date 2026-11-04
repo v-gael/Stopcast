@@ -17,7 +17,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Zenstruck\Foundry\Test\Factories;
@@ -40,28 +39,18 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->loginUser($this->user);
     }
 
-    public function testListGroupsOwnConfigurationsByDeviceInRotationOrder(): void
+    public function testThereIsNoConfigurationsListAnymore(): void
     {
-        $salon = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
-        $cuisine = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Cuisine']);
-        $this->configure($salon, 'Premier');
-        $this->configure($salon, 'Deuxième')->setActive(false);
-        $this->entityManager()->flush();
-        $this->configure(DeviceFactory::createOne(['label' => 'Ailleurs']), "Chez quelqu'un d'autre");
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $configuration = $this->configure($device, 'Premier');
 
-        $crawler = $this->client->request('GET', '/display-configurations');
+        $this->client->request('GET', '/display-configurations');
+        self::assertResponseStatusCodeSame(404);
 
-        self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('header nav [aria-current="page"]', "Configurations d'affichage");
-        $groups = $crawler->filter('main section')->each(static fn (Crawler $group): array => [
-            $group->filter('h2')->text(),
-            $group->filter('li [data-label]')->each(static fn (Crawler $label): string => $label->text()),
-        ]);
-        self::assertSame([['Cuisine', []], ['Salon', ['Premier', 'Deuxième']]], $groups);
-        self::assertSame(
-            \sprintf('/display-configurations/new?device=%d', $cuisine->getId()),
-            $crawler->filter('main section')->first()->selectLink('Ajouter une configuration')->attr('href'),
-        );
+        // Une configuration se gère depuis son dispositif : ses pages relèvent du menu « Dispositifs ».
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
+        self::assertCount(0, $crawler->filter('header nav')->selectLink("Configurations d'affichage"));
+        self::assertSelectorTextSame('header nav [aria-current="page"]', 'Dispositifs');
     }
 
     public function testMovingChangesTheOrderServedToTheDevice(): void
@@ -94,39 +83,23 @@ final class DisplayConfigurationsTest extends WebTestCase
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         $form = $crawler->filter('main li')->eq(0)->selectButton('Supprimer')->form();
-        self::assertStringContainsString('Premier', $form->getFormNode()->getAttribute('data-turbo-confirm'));
+        self::assertSame('Supprimer le quai « Premier » ? Cette action est définitive.', $form->getFormNode()->getAttribute('data-turbo-confirm'));
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'La configuration « Premier » a été supprimée.');
+        self::assertSelectorTextContains('[role="status"]', 'Le quai « Premier » a été supprimé.');
         self::assertSame(['Deuxième'], $this->displayedLabels($device));
     }
 
-    /**
-     * @return iterable<string, array{string, string|null}>
-     */
-    public static function rotationPages(): iterable
-    {
-        yield 'liste des configurations' => ['/display-configurations', 'index'];
-        yield 'page du dispositif' => ['/devices/%d', null];
-    }
-
-    #[DataProvider('rotationPages')]
-    public function testRotationFormsRecordTheirPageWhichIsRefreshedInPlace(string $path, ?string $return): void
+    public function testDevicePageIsRefreshedInPlaceAfterARotationAction(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $this->configure($device, 'Premier');
-        $this->configure($device, 'Deuxième');
 
-        $crawler = $this->client->request('GET', \sprintf($path, $device->getId()));
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
 
         self::assertSame('morph', $crawler->filter('head meta[name="turbo-refresh-method"]')->attr('content'));
         self::assertSame('preserve', $crawler->filter('head meta[name="turbo-refresh-scroll"]')->attr('content'));
-        $items = $crawler->filter('main li');
-        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Supprimer')] as $button) {
-            self::assertSame($return, $button->form()->getValues()['_return'] ?? null);
-        }
     }
 
     /**
@@ -136,35 +109,21 @@ final class DisplayConfigurationsTest extends WebTestCase
     {
         yield 'montée' => ['Monter'];
         yield 'descente' => ['Descendre'];
+        yield 'masquage' => ['Afficher'];
         yield 'suppression' => ['Supprimer'];
     }
 
     #[DataProvider('rotationButtons')]
-    public function testRotationActionFromTheListReturnsToTheList(string $button): void
+    public function testRotationActionReturnsToTheDevice(string $button): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $this->configure($device, 'Premier');
         $this->configure($device, 'Deuxième');
 
-        $crawler = $this->client->request('GET', '/display-configurations');
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         $this->client->submit($crawler->filter('main li')->eq('Monter' === $button ? 1 : 0)->selectButton($button)->form());
 
-        self::assertResponseRedirects('/display-configurations', 303);
-    }
-
-    public function testUnknownReturnValueFallsBackToTheDevice(): void
-    {
-        $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $this->configure($device, 'Premier');
-        $this->configure($device, 'Deuxième');
-
-        $crawler = $this->client->request('GET', '/display-configurations');
-        $form = $crawler->filter('main li')->eq(0)->selectButton('Descendre')->form();
-        $form['_return'] = 'https://example.com/';
-        $this->client->submit($form);
-
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        self::assertSame(['Deuxième', 'Premier'], $this->displayedLabels($device));
     }
 
     /**
@@ -177,6 +136,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         yield 'suppression' => ['POST', '/display-configurations/%d/delete'];
         yield 'montée' => ['POST', '/display-configurations/%d/move-up'];
         yield 'descente' => ['POST', '/display-configurations/%d/move-down'];
+        yield 'masquage' => ['POST', '/display-configurations/%d/visibility'];
     }
 
     #[DataProvider('configurationActions')]
@@ -190,7 +150,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->request($method, \sprintf($path, $configuration->getId()));
 
         self::assertResponseStatusCodeSame(403);
-        self::assertSame(1, $this->reload($configuration)->getPosition());
+        $configuration = $this->reload($configuration);
+        self::assertSame(1, $configuration->getPosition());
+        self::assertTrue($configuration->isActive());
     }
 
     /**
@@ -202,6 +164,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         yield 'suppression avec un jeton invalide' => ['/display-configurations/%d/delete', ['_token' => 'invalide']];
         yield 'montée sans jeton' => ['/display-configurations/%d/move-up', []];
         yield 'descente sans jeton' => ['/display-configurations/%d/move-down', []];
+        yield 'masquage sans jeton' => ['/display-configurations/%d/visibility', ['active' => '0']];
     }
 
     /**
@@ -218,7 +181,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->request('POST', \sprintf($path, $configuration->getId()), $parameters);
 
         self::assertFalse($this->client->getResponse()->isSuccessful());
-        self::assertSame(1, $this->reload($configuration)->getPosition());
+        $configuration = $this->reload($configuration);
+        self::assertSame(1, $configuration->getPosition());
+        self::assertTrue($configuration->isActive());
     }
 
     public function testQuayAutocompleteOffersOnlyActiveQuaysWithTheirDestinations(): void
@@ -255,6 +220,33 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects('http://localhost/');
     }
 
+    public function testAddingAQuayTargetsTheDeviceFromTheUrl(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/new?device=%d', $device->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextSame('h1', 'Ajouter un quai');
+        self::assertSelectorTextContains('main', 'Sur le dispositif « Salon ».');
+        $form = $crawler->selectButton('Ajouter')->form();
+        self::assertArrayNotHasKey('display_configuration[device]', $form->all());
+        self::assertSame(['quay', 'label', 'active'], array_values(array_map(
+            static fn (string $name): string => (string) preg_replace('/^display_configuration\[(\w+)\].*$/', '$1', $name),
+            array_filter(array_keys($form->all()), static fn (string $name): bool => !str_contains($name, '_token')),
+        )));
+        self::assertSame('switch', $crawler->filter('#display_configuration_active')->attr('role'));
+        self::assertNotNull($crawler->filter('#display_configuration_active')->attr('checked'));
+        self::assertSame(\sprintf('/devices/%d', $device->getId()), $crawler->selectLink('Annuler')->attr('href'));
+    }
+
+    public function testAddingAQuayWithoutDeviceIsNotFound(): void
+    {
+        $this->client->request('GET', '/display-configurations/new');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testNewConfigurationJoinsTheEndOfItsDevicesRotation(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
@@ -262,11 +254,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $gare = $this->quay('S3', 'GARE');
 
         $crawler = $this->client->request('GET', '/display-configurations/new', ['device' => $device->getId()]);
-        self::assertResponseIsSuccessful();
-        $form = $crawler->selectButton('Créer')->form();
-        self::assertInstanceOf(ChoiceFormField::class, $form['display_configuration[device]']);
-        self::assertSame((string) $device->getId(), $form['display_configuration[device]']->getValue());
+        $form = $crawler->selectButton('Ajouter')->form();
         $form->disableValidation();
+
         $this->client->submit($form, [
             'display_configuration[quay]' => (string) $gare->getId(),
             'display_configuration[label]' => 'Vers la gare',
@@ -274,28 +264,40 @@ final class DisplayConfigurationsTest extends WebTestCase
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'La configuration a été créée.');
+        self::assertSelectorTextContains('[role="status"]', 'Le quai a été ajouté.');
         self::assertSame(['Premier', 'Vers la gare'], $this->displayedLabels($device));
     }
 
-    public function testCreatingWithAnotherUsersDeviceIsRefused(): void
+    public function testAddingAQuayHiddenKeepsItOutOfTheRotation(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $gare = $this->quay('S3', 'GARE');
+
+        $crawler = $this->client->request('GET', '/display-configurations/new', ['device' => $device->getId()]);
+        $form = $crawler->selectButton('Ajouter')->form();
+        $form->disableValidation();
+
+        $active = $form['display_configuration[active]'];
+        self::assertInstanceOf(ChoiceFormField::class, $active);
+        $active->untick();
+        $this->client->submit($form, ['display_configuration[quay]' => (string) $gare->getId()]);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $configuration = $this->entityManager()->getRepository(DisplayConfiguration::class)->findOneBy([]);
+        self::assertInstanceOf(DisplayConfiguration::class, $configuration);
+        self::assertFalse($configuration->isActive());
+    }
+
+    public function testAddingAQuayToAnotherUsersDeviceIsForbidden(): void
     {
         $othersDevice = DeviceFactory::createOne();
         $gare = $this->quay('S3', 'GARE');
 
-        $crawler = $this->client->request('GET', '/display-configurations/new', ['device' => $othersDevice->getId()]);
-        $form = $crawler->selectButton('Créer')->form();
-        self::assertInstanceOf(ChoiceFormField::class, $form['display_configuration[device]']);
-        self::assertSame('', $form['display_configuration[device]']->getValue());
-        self::assertStringNotContainsString($othersDevice->getLabel(), (string) $this->client->getResponse()->getContent());
-        $form->disableValidation();
-        $this->client->submit($form, [
-            'display_configuration[device]' => (string) $othersDevice->getId(),
-            'display_configuration[quay]' => (string) $gare->getId(),
-        ]);
+        $this->client->request('GET', '/display-configurations/new', ['device' => $othersDevice->getId()]);
+        self::assertResponseStatusCodeSame(403);
 
-        self::assertResponseStatusCodeSame(422);
-        self::assertSelectorExists('#display_configuration_device_error1');
+        $this->client->request('POST', \sprintf('/display-configurations/new?device=%d', $othersDevice->getId()), ['display_configuration' => ['quay' => (string) $gare->getId()]]);
+        self::assertResponseStatusCodeSame(403);
         self::assertSame(0, $this->entityManager()->getRepository(DisplayConfiguration::class)->count());
     }
 
@@ -304,7 +306,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $device = DeviceFactory::createOne(['owner' => $this->user]);
 
         $crawler = $this->client->request('GET', '/display-configurations/new', ['device' => $device->getId()]);
-        $this->client->submit($crawler->selectButton('Créer')->form());
+        $this->client->submit($crawler->selectButton('Ajouter')->form());
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('#display_configuration_quay_error1', 'Choisissez un quai.');
@@ -320,18 +322,74 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         $crawler = $this->client->click($crawler->filter('main li')->eq(1)->selectLink('Modifier')->link());
         self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Modifier le quai');
         $form = $crawler->selectButton('Enregistrer')->form();
         self::assertArrayNotHasKey('display_configuration[device]', $form->all());
         self::assertInstanceOf(ChoiceFormField::class, $form['display_configuration[active]']);
-        $form['display_configuration[active]']->untick();
+        self::assertSame('switch', $crawler->filter('#display_configuration_active')->attr('role'));
+        $active = $form['display_configuration[active]'];
+        self::assertInstanceOf(ChoiceFormField::class, $active);
+        $active->untick();
         $form['display_configuration[label]'] = 'Vers la gare';
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('[role="status"]', 'La configuration a été modifiée.');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Le quai a été modifié.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
-        self::assertSelectorTextContains('main li:nth-child(2)', 'Masquée');
+        self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
+        self::assertSame(['Premier'], $this->displayedLabels($device));
+    }
+
+    public function testSwitchHidesThenShowsTheConfiguration(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $switch = $crawler->filter('main li')->eq(1)->filter('[role="switch"]');
+        self::assertSame('true', $switch->attr('aria-checked'));
+        self::assertStringContainsString('Afficher Deuxième', $switch->text());
+        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form());
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $crawler = $this->client->followRedirect();
+        self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
+        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form());
+        $crawler = $this->client->followRedirect();
+        self::assertSame('true', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
+
+        self::assertSame(['Premier', 'Deuxième'], $this->displayedLabels($device));
+    }
+
+    public function testHidingTwiceKeepsTheConfigurationHidden(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $form = $crawler->filter('main li')->eq(1)->selectButton('Afficher Deuxième')->form();
+        $this->client->submit($form);
+        $this->client->submit($form);
+
+        self::assertSame(['Premier'], $this->displayedLabels($device));
+    }
+
+    public function testEditPageDeletesTheConfigurationAndReturnsToTheDevice(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $configuration = $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
+        self::assertSelectorTextContains('main dl', $device->getLabel());
+        $form = $crawler->selectButton('Supprimer')->form();
+        self::assertStringContainsString('Deuxième', $form->getFormNode()->getAttribute('data-turbo-confirm'));
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         self::assertSame(['Premier'], $this->displayedLabels($device));
     }
 
@@ -356,7 +414,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $configuration = $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
 
-        $this->client->request('GET', '/display-configurations');
+        $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
         self::assertSelectorTextContains('main li', 'Quai absent du dernier import');
 
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Device;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -28,26 +29,40 @@ class DeviceRepository extends ServiceEntityRepository
         return $this->findOneBy(['token' => $token, 'active' => true]);
     }
 
-    /**
-     * Dispositifs d'un compte, du plus récent au plus ancien, avec leurs
-     * configurations chargées pour les compter sans requête de plus.
-     *
-     * @return list<Device>
-     */
-    public function findByOwner(User $owner): array
+    public function countByOwner(User $owner): int
     {
-        /** @var list<Device> $devices */
-        $devices = $this->createQueryBuilder('d')
+        return $this->count(['owner' => $owner]);
+    }
+
+    /**
+     * Une page des dispositifs d'un compte, du plus récent au plus ancien, avec
+     * leurs configurations chargées. « $search » filtre sur le libellé, sans
+     * tenir compte de la casse ; le Paginator compte aussi le total filtré.
+     *
+     * @return Paginator<Device>
+     */
+    public function findPageByOwner(User $owner, string $search, int $page, int $perPage): Paginator
+    {
+        $queryBuilder = $this->createQueryBuilder('d')
             ->addSelect('c')
             ->leftJoin('d.displayConfigurations', 'c')
             ->andWhere('d.owner = :owner')
             ->setParameter('owner', $owner)
             ->orderBy('d.createdAt', 'DESC')
             ->addOrderBy('d.id', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage);
 
-        return $devices;
+        if ('' !== $search) {
+            $queryBuilder
+                ->andWhere('LOWER(d.label) LIKE :search')
+                ->setParameter('search', '%'.addcslashes(mb_strtolower($search), '%_\\').'%');
+        }
+
+        /** @var Paginator<Device> $paginator */
+        $paginator = new Paginator($queryBuilder);
+
+        return $paginator;
     }
 
     /**
