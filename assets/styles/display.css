@@ -180,7 +180,7 @@ body {
     line-clamp: 2;
 }
 
-/* Écrans d'état : aucun passage, aucune configuration active. */
+/* Écrans d'état : aucun passage, aucune configuration active, écran désactivé. */
 .screen__message {
     display: flex;
     flex-direction: column;
@@ -207,4 +207,74 @@ body {
 
 .screen__message p {
     margin: 0;
+}
+
+/*
+ * Écran d'appairage (templates/display/_pairing.html.twig) : à gauche le QR
+ * code, puis le code en gras dessous ; à droite le compte à rebours ; en bas
+ * la ligne d'instruction.
+ */
+.pairing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    height: 100%;
+    padding: calc(16 * var(--u));
+    gap: calc(12 * var(--u));
+    color: var(--display-message-text);
+}
+
+.pairing__code-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(10 * var(--u));
+}
+
+/* Place du QR code, vide tant qu'il n'est pas affiché. */
+.pairing__qr:empty {
+    display: none;
+}
+
+.pairing__qr {
+    width: calc(150 * var(--u));
+    height: calc(150 * var(--u));
+}
+
+.pairing__code {
+    margin: 0;
+    font-size: calc(46 * var(--u));
+    letter-spacing: calc(2 * var(--u));
+    white-space: nowrap;
+}
+
+/*
+ * Disque blanc dont la part écoulée (--elapsed, posée par le contrôleur
+ * « pairing ») s'efface dans le sens des aiguilles d'une montre depuis midi ;
+ * le contour reste visible.
+ */
+.pairing__countdown {
+    width: calc(150 * var(--u));
+    aspect-ratio: 1;
+    border: calc(3 * var(--u)) solid var(--display-message-text);
+    border-radius: 50%;
+    background: conic-gradient(transparent 0 var(--elapsed, 0deg), var(--display-message-text) var(--elapsed, 0deg) 360deg);
+}
+
+.pairing__instruction {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--display-header-text);
+    font-size: calc(18 * var(--u));
+    text-align: center;
+}
+
+.pairing__message {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    margin: 0;
+    font-size: calc(24 * var(--u));
+    text-align: center;
 }

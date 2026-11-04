@@ -17,6 +17,20 @@ framework:
             interval: '15 minutes'
             # Pas de verrou, comme current_password.
             lock_factory: null
+        # Codes d'appairage générés par les écrans, un compteur par adresse IP :
+        # un écran non appairé en demande un par minute, la limite en laisse
+        # passer deux derrière la même box (voir ScreenPairing).
+        display_pairing_code:
+            policy: sliding_window
+            limit: 150
+            interval: '1 hour'
+            lock_factory: null
+        # Saisies fausses d'un code d'appairage, un compteur par compte.
+        display_pairing_entry:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+            lock_factory: null
 
 when@test:
     framework:
@@ -27,6 +41,10 @@ when@test:
                 # disableReboot(), le compteur tient le temps d'un test.
                 storage_service: app.rate_limiter.test_storage
             reset_password_request:
+                storage_service: app.rate_limiter.test_storage
+            display_pairing_code:
+                storage_service: app.rate_limiter.test_storage
+            display_pairing_entry:
                 storage_service: app.rate_limiter.test_storage
 
     services:

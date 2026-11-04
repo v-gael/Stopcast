@@ -2,7 +2,8 @@
  # Page d'affichage d'un dispositif, autonome (sans le layout de l'espace web) :
  # elle remplit la fenêtre, en paysage. Le contrôleur Stimulus « display » fait
  # tourner les écrans, tient l'heure à jour et relit les écrans (refresh_url)
- # à la cadence du dispositif.
+ # à la cadence du dispositif. « offline » montre d'emblée le pictogramme
+ # no_signal, quand les passages n'ont pas pu être lus.
  #}
 <!DOCTYPE html>
 <html lang="fr">
@@ -17,7 +18,8 @@
     <body class="display"
           data-controller="display"
           data-display-url-value="{{ refresh_url }}"
-          data-display-time-zone-value="{{ 'now'|date('e') }}">
+          data-display-time-zone-value="{{ 'now'|date('e') }}"
+          {%- if offline|default(false) %} data-display-offline{% endif %}>
         {{ include('display/_screens.html.twig') }}
     </body>
 </html>

@@ -1,0 +1,20 @@
+{#
+ # Contenu de l'écran d'appairage, relu à chaque interrogation : le code, les
+ # secondes qui lui restent et sa durée d'affichage, ou l'attente quand trop de
+ # codes ont été demandés depuis cette adresse. Le temps restant est relatif :
+ # le compte à rebours ne dépend pas de l'horloge de l'écran.
+ #}
+<div class="pairing" data-pairing-target="content"
+     {%- if code %} data-remaining-seconds="{{ remaining_seconds }}" data-duration-seconds="{{ constant('App\\Display\\Pairing\\ScreenPairing::CODE_DISPLAY_SECONDS') }}"{% endif %}>
+    {% if code %}
+        <div class="pairing__code-column">
+            {# Le QR code vers le parcours d'appairage prendra cette place. #}
+            <div class="pairing__qr"></div>
+            <p class="pairing__code">{{ code }}</p>
+        </div>
+        <div class="pairing__countdown" data-pairing-target="countdown" role="img" aria-label="Temps restant avant un nouveau code"></div>
+        <p class="pairing__instruction">{{ host }} → Dispositifs → Appairer un écran</p>
+    {% else %}
+        <p class="pairing__message">Trop de demandes, nouvel essai dans quelques minutes</p>
+    {% endif %}
+</div>

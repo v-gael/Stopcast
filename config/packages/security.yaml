@@ -32,6 +32,19 @@ security:
                 token_handler: App\Security\DeviceTokenHandler
                 token_extractors: App\Security\DeviceTokenExtractor
                 failure_handler: App\Security\DeviceUnauthorizedHandler
+        # L'écran d'affichage s'authentifie par le cookie reçu à l'appairage, à
+        # part des comptes : une session n'ouvre pas la page d'affichage, et le
+        # cookie n'ouvre pas main. Sans cookie, l'écran passe en anonyme et
+        # reçoit l'écran d'appairage. « ^/display » seul attraperait
+        # /display-configurations.
+        display:
+            pattern: ^/display(/|$)
+            stateless: true
+            provider: app_user_provider
+            access_token:
+                token_handler: App\Security\ScreenCookieHandler
+                token_extractors: App\Security\ScreenCookieExtractor
+                failure_handler: App\Security\ScreenCookieRejectedHandler
         main:
             lazy: true
             provider: app_user_provider

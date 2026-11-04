@@ -167,6 +167,9 @@ final class DevicesTest extends WebTestCase
         yield 'enregistrement' => ['POST', '/devices/%d/edit'];
         yield 'suppression' => ['POST', '/devices/%d/delete'];
         yield 'régénération du jeton' => ['POST', '/devices/%d/regenerate-token'];
+        yield "saisie d'un code d'appairage" => ['GET', '/devices/%d/pair'];
+        yield "envoi d'un code d'appairage" => ['POST', '/devices/%d/pair'];
+        yield "dissociation de l'écran" => ['POST', '/devices/%d/unpair'];
     }
 
     #[DataProvider('deviceActions')]
