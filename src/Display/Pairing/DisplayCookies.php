@@ -56,7 +56,7 @@ final readonly class DisplayCookies
 
     public function clearScreen(Response $response): void
     {
-        $response->headers->clearCookie($this->screenName, '/', null, true, true, Cookie::SAMESITE_STRICT);
+        $this->clear($response, $this->screenName);
     }
 
     public function setPairing(Response $response, #[\SensitiveParameter] string $requestSecret): void
@@ -66,7 +66,7 @@ final readonly class DisplayCookies
 
     public function clearPairing(Response $response): void
     {
-        $response->headers->clearCookie($this->pairingName, '/', null, true, true, Cookie::SAMESITE_STRICT);
+        $this->clear($response, $this->pairingName);
     }
 
     private function value(Request $request, string $name): ?string
@@ -74,6 +74,11 @@ final readonly class DisplayCookies
         $value = $request->cookies->get($name);
 
         return \is_string($value) && '' !== $value ? $value : null;
+    }
+
+    private function clear(Response $response, string $name): void
+    {
+        $response->headers->setCookie($this->cookie($name, '', 1));
     }
 
     private function cookie(string $name, #[\SensitiveParameter] string $value, \DateTimeInterface|int $expire): Cookie

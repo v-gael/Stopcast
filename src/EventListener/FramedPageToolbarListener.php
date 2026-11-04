@@ -22,13 +22,13 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
 #[AsEventListener(priority: -1536)]
 final readonly class FramedPageToolbarListener
 {
-    public const string ATTRIBUTE = '_without_toolbar';
+    public const string WITHOUT_TOOLBAR = '_without_toolbar';
 
     public function __invoke(ResponseEvent $event): void
     {
         $attributes = $event->getRequest()->attributes;
 
-        if (!$event->isMainRequest() || (true !== $attributes->get(SameOriginFramingListener::ATTRIBUTE) && true !== $attributes->get(self::ATTRIBUTE))) {
+        if (!$event->isMainRequest() || (true !== $attributes->get(SameOriginFramingListener::ATTRIBUTE) && true !== $attributes->get(self::WITHOUT_TOOLBAR))) {
             return;
         }
 

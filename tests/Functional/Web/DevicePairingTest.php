@@ -8,7 +8,7 @@ use App\Entity\Device;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\ScreenPairingTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
@@ -22,6 +22,7 @@ final class DevicePairingTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use ScreenPairingTrait;
 
     private const string TOO_MANY_ATTEMPTS = "Trop d'essais. Réessayez plus tard.";
 
@@ -84,7 +85,7 @@ final class DevicePairingTest extends WebTestCase
         self::assertResponseRedirects($this->showPath(), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', "L'écran a été dissocié");
-        self::assertFalse($this->storedDevice()->hasPairedScreen());
+        self::assertFalse($this->storedDevice($this->device)->hasPairedScreen());
     }
 
     public function testUnpairingWithoutAValidCsrfTokenChangesNothing(): void
@@ -94,12 +95,12 @@ final class DevicePairingTest extends WebTestCase
         $this->client->request('POST', \sprintf('/devices/%d/unpair', $this->device->getId()), ['_token' => 'invalide']);
 
         self::assertFalse($this->client->getResponse()->isSuccessful());
-        self::assertTrue($this->storedDevice()->hasPairedScreen());
+        self::assertTrue($this->storedDevice($this->device)->hasPairedScreen());
     }
 
     public function testMalformedCodeIsRefused(): void
     {
-        $this->enterCode('0OI1L');
+        $this->enterCode('0OI1L', $this->device);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('#pair_screen', 'Ce code est inconnu ou a expiré.');
@@ -107,17 +108,15 @@ final class DevicePairingTest extends WebTestCase
 
     public function testEntryIsBlockedAfterFiveWrongCodes(): void
     {
-        $this->client->request('GET', '/display');
-        $code = $this->screenCode();
-        $this->client->loginUser($this->user);
+        $code = $this->displayedCode();
 
         for ($i = 0; $i < 5; ++$i) {
-            $this->enterCode('ZZZ-ZZZ');
+            $this->enterCode('ZZZ-ZZZ', $this->device);
             self::assertSelectorTextContains('#pair_screen', 'Ce code est inconnu ou a expiré.');
         }
 
         // Même le bon code est refusé, et l'écran n'est pas appairé.
-        $this->enterCode($code);
+        $this->enterCode($code, $this->device);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('#pair_screen', self::TOO_MANY_ATTEMPTS);
@@ -128,13 +127,13 @@ final class DevicePairingTest extends WebTestCase
     public function testCorrectCodeResetsTheWrongAttempts(): void
     {
         for ($i = 0; $i < 4; ++$i) {
-            $this->enterCode('ZZZ-ZZZ');
+            $this->enterCode('ZZZ-ZZZ', $this->device);
         }
 
         $this->pairAScreen();
 
         for ($i = 0; $i < 4; ++$i) {
-            $this->enterCode('ZZZ-ZZZ');
+            $this->enterCode('ZZZ-ZZZ', $this->device);
             self::assertSelectorTextContains('#pair_screen', 'Ce code est inconnu ou a expiré.');
         }
     }
@@ -145,34 +144,10 @@ final class DevicePairingTest extends WebTestCase
      */
     private function pairAScreen(): void
     {
-        $this->client->request('GET', '/display');
-        $this->enterCode($this->screenCode());
+        $this->enterCode($this->displayedCode(), $this->device);
         self::assertResponseRedirects($this->showPath(), 303);
 
-        $this->client->request('GET', '/display/pairing');
-        self::assertResponseStatusCodeSame(205);
-    }
-
-    private function screenCode(): string
-    {
-        return $this->client->getCrawler()->filter('.pairing__code')->text();
-    }
-
-    private function enterCode(string $code): void
-    {
-        $crawler = $this->client->request('GET', $this->pairPath());
-        $this->client->submit($crawler->selectButton('Appairer')->form(['pair_screen[code]' => $code]));
-    }
-
-    private function storedDevice(): Device
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $entityManager->clear();
-        $device = $entityManager->find(Device::class, $this->device->getId());
-        self::assertInstanceOf(Device::class, $device);
-
-        return $device;
+        $this->receiveScreenCookie();
     }
 
     private function showPath(): string

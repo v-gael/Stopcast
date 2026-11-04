@@ -23,7 +23,7 @@ final class FramedPageToolbarListenerTest extends TestCase
 
     public function testPageWithoutToolbarLosesItsDebugToken(): void
     {
-        $response = $this->dispatch([FramedPageToolbarListener::ATTRIBUTE => true]);
+        $response = $this->dispatch([FramedPageToolbarListener::WITHOUT_TOOLBAR => true]);
 
         self::assertFalse($response->headers->has('X-Debug-Token'));
     }

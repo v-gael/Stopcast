@@ -17,4 +17,12 @@ final readonly class PendingPairing
         public \DateTimeImmutable $expiresAt,
     ) {
     }
+
+    /**
+     * Secondes pendant lesquelles le code reste affiché.
+     */
+    public function remainingSeconds(\DateTimeImmutable $now): int
+    {
+        return max(0, $this->expiresAt->getTimestamp() - $now->getTimestamp());
+    }
 }

@@ -42,7 +42,7 @@ final class DisplayController extends AbstractController
     ) {
     }
 
-    #[Route('/display', name: 'app_display', defaults: [FramedPageToolbarListener::ATTRIBUTE => true], methods: ['GET'])]
+    #[Route('/display', name: 'app_display', defaults: [FramedPageToolbarListener::WITHOUT_TOOLBAR => true], methods: ['GET'])]
     public function show(
         Request $request,
         DisplayAssembler $displayAssembler,
@@ -91,31 +91,38 @@ final class DisplayController extends AbstractController
      * (429), ou 205 quand l'écran est appairé (son cookie est posé, la page se
      * recharge sur l'affichage).
      */
-    #[Route('/display/pairing', name: 'app_display_pairing', defaults: [FramedPageToolbarListener::ATTRIBUTE => true], methods: ['GET'])]
+    #[Route('/display/pairing', name: 'app_display_pairing', defaults: [FramedPageToolbarListener::WITHOUT_TOOLBAR => true], methods: ['GET'])]
     public function pairing(Request $request, #[CurrentUser] ?UserInterface $user): Response
     {
         if ($user instanceof DeviceUser) {
             return new Response(null, Response::HTTP_RESET_CONTENT);
         }
 
-        $state = $this->screenPairing->forScreen($this->displayCookies->pairingSecret($request), $request->getClientIp() ?? '');
-
-        if ($state instanceof PairedScreen) {
-            return $this->paired($state, new Response(null, Response::HTTP_RESET_CONTENT));
-        }
-
-        return $this->renderPairing('display/_pairing.html.twig', $request, $state);
+        return $this->pairingResponse($request, 'display/_pairing.html.twig', new Response(null, Response::HTTP_RESET_CONTENT));
     }
 
     private function pairingPage(Request $request): Response
     {
+        return $this->pairingResponse($request, 'display/pairing.html.twig', $this->redirectToRoute('app_display', status: Response::HTTP_SEE_OTHER));
+    }
+
+    /**
+     * Reprend ou ouvre la demande d'appairage de l'écran : rend le code avec
+     * ce template, ou pose le cookie de l'écran sur $whenPaired s'il vient
+     * d'être appairé.
+     */
+    private function pairingResponse(Request $request, string $template, Response $whenPaired): Response
+    {
         $state = $this->screenPairing->forScreen($this->displayCookies->pairingSecret($request), $request->getClientIp() ?? '');
 
         if ($state instanceof PairedScreen) {
-            return $this->paired($state, $this->redirectToRoute('app_display', status: Response::HTTP_SEE_OTHER));
+            $this->displayCookies->setScreen($whenPaired, $state->screenSecret, $this->clock->now());
+            $this->displayCookies->clearPairing($whenPaired);
+
+            return $whenPaired;
         }
 
-        return $this->renderPairing('display/pairing.html.twig', $request, $state);
+        return $this->renderPairing($template, $request, $state);
     }
 
     private function renderPairing(string $template, Request $request, PendingPairing|PairingThrottled $state): Response
@@ -124,21 +131,13 @@ final class DisplayController extends AbstractController
 
         $response = $this->render($template, [
             'code' => $pending instanceof PendingPairing ? PairingCode::format($pending->code) : null,
-            'remaining_seconds' => $pending instanceof PendingPairing ? max(0, $pending->expiresAt->getTimestamp() - $this->clock->now()->getTimestamp()) : null,
+            'remaining_seconds' => $pending instanceof PendingPairing ? $pending->remainingSeconds($this->clock->now()) : null,
             'host' => $request->getHttpHost(),
         ], new Response(status: $pending instanceof PendingPairing ? Response::HTTP_OK : Response::HTTP_TOO_MANY_REQUESTS));
 
         if ($pending instanceof PendingPairing) {
             $this->displayCookies->setPairing($response, $pending->requestSecret);
         }
-
-        return $response;
-    }
-
-    private function paired(PairedScreen $paired, Response $response): Response
-    {
-        $this->displayCookies->setScreen($response, $paired->screenSecret, $this->clock->now());
-        $this->displayCookies->clearPairing($response);
 
         return $response;
     }

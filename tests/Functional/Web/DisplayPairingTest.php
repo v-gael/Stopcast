@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\RealtimeFeedTrait;
+use App\Tests\Support\ScreenPairingTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
 use Google\Transit\Realtime\TripDescriptor;
@@ -36,6 +37,7 @@ final class DisplayPairingTest extends WebTestCase
     use Factories;
     use RealtimeFeedTrait;
     use ResetDatabase;
+    use ScreenPairingTrait;
 
     private const string CODE_PATTERN = '/^[2-9A-HJKMNP-Z]{3}-[2-9A-HJKMNP-Z]{3}$/';
 
@@ -91,7 +93,7 @@ final class DisplayPairingTest extends WebTestCase
         $this->serveRealtimeFeed();
         $code = $this->displayedCode();
 
-        $this->enterCode($code);
+        $this->ownerEntersCode($code);
         self::assertResponseRedirects(\sprintf('/devices/%d', $this->device->getId()));
 
         $this->pairScreen();
@@ -141,7 +143,7 @@ final class DisplayPairingTest extends WebTestCase
         $this->clock->sleep(90);
         self::assertNotSame($previous, $this->displayedCode());
 
-        $this->enterCode($previous);
+        $this->ownerEntersCode($previous);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $this->device->getId()));
         $this->pairScreen();
@@ -152,7 +154,7 @@ final class DisplayPairingTest extends WebTestCase
         $code = $this->displayedCode();
         $this->clock->sleep(121);
 
-        $this->enterCode($code);
+        $this->ownerEntersCode($code);
 
         $this->assertCodeRefused();
     }
@@ -160,9 +162,9 @@ final class DisplayPairingTest extends WebTestCase
     public function testCodeServesOnlyOnce(): void
     {
         $code = $this->displayedCode();
-        $this->enterCode($code);
+        $this->ownerEntersCode($code);
 
-        $this->enterCode($code, DeviceFactory::createOne(['owner' => $this->owner]));
+        $this->ownerEntersCode($code, DeviceFactory::createOne(['owner' => $this->owner]));
 
         $this->assertCodeRefused();
     }
@@ -171,7 +173,7 @@ final class DisplayPairingTest extends WebTestCase
     {
         $code = $this->displayedCode();
 
-        $this->enterCode(strtolower(str_replace('-', '', $code)));
+        $this->ownerEntersCode(strtolower(str_replace('-', '', $code)));
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $this->device->getId()));
     }
@@ -181,7 +183,7 @@ final class DisplayPairingTest extends WebTestCase
         $code = $this->displayedCode();
         $requestCookie = $this->client->getCookieJar()->get('STOPCAST_DISPLAY_PAIRING', '/', 'localhost');
         self::assertNotNull($requestCookie);
-        $this->enterCode($code);
+        $this->ownerEntersCode($code);
 
         // Un autre navigateur, qui connaît le code mais pas le secret de la demande.
         $this->client->getCookieJar()->clear();
@@ -202,7 +204,7 @@ final class DisplayPairingTest extends WebTestCase
         $cookie = $this->screenCookie();
         self::assertNotNull($cookie);
         self::assertSame(64, \strlen($cookie->getValue()));
-        self::assertSame(hash('sha256', $cookie->getValue()), $this->storedDevice()->getScreenSecretHash());
+        self::assertSame(hash('sha256', $cookie->getValue()), $this->storedDevice($this->device)->getScreenSecretHash());
         self::assertTrue($cookie->isHttpOnly());
         self::assertTrue($cookie->isSecure());
         self::assertSame('strict', strtolower((string) $cookie->getSameSite()));
@@ -273,7 +275,7 @@ final class DisplayPairingTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $this->device->getId()));
         $this->client->submit($crawler->selectButton('Dissocier')->form());
         self::assertResponseRedirects(\sprintf('/devices/%d', $this->device->getId()));
-        self::assertFalse($this->storedDevice()->hasPairedScreen());
+        self::assertFalse($this->storedDevice($this->device)->hasPairedScreen());
 
         $this->assertSentBackToPairing();
     }
@@ -281,7 +283,7 @@ final class DisplayPairingTest extends WebTestCase
     public function testScreenUnpairedByItsOwnerCanBePairedByAnotherUser(): void
     {
         $this->pairedScreen();
-        $device = $this->storedDevice();
+        $device = $this->storedDevice($this->device);
         $device->unpairScreen();
 
         $this->entityManager->flush();
@@ -292,8 +294,7 @@ final class DisplayPairingTest extends WebTestCase
         $otherDevice = DeviceFactory::createOne(['owner' => $otherUser]);
         $code = $this->displayedCode();
         $this->client->loginUser($otherUser);
-        $crawler = $this->client->request('GET', \sprintf('/devices/%d/pair', $otherDevice->getId()));
-        $this->client->submit($crawler->selectButton('Appairer')->form(['pair_screen[code]' => $code]));
+        $this->enterCode($code, $otherDevice);
         self::assertResponseRedirects(\sprintf('/devices/%d', $otherDevice->getId()));
 
         $this->pairScreen();
@@ -302,7 +303,7 @@ final class DisplayPairingTest extends WebTestCase
     public function testDisabledDeviceShowsADisabledScreenAndKeepsItsCookie(): void
     {
         $this->pairedScreen();
-        $device = $this->storedDevice();
+        $device = $this->storedDevice($this->device);
         $device->setActive(false);
 
         $this->entityManager->flush();
@@ -375,27 +376,12 @@ final class DisplayPairingTest extends WebTestCase
     }
 
     /**
-     * Code affiché par l'écran d'appairage de /display.
+     * Le propriétaire se connecte et saisit le code sur la fiche de son dispositif.
      */
-    private function displayedCode(): string
-    {
-        $crawler = $this->client->request('GET', '/display');
-
-        self::assertResponseIsSuccessful();
-
-        return $crawler->filter('.pairing__code')->text();
-    }
-
-    /**
-     * Le propriétaire saisit le code sur la fiche de son dispositif.
-     */
-    private function enterCode(string $code, ?Device $device = null): void
+    private function ownerEntersCode(string $code, ?Device $device = null): void
     {
         $this->client->loginUser($this->owner);
-        $crawler = $this->client->request('GET', \sprintf('/devices/%d/pair', ($device ?? $this->device)->getId()));
-        self::assertResponseIsSuccessful();
-
-        $this->client->submit($crawler->selectButton('Appairer')->form(['pair_screen[code]' => $code]));
+        $this->enterCode($code, $device ?? $this->device);
     }
 
     /**
@@ -403,9 +389,7 @@ final class DisplayPairingTest extends WebTestCase
      */
     private function pairScreen(): void
     {
-        $this->client->request('GET', '/display/pairing');
-
-        self::assertResponseStatusCodeSame(205);
+        $this->receiveScreenCookie();
         self::assertNotNull($this->screenCookie());
     }
 
@@ -416,13 +400,11 @@ final class DisplayPairingTest extends WebTestCase
     private function pairedScreen(): void
     {
         $code = $this->displayedCode();
-        $this->enterCode($code);
-        $screenCookies = array_filter(
-            $this->client->getCookieJar()->all(),
-            static fn (Cookie $cookie): bool => str_starts_with($cookie->getName(), 'STOPCAST_DISPLAY'),
-        );
-        $this->client->getCookieJar()->clear();
-        array_map($this->client->getCookieJar()->set(...), $screenCookies);
+        $this->ownerEntersCode($code);
+        $jar = $this->client->getCookieJar();
+        $screenCookies = array_filter($jar->all(), static fn (Cookie $cookie): bool => str_starts_with($cookie->getName(), 'STOPCAST_DISPLAY'));
+        $jar->clear();
+        array_map($jar->set(...), $screenCookies);
         $this->pairScreen();
     }
 
@@ -452,15 +434,6 @@ final class DisplayPairingTest extends WebTestCase
     {
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('#pair_screen', 'Ce code est inconnu ou a expiré.');
-    }
-
-    private function storedDevice(): Device
-    {
-        $this->entityManager->clear();
-        $device = $this->entityManager->find(Device::class, $this->device->getId());
-        self::assertInstanceOf(Device::class, $device);
-
-        return $device;
     }
 
     private function screenCookie(): ?Cookie
