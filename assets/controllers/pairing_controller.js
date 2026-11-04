@@ -22,12 +22,12 @@ export default class extends Controller {
 
     connect() {
         this.#start();
-        this.timer = setInterval(() => this.#tick(), 200);
+        this.#animate();
         this.#schedulePoll();
     }
 
     disconnect() {
-        clearInterval(this.timer);
+        cancelAnimationFrame(this.frame);
         clearTimeout(this.pollTimer);
         this.request?.abort();
     }
@@ -52,7 +52,8 @@ export default class extends Controller {
                 .parseFromString(await response.text(), 'text/html')
                 .querySelector('[data-pairing-target="content"]');
 
-            if (content) {
+            // Même code : rien ne change, le compte à rebours garde son élan.
+            if (content && content.dataset.code !== this.contentTarget.dataset.code) {
                 this.contentTarget.replaceWith(document.adoptNode(content));
                 this.#start();
             }
@@ -67,14 +68,22 @@ export default class extends Controller {
     }
 
     /*
-     * Contenu neuf : l'expiration est recalée sur l'horloge de l'écran.
+     * Nouveau code : son expiration est calée sur l'horloge de l'écran.
      */
     #start() {
         const { remainingSeconds, durationSeconds } = this.contentTarget.dataset;
 
-        this.expiresAt = remainingSeconds === undefined ? null : Date.now() + Number(remainingSeconds) * 1000;
+        this.expiresAt = remainingSeconds === undefined ? null : performance.now() + Number(remainingSeconds) * 1000;
         this.duration = Number(durationSeconds) * 1000 || 60000;
         this.#tick();
+    }
+
+    /*
+     * Un pas à chaque image affichée, pour un camembert qui avance sans à-coups.
+     */
+    #animate() {
+        this.#tick();
+        this.frame = requestAnimationFrame(() => this.#animate());
     }
 
     #tick() {
@@ -82,10 +91,10 @@ export default class extends Controller {
             return;
         }
 
-        const remaining = Math.min(1, Math.max(0, (this.expiresAt - Date.now()) / this.duration));
+        const remaining = Math.min(1, Math.max(0, (this.expiresAt - performance.now()) / this.duration));
 
         // La CSP refuse les attributs style : l'angle passe par le CSSOM.
-        this.countdownTarget.style.setProperty('--elapsed', `${((1 - remaining) * 360).toFixed(1)}deg`);
+        this.countdownTarget.style.setProperty('--elapsed', `${((1 - remaining) * 360).toFixed(2)}deg`);
     }
 
     #schedulePoll() {
@@ -94,7 +103,7 @@ export default class extends Controller {
         let delay = this.expiresAt === null ? THROTTLED_RETRY : POLL_INTERVAL;
 
         if (this.expiresAt !== null) {
-            delay = Math.min(delay, Math.max(0, this.expiresAt - Date.now()) + 250);
+            delay = Math.min(delay, Math.max(0, this.expiresAt - performance.now()) + 250);
         }
 
         this.pollTimer = setTimeout(() => this.poll(), delay);

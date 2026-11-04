@@ -252,13 +252,11 @@ body {
 
 /*
  * Disque blanc dont la part écoulée (--elapsed, posée par le contrôleur
- * « pairing ») s'efface dans le sens des aiguilles d'une montre depuis midi ;
- * le contour reste visible.
+ * « pairing ») s'efface dans le sens des aiguilles d'une montre depuis midi.
  */
 .pairing__countdown {
     width: calc(150 * var(--u));
     aspect-ratio: 1;
-    border: calc(3 * var(--u)) solid var(--display-message-text);
     border-radius: 50%;
     background: conic-gradient(transparent 0 var(--elapsed, 0deg), var(--display-message-text) var(--elapsed, 0deg) 360deg);
 }

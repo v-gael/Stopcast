@@ -5,7 +5,7 @@
  # le compte à rebours ne dépend pas de l'horloge de l'écran.
  #}
 <div class="pairing" data-pairing-target="content"
-     {%- if code %} data-remaining-seconds="{{ remaining_seconds }}" data-duration-seconds="{{ constant('App\\Display\\Pairing\\ScreenPairing::CODE_DISPLAY_SECONDS') }}"{% endif %}>
+     {%- if code %} data-code="{{ code }}" data-remaining-seconds="{{ remaining_seconds }}" data-duration-seconds="{{ constant('App\\Display\\Pairing\\ScreenPairing::CODE_DISPLAY_SECONDS') }}"{% endif %}>
     {% if code %}
         <div class="pairing__code-column">
             {# Le QR code vers le parcours d'appairage prendra cette place. #}
