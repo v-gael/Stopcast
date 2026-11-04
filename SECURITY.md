@@ -22,7 +22,16 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 
 Derrière un proxy, l'adresse IP retenue est celle du client seulement si `TRUSTED_PROXIES` est configuré ; sinon, tous les visiteurs partagent l'adresse du proxy.
 
-Limite connue : les compteurs ne sont pas protégés par un verrou, des envois simultanés peuvent dépasser les limites de quelques essais.
+Limite connue : les compteurs ne sont pas protégés par un verrou, des envois simultanés peuvent dépasser les limites de quelques essais (de même pour l'appairage des écrans, plus bas).
+
+## Appairage des écrans
+
+Un écran d'affichage s'authentifie par un cookie reçu à l'appairage (voir [ADR 0008](docs/adr/0008-affichage-html-et-appairage.md)) :
+
+- Le cookie contient un secret aléatoire de 256 bits ; seul son haché SHA-256 est enregistré. Il est `HttpOnly` et `SameSite=Strict`, `Secure` dès que la requête arrive en HTTPS (toujours en production, où il est aussi préfixé `__Host-`), valable 400 jours et renvoyé à chaque réponse. Il n'ouvre que la page d'affichage, jamais l'espace web, et une session d'utilisateur n'ouvre pas la page d'affichage.
+- Le code d'appairage (six caractères parmi 31) est affiché une minute et accepté deux, une seule fois. L'écran interroge le serveur avec le secret de sa demande, gardé dans un cookie temporaire : connaître le code ne permet pas de récupérer le cookie de l'écran.
+- La génération de codes est limitée à **150 par heure** et par adresse IP ; la saisie à **5 codes faux par 15 minutes** et par compte (fenêtres glissantes). Au-delà, même un bon code est refusé.
+- Dissocier un écran, ou en appairer un autre au même dispositif, coupe l'accès de l'ancien écran.
 
 ## En-têtes de sécurité HTTP
 

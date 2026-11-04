@@ -10,7 +10,8 @@ const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
  * lues sur le contenu à chaque fois : un réglage modifié s'applique au
  * rafraîchissement suivant. Si un rafraîchissement échoue, le contenu reste et
  * « data-display-offline » montre le pictogramme no_signal jusqu'au suivant
- * qui réussit.
+ * qui réussit. Un 401 (écran dissocié ou remplacé) recharge la page, qui
+ * montre alors l'écran d'appairage.
  */
 export default class extends Controller {
     static targets = ['content', 'screen', 'clock', 'minutes', 'route'];
@@ -42,6 +43,13 @@ export default class extends Controller {
                 cache: 'no-store',
                 signal: this.request.signal,
             });
+
+            // Cookie de l'écran refusé (dissocié, remplacé) : la page se recharge sur l'écran d'appairage.
+            if (response.status === 401) {
+                window.location.reload();
+
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error(`Réponse ${response.status}`);

@@ -8,7 +8,8 @@ use App\Entity\Device;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
- * Dispositif d'affichage authentifié par son jeton (X-Device-Token).
+ * Dispositif d'affichage authentifié : par son jeton (X-Device-Token) sur
+ * l'API, par le cookie de son écran appairé sur la page d'affichage.
  *
  * Enveloppe le Device plutôt que d'en faire un utilisateur Security : l'entité
  * reste libre de Security, et un écran ne se confond pas avec un utilisateur

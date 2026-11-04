@@ -29,6 +29,14 @@ class DeviceRepository extends ServiceEntityRepository
         return $this->findOneBy(['token' => $token, 'active' => true]);
     }
 
+    /**
+     * Le dispositif dont l'écran appairé détient ce secret, actif ou non.
+     */
+    public function findOneByScreenSecretHash(string $screenSecretHash): ?Device
+    {
+        return $this->findOneBy(['screenSecretHash' => $screenSecretHash]);
+    }
+
     public function countByOwner(User $owner): int
     {
         return $this->count(['owner' => $owner]);

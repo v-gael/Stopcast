@@ -1,7 +1,8 @@
 {#
  # Écrans d'un dispositif, un seul visible à la fois, et ses cadences (en
  # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
- # que la page relit.
+ # que la page relit. « state_message » remplace les écrans par un écran
+ # d'état (dispositif désactivé, passages illisibles).
  #}
 {% set no_signal %}
     <img class="screen__no-signal" src="{{ asset('images/display/no_signal.png') }}" alt="Données non rafraîchies">
@@ -21,7 +22,7 @@
      data-display-target="content"
      data-screen-duration="{{ device.screenDuration }}"
      data-refresh-interval="{{ device.refreshInterval }}">
-    {% for screen in screens %}
+    {% for screen in state_message is defined and state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">
                 <h1 class="screen__stop">{{ screen.quayName }}</h1>
@@ -55,7 +56,7 @@
             </div>
             {{ columns }}
             <div class="screen__message">
-                <p>Aucun quai affiché</p>
+                <p>{{ state_message ?? 'Aucun quai affiché' }}</p>
             </div>
         </section>
     {% endfor %}

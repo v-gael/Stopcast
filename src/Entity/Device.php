@@ -15,6 +15,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: DeviceRepository::class)]
 #[ORM\Table(name: 'device')]
 #[ORM\UniqueConstraint(name: 'uniq_device_token', columns: ['token'])]
+#[ORM\UniqueConstraint(name: 'uniq_device_screen_secret_hash', columns: ['screen_secret_hash'])]
 #[ORM\HasLifecycleCallbacks]
 class Device
 {
@@ -58,6 +59,14 @@ class Device
      */
     #[ORM\Column(type: Types::STRING, length: self::TOKEN_MAX_LENGTH)]
     private string $token;
+
+    /**
+     * Haché SHA-256 du secret de l'écran appairé, que l'écran garde dans son
+     * cookie ; null tant qu'aucun écran n'est appairé. Le secret en clair n'est
+     * jamais stocké.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $screenSecretHash = null;
 
     /**
      * Permet de couper l'accès d'un dispositif sans le supprimer.
@@ -155,6 +164,42 @@ class Device
         $this->token = Uuid::v4()->toRfc4122();
 
         return $this;
+    }
+
+    /**
+     * Haché sous lequel le secret d'un écran est stocké et recherché.
+     */
+    public static function hashScreenSecret(#[\SensitiveParameter] string $secret): string
+    {
+        return hash('sha256', $secret);
+    }
+
+    /**
+     * Appaire l'écran qui détient ce secret : un dispositif n'a qu'un écran,
+     * l'écran précédent, s'il y en avait un, ne s'authentifie plus.
+     */
+    public function pairScreen(#[\SensitiveParameter] string $secret): static
+    {
+        $this->screenSecretHash = self::hashScreenSecret($secret);
+
+        return $this;
+    }
+
+    public function unpairScreen(): static
+    {
+        $this->screenSecretHash = null;
+
+        return $this;
+    }
+
+    public function hasPairedScreen(): bool
+    {
+        return null !== $this->screenSecretHash;
+    }
+
+    public function getScreenSecretHash(): ?string
+    {
+        return $this->screenSecretHash;
     }
 
     public function isActive(): bool

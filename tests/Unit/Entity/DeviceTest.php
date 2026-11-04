@@ -40,6 +40,35 @@ final class DeviceTest extends TestCase
         yield 'plus de 64 caractères' => [str_repeat('a', Device::TOKEN_MAX_LENGTH + 1)];
     }
 
+    public function testNewDeviceHasNoPairedScreen(): void
+    {
+        self::assertFalse(new Device($this->owner(), 'A')->hasPairedScreen());
+    }
+
+    public function testPairingAScreenKeepsOnlyTheHashOfItsSecret(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('secret-de-l-ecran');
+
+        self::assertTrue($device->hasPairedScreen());
+        // SHA-256 de « secret-de-l-ecran », calculé à part.
+        self::assertSame('462e5b58629bac4eb9e97d66bfafe0b4337e875547a5d1f576e8b0879041e12d', $device->getScreenSecretHash());
+    }
+
+    public function testPairingAnotherScreenReplacesTheFirst(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('premier')->pairScreen('second');
+
+        self::assertSame(Device::hashScreenSecret('second'), $device->getScreenSecretHash());
+    }
+
+    public function testUnpairingForgetsTheScreen(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('secret')->unpairScreen();
+
+        self::assertFalse($device->hasPairedScreen());
+        self::assertNull($device->getScreenSecretHash());
+    }
+
     public function testActiveDisplayConfigurationsAreSortedByPosition(): void
     {
         $device = new Device($this->owner(), 'A');

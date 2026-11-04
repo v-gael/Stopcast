@@ -48,6 +48,10 @@
                             </dd>
                         </div>
                         <div>
+                            <dt class="font-medium text-slate-500">Écran</dt>
+                            <dd class="mt-0.5 text-slate-900" data-screen-state>{{ device.hasPairedScreen ? 'Écran appairé' : 'Aucun écran appairé' }}</dd>
+                        </div>
+                        <div>
                             <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>
                             <dd class="mt-0.5 text-slate-900" data-screen-duration>{{ device.screenDuration }} s</dd>
                         </div>
@@ -58,6 +62,16 @@
                     </dl>
 
                     <div class="flex flex-col gap-2">
+                        <twig:Button href="{{ path('app_device_pair', {id: device.id}) }}" variant="secondary">{{ device.hasPairedScreen ? "Remplacer l'écran" : 'Appairer un écran' }}</twig:Button>
+
+                        {% if device.hasPairedScreen %}
+                            <form method="post" action="{{ path('app_device_unpair', {id: device.id}) }}"
+                                  data-turbo-confirm="Dissocier l'écran de « {{ device.label }} » ? Il affichera de nouveau un code d'appairage.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('unpair-device-' ~ device.id) }}">
+                                <twig:Button type="submit" variant="secondary" class="w-full">Dissocier</twig:Button>
+                            </form>
+                        {% endif %}
+
                         <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
 
                         <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}" data-turbo-action="advance"

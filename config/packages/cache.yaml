@@ -18,6 +18,11 @@ framework:
         pools:
             # Flux temps réel, partagé entre tous les dispositifs (voir NextPassageFinder).
             gtfs_realtime.cache: null
+            # Demandes d'appairage des écrans, quelques minutes chacune (voir ScreenPairing).
+            # Sur disque en test aussi : un pool en mémoire est vidé à chaque
+            # requête, et un appairage en enchaîne plusieurs. Les clés sont
+            # aléatoires, rien ne déborde d'un test à l'autre.
+            display_pairing.cache: null
 
 when@test:
     framework:

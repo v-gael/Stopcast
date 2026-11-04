@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Display\Pairing\PairingConfirmation;
+use App\Display\Pairing\ScreenPairing;
 use App\Entity\Device;
 use App\Entity\User;
 use App\Form\DeviceType;
+use App\Form\PairScreenType;
 use App\Repository\DeviceRepository;
 use App\Security\Voter\DeviceVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\ExpressionLanguage\Expression;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
@@ -129,6 +133,58 @@ final class DeviceController extends AbstractController
         $this->addFlash('success', \sprintf('Le dispositif « %s » a été supprimé.', $device->getLabel()));
 
         return $this->redirectToRoute('app_device_index', status: Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Saisie du code affiché par un écran : l'écran reçoit son cookie à sa
+     * prochaine interrogation. Un écran déjà appairé est remplacé.
+     */
+    #[Route('/{id}/pair', name: 'app_device_pair', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[IsGranted(DeviceVoter::EDIT, 'device')]
+    public function pair(Request $request, Device $device, ScreenPairing $screenPairing): Response
+    {
+        $form = $this->createForm(PairScreenType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var string $code */
+            $code = $form->get('code')->getData();
+
+            $error = match ($screenPairing->confirm($code, $device)) {
+                PairingConfirmation::Confirmed => null,
+                PairingConfirmation::UnknownCode => "Ce code est inconnu ou a expiré. Saisissez le code affiché en ce moment sur l'écran.",
+                PairingConfirmation::TooManyAttempts => "Trop d'essais. Réessayez plus tard.",
+            };
+
+            if (null === $error) {
+                $this->addFlash('success', \sprintf("Code accepté : l'écran affichera « %s » dans quelques secondes.", $device->getLabel()));
+
+                return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
+            }
+
+            $form->get('code')->addError(new FormError($error));
+        }
+
+        return $this->render('device/pair.html.twig', [
+            'device' => $device,
+            'form' => $form,
+        ]);
+    }
+
+    /**
+     * L'écran appairé perd son accès et revient à l'écran d'appairage.
+     */
+    #[Route('/{id}/unpair', name: 'app_device_unpair', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsGranted(DeviceVoter::EDIT, 'device')]
+    #[IsCsrfTokenValid(new Expression('"unpair-device-" ~ args["device"].getId()'))]
+    public function unpair(Device $device, EntityManagerInterface $entityManager): Response
+    {
+        $device->unpairScreen();
+        $entityManager->flush();
+
+        $this->addFlash('success', "L'écran a été dissocié : il affiche de nouveau un code d'appairage.");
+
+        return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{id}/regenerate-token', name: 'app_device_regenerate_token', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
