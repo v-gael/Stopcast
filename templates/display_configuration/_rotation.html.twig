@@ -2,12 +2,15 @@
 {% set configurations = device.displayConfigurationsInRotationOrder %}
 {# Depuis la liste des configurations, les actions y ramènent ; sinon, vers le dispositif. #}
 {% set from_index = app.current_route == 'app_display_configuration_index' %}
+{% set icon_button = 'flex size-7 items-center justify-center rounded-md ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700' %}
+{% set icon = 'viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"' %}
 {% if configurations is empty %}
     <p class="text-slate-600">Aucune configuration : le dispositif n'a rien à afficher.</p>
 {% else %}
     <ol class="divide-y divide-slate-200">
         {% for configuration in configurations %}
-            <li class="flex items-center gap-3 py-3">
+            {% set name = configuration.label ?: configuration.quay.name %}
+            <li class="flex items-start gap-2 py-2">
                 {# Flèches de rotation ; aux extrémités, un emplacement vide garde l'alignement. #}
                 <div class="flex shrink-0 flex-col gap-1">
                     {% for move in [
@@ -18,9 +21,9 @@
                             <form method="post" action="{{ path(move.route, {id: configuration.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('move-display-configuration-' ~ configuration.id) }}">
                                 {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
-                                <button type="submit" title="{{ move.title }}" class="flex size-7 items-center justify-center rounded-md text-slate-500 ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
-                                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"><path d="{{ move.icon }}"/></svg>
-                                    <span class="sr-only">{{ move.label }} {{ configuration.label ?: configuration.quay.name }}</span>
+                                <button type="submit" title="{{ move.title }}" class="{{ icon_button }} text-slate-500 hover:text-slate-900">
+                                    <svg {{ icon|raw }}><path d="{{ move.icon }}"/></svg>
+                                    <span class="sr-only">{{ move.label }} {{ name }}</span>
                                 </button>
                             </form>
                         {% else %}
@@ -29,22 +32,40 @@
                     {% endfor %}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="font-medium text-slate-900" data-label>{{ configuration.label ?: configuration.quay.name }}</p>
-                    <p class="text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
-                </div>
-                <div class="flex flex-wrap items-center justify-end gap-2">
-                    {% if configuration.active %}
-                        <twig:Badge variant="success">Affichée</twig:Badge>
-                    {% else %}
-                        <twig:Badge variant="warning">Masquée</twig:Badge>
-                    {% endif %}
+                    <p class="truncate font-medium text-slate-900" data-label>{{ name }}</p>
+                    <p class="truncate text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
                     {{ include('display_configuration/_deprecated_quay.html.twig') }}
-                    <twig:Button href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" variant="secondary">Modifier<span class="sr-only"> {{ configuration.label ?: configuration.quay.name }}</span></twig:Button>
+                </div>
+                <div class="flex shrink-0 gap-1">
+                    {# Œil ouvert : affichée, le bouton la masque ; œil barré, en ambre : masquée, le bouton l'affiche. #}
+                    <form method="post" action="{{ path('app_display_configuration_visibility', {id: configuration.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('display-configuration-visibility-' ~ configuration.id) }}">
+                        <input type="hidden" name="active" value="{{ configuration.active ? 0 : 1 }}">
+                        {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
+                        {% if configuration.active %}
+                            <button type="submit" title="Affichée : la masquer de la rotation" class="{{ icon_button }} text-slate-500 hover:text-slate-900" data-visibility="active">
+                                <svg {{ icon|raw }}><path d="M1.5 10s3-6 8.5-6 8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                                <span class="sr-only">Masquer {{ name }}</span>
+                            </button>
+                        {% else %}
+                            <button type="submit" title="Masquée : l'afficher dans la rotation" class="{{ icon_button }} text-amber-700 hover:text-amber-800" data-visibility="hidden">
+                                <svg {{ icon|raw }}><path d="M3 3l14 14"/><path d="M8.2 4.2A8 8 0 0 1 10 4c5.5 0 8.5 6 8.5 6a14 14 0 0 1-2.3 3.1M5.6 5.6C3 7.3 1.5 10 1.5 10s3 6 8.5 6a8 8 0 0 0 4.4-1.4"/><path d="M8.2 8.2a2.5 2.5 0 0 0 3.6 3.6"/></svg>
+                                <span class="sr-only">Afficher {{ name }}</span>
+                            </button>
+                        {% endif %}
+                    </form>
+                    <a href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" title="Modifier" class="{{ icon_button }} text-slate-500 hover:text-slate-900">
+                        <svg {{ icon|raw }}><path d="M13.5 3.5l3 3L7 16H4v-3z"/></svg>
+                        <span class="sr-only">Modifier {{ name }}</span>
+                    </a>
                     <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
-                          data-turbo-confirm="Supprimer la configuration « {{ configuration.label ?: configuration.quay.name }} » ? Cette action est définitive.">
+                          data-turbo-confirm="Supprimer la configuration « {{ name }} » ? Cette action est définitive.">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
                         {% if from_index %}<input type="hidden" name="_return" value="index">{% endif %}
-                        <twig:Button type="submit" variant="danger">Supprimer<span class="sr-only"> {{ configuration.label ?: configuration.quay.name }}</span></twig:Button>
+                        <button type="submit" title="Supprimer" class="{{ icon_button }} text-slate-500 hover:text-red-700">
+                            <svg {{ icon|raw }}><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+                            <span class="sr-only">Supprimer {{ name }}</span>
+                        </button>
                     </form>
                 </div>
             </li>
@@ -52,5 +73,5 @@
     </ol>
 {% endif %}
 <div class="mt-4">
-    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary">Ajouter une configuration<span class="sr-only"> à {{ device.label }}</span></twig:Button>
+    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary" class="{{ from_index ? '' : 'w-full' }}">Ajouter une configuration<span class="sr-only"> à {{ device.label }}</span></twig:Button>
 </div>

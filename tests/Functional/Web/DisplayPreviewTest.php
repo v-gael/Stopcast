@@ -129,21 +129,18 @@ final class DisplayPreviewTest extends WebTestCase
         self::assertStringContainsString("frame-ancestors 'none'", (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
     }
 
-    public function testDevicePageFramesOnePreviewPerActiveConfiguration(): void
+    public function testDevicePageFramesTheWholeRotationInOnePreview(): void
     {
-        $gare = $this->configure('Gare', 'GARE ROUTIERE');
+        $this->configure('Gare', 'GARE ROUTIERE');
         $this->configure('Masquée', 'MAIRIE', position: 1, active: false);
-        $centre = $this->configure(null, 'CENTRE VILLE', position: 2);
+        $this->configure(null, 'CENTRE VILLE', position: 2);
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $this->device->getId()));
 
         $frames = $crawler->filter('iframe');
-        self::assertSame(
-            [\sprintf('/display-configurations/%d/preview', $gare->getId()), \sprintf('/display-configurations/%d/preview', $centre->getId())],
-            $frames->each(static fn (Crawler $frame): ?string => $frame->attr('src')),
-        );
+        self::assertSame([$this->devicePreview()], $frames->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
         self::assertSame(['480', '320'], [$frames->attr('width'), $frames->attr('height')]);
-        self::assertSame(['Aperçu de « Gare »', 'Aperçu de « CENTRE VILLE »'], $frames->each(static fn (Crawler $frame): ?string => $frame->attr('title')));
+        self::assertSame(\sprintf('Aperçu de « %s »', $this->device->getLabel()), $frames->attr('title'));
     }
 
     public function testDevicePageWithoutActiveConfigurationFramesTheDevicePreview(): void

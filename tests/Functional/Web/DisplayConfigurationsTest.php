@@ -124,7 +124,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame('morph', $crawler->filter('head meta[name="turbo-refresh-method"]')->attr('content'));
         self::assertSame('preserve', $crawler->filter('head meta[name="turbo-refresh-scroll"]')->attr('content'));
         $items = $crawler->filter('main li');
-        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Supprimer')] as $button) {
+        foreach ([$items->eq(0)->selectButton('Descendre'), $items->eq(1)->selectButton('Monter'), $items->eq(0)->selectButton('Masquer'), $items->eq(0)->selectButton('Supprimer')] as $button) {
             self::assertSame($return, $button->form()->getValues()['_return'] ?? null);
         }
     }
@@ -136,6 +136,7 @@ final class DisplayConfigurationsTest extends WebTestCase
     {
         yield 'montée' => ['Monter'];
         yield 'descente' => ['Descendre'];
+        yield 'masquage' => ['Masquer'];
         yield 'suppression' => ['Supprimer'];
     }
 
@@ -177,6 +178,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         yield 'suppression' => ['POST', '/display-configurations/%d/delete'];
         yield 'montée' => ['POST', '/display-configurations/%d/move-up'];
         yield 'descente' => ['POST', '/display-configurations/%d/move-down'];
+        yield 'masquage' => ['POST', '/display-configurations/%d/visibility'];
     }
 
     #[DataProvider('configurationActions')]
@@ -190,7 +192,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->request($method, \sprintf($path, $configuration->getId()));
 
         self::assertResponseStatusCodeSame(403);
-        self::assertSame(1, $this->reload($configuration)->getPosition());
+        $configuration = $this->reload($configuration);
+        self::assertSame(1, $configuration->getPosition());
+        self::assertTrue($configuration->isActive());
     }
 
     /**
@@ -202,6 +206,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         yield 'suppression avec un jeton invalide' => ['/display-configurations/%d/delete', ['_token' => 'invalide']];
         yield 'montée sans jeton' => ['/display-configurations/%d/move-up', []];
         yield 'descente sans jeton' => ['/display-configurations/%d/move-down', []];
+        yield 'masquage sans jeton' => ['/display-configurations/%d/visibility', ['active' => '0']];
     }
 
     /**
@@ -218,7 +223,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->request('POST', \sprintf($path, $configuration->getId()), $parameters);
 
         self::assertFalse($this->client->getResponse()->isSuccessful());
-        self::assertSame(1, $this->reload($configuration)->getPosition());
+        $configuration = $this->reload($configuration);
+        self::assertSame(1, $configuration->getPosition());
+        self::assertTrue($configuration->isActive());
     }
 
     public function testQuayAutocompleteOffersOnlyActiveQuaysWithTheirDestinations(): void
@@ -328,10 +335,46 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        $this->client->followRedirect();
+        $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'La configuration a été modifiée.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
-        self::assertSelectorTextContains('main li:nth-child(2)', 'Masquée');
+        self::assertCount(1, $crawler->filter('main li')->eq(1)->selectButton('Afficher Vers la gare'));
+        self::assertSame(['Premier'], $this->displayedLabels($device));
+    }
+
+    public function testEyeButtonHidesThenShowsTheConfiguration(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        self::assertCount(0, $crawler->filter('main li')->eq(1)->selectButton('Afficher'));
+        $this->client->submit($crawler->filter('main li')->eq(1)->selectButton('Masquer')->form());
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $crawler = $this->client->followRedirect();
+        $item = $crawler->filter('main li')->eq(1);
+        self::assertCount(0, $item->selectButton('Masquer'));
+        self::assertSame('hidden', $item->filter('[data-visibility]')->attr('data-visibility'));
+        $this->client->submit($item->selectButton('Afficher')->form());
+        $this->client->followRedirect();
+        self::assertSame('active', $this->client->getCrawler()->filter('main li')->eq(1)->filter('[data-visibility]')->attr('data-visibility'));
+
+        self::assertSame(['Premier', 'Deuxième'], $this->displayedLabels($device));
+    }
+
+    public function testHidingTwiceKeepsTheConfigurationHidden(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $form = $crawler->filter('main li')->eq(1)->selectButton('Masquer')->form();
+        $this->client->submit($form);
+        $this->client->submit($form);
+
         self::assertSame(['Premier'], $this->displayedLabels($device));
     }
 

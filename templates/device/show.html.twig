@@ -22,66 +22,55 @@
         </div>
     {% endif %}
 
-    <div class="grid gap-6 lg:grid-cols-3">
-        <twig:Card title="Configurations d'affichage" class="lg:col-span-2">
+    {# Un tiers pour la rotation, deux pour le dispositif : son écran, et à côté ses réglages, à la hauteur de l'écran. #}
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <twig:Card title="Configurations d'affichage">
             {{ include('display_configuration/_rotation.html.twig') }}
         </twig:Card>
 
-        <twig:Card title="Dispositif">
-            <dl class="space-y-3 text-sm">
-                <div>
-                    <dt class="font-medium text-slate-500">Créé le</dt>
-                    <dd class="mt-1 text-slate-900">{{ device.createdAt|date('d/m/Y à H:i') }}</dd>
-                </div>
-                <div>
-                    <dt class="font-medium text-slate-500">Durée d'un écran</dt>
-                    <dd class="mt-1 text-slate-900" data-screen-duration>{{ device.screenDuration }} s</dd>
-                </div>
-                <div>
-                    <dt class="font-medium text-slate-500">Rafraîchissement des données</dt>
-                    <dd class="mt-1 text-slate-900" data-refresh-interval>{{ device.refreshInterval }} s</dd>
-                </div>
-            </dl>
-
-            <div class="mt-6 flex flex-col gap-3">
-                <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
-
-                <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}" data-turbo-action="advance"
-                      data-turbo-confirm="Générer un nouveau jeton ? L'ancien cessera immédiatement de fonctionner : l'afficheur devra être reconfiguré.">
-                    <input type="hidden" name="_token" value="{{ csrf_token('regenerate-device-token-' ~ device.id) }}">
-                    <twig:Button type="submit" variant="secondary" class="w-full">Régénérer le jeton</twig:Button>
-                </form>
-
-                <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
-                      data-turbo-confirm="Supprimer « {{ device.label }} » et ses configurations d'affichage ? Cette action est définitive.">
-                    <input type="hidden" name="_token" value="{{ csrf_token('delete-device-' ~ device.id) }}">
-                    <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
-                </form>
-            </div>
-        </twig:Card>
-    </div>
-
-    <twig:Card title="Aperçu de l'écran" class="mt-6">
-        <p class="mb-4 text-sm text-slate-600">Sur des passages d'exemple, chaque configuration affichée telle que l'écran la montre, avec la durée d'écran et le rafraîchissement du dispositif.</p>
-        {% set active_configurations = device.activeDisplayConfigurations %}
-        <div class="flex flex-wrap gap-6">
-            {% for configuration in active_configurations %}
-                <figure class="w-full max-w-[480px]">
-                    {{ include('display/_preview.html.twig', {
-                        preview_url: path('app_display_configuration_preview', {id: configuration.id}),
-                        preview_title: 'Aperçu de « ' ~ (configuration.label ?: configuration.quay.name) ~ ' »',
-                    }, with_context = false) }}
-                    <figcaption class="mt-2 text-sm font-medium text-slate-900">{{ configuration.label ?: configuration.quay.name }}</figcaption>
-                </figure>
-            {% else %}
-                <figure class="w-full max-w-[480px]">
+        <twig:Card title="Dispositif" class="lg:col-span-2">
+            <div class="flex flex-col gap-6 xl:flex-row">
+                <div class="min-w-0 flex-1">
+                    {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
                     {{ include('display/_preview.html.twig', {
                         preview_url: path('app_device_preview', {id: device.id}),
                         preview_title: 'Aperçu de « ' ~ device.label ~ ' »',
                     }, with_context = false) }}
-                    <figcaption class="mt-2 text-sm text-slate-600">Aucune configuration affichée : l'écran le signale.</figcaption>
-                </figure>
-            {% endfor %}
-        </div>
-    </twig:Card>
+                </div>
+
+                <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
+                    <dl class="space-y-2 text-sm">
+                        <div>
+                            <dt class="font-medium text-slate-500">Créé le</dt>
+                            <dd class="mt-0.5 text-slate-900">{{ device.createdAt|date('d/m/Y à H:i') }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Durée d'un écran</dt>
+                            <dd class="mt-0.5 text-slate-900" data-screen-duration>{{ device.screenDuration }} s</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Rafraîchissement des données</dt>
+                            <dd class="mt-0.5 text-slate-900" data-refresh-interval>{{ device.refreshInterval }} s</dd>
+                        </div>
+                    </dl>
+
+                    <div class="flex flex-col gap-2">
+                        <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
+
+                        <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}" data-turbo-action="advance"
+                              data-turbo-confirm="Générer un nouveau jeton ? L'ancien cessera immédiatement de fonctionner : l'afficheur devra être reconfiguré.">
+                            <input type="hidden" name="_token" value="{{ csrf_token('regenerate-device-token-' ~ device.id) }}">
+                            <twig:Button type="submit" variant="secondary" class="w-full">Régénérer le jeton</twig:Button>
+                        </form>
+
+                        <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
+                              data-turbo-confirm="Supprimer « {{ device.label }} » et ses configurations d'affichage ? Cette action est définitive.">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete-device-' ~ device.id) }}">
+                            <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </twig:Card>
+    </div>
 {% endblock %}

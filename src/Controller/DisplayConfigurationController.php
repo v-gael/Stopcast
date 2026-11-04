@@ -126,6 +126,21 @@ final class DisplayConfigurationController extends AbstractController
     }
 
     /**
+     * Affiche (« active=1 ») ou masque (« active=0 ») la configuration : l'état demandé, pas une bascule,
+     * pour qu'un double envoi ne la remette pas dans l'état d'avant.
+     */
+    #[Route('/{id}/visibility', name: 'app_display_configuration_visibility', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsGranted(DisplayConfigurationVoter::EDIT, 'configuration')]
+    #[IsCsrfTokenValid(new Expression('"display-configuration-visibility-" ~ args["configuration"].getId()'))]
+    public function visibility(Request $request, DisplayConfiguration $configuration, EntityManagerInterface $entityManager): Response
+    {
+        $configuration->setActive($request->getPayload()->getBoolean('active'));
+        $entityManager->flush();
+
+        return $this->redirectBack($request, $configuration);
+    }
+
+    /**
      * Retour à la page du formulaire : « _return=index » pour la liste, le dispositif sinon.
      * Aucune autre destination n'est acceptée.
      */
