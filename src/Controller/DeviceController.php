@@ -123,7 +123,7 @@ final class DeviceController extends AbstractController
         DeviceRepository $deviceRepository,
         ScreenPairing $screenPairing,
         #[MapQueryParameter] string $code = '',
-        #[MapQueryParameter] ?int $device = null,
+        #[MapQueryParameter('device')] ?int $deviceId = null,
     ): Response {
         $pairingCode = PairingCode::normalize($code);
 
@@ -132,13 +132,8 @@ final class DeviceController extends AbstractController
         }
 
         $devices = $deviceRepository->findBy(['owner' => $user], ['label' => 'ASC', 'id' => 'ASC']);
-        $preselected = 1 === \count($devices) ? $devices[0] : null;
-
-        foreach ($devices as $candidate) {
-            if ($candidate->getId() === $device) {
-                $preselected = $candidate;
-            }
-        }
+        $preselected = array_find($devices, static fn (Device $candidate): bool => $candidate->getId() === $deviceId)
+            ?? (1 === \count($devices) ? $devices[0] : null);
 
         $form = $this->createForm(ScannedPairingType::class, ['device' => $preselected], ['devices' => $devices]);
         $form->handleRequest($request);
@@ -162,7 +157,7 @@ final class DeviceController extends AbstractController
 
         return $this->render('device/pair_scanned.html.twig', [
             'code' => PairingCode::format($pairingCode),
-            'pair_code' => $pairingCode,
+            'raw_code' => $pairingCode,
             'form' => [] === $devices ? null : $form,
         ]);
     }
@@ -276,11 +271,11 @@ final class DeviceController extends AbstractController
     /**
      * Message d'erreur d'un appairage refusé, null s'il est accepté.
      */
-    private function pairingError(PairingConfirmation $confirmation, string $unknownCode): ?string
+    private function pairingError(PairingConfirmation $confirmation, string $unknownCodeMessage): ?string
     {
         return match ($confirmation) {
             PairingConfirmation::Confirmed => null,
-            PairingConfirmation::UnknownCode => $unknownCode,
+            PairingConfirmation::UnknownCode => $unknownCodeMessage,
             PairingConfirmation::TooManyAttempts => "Trop d'essais. Réessayez plus tard.",
         };
     }

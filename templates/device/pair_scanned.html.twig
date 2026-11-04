@@ -1,21 +1,23 @@
 {#
  # Page ouverte en scannant le QR code d'un écran (« code » formaté, ou null
  # si l'adresse n'en porte pas de valide) : choix du dispositif dans « form »,
- # ou création d'un premier dispositif qui ramène ici avec « pair_code ».
+ # ou création d'un premier dispositif qui ramène ici avec « raw_code ».
  #}
 {% extends 'layout/space.html.twig' %}
 
-{% block title %}{{ code ? "Appairer l'écran " ~ code : 'Appairer un écran' }} · Stopcast{% endblock %}
+{% set heading = code ? "Appairer l'écran " ~ code : 'Appairer un écran' %}
+
+{% block title %}{{ heading }} · Stopcast{% endblock %}
 
 {% block content %}
-    <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ code ? "Appairer l'écran " ~ code : 'Appairer un écran' }}</h1>
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ heading }}</h1>
 
     <twig:Card class="max-w-md">
         {% if not code %}
             <p class="text-sm text-slate-700">Cette adresse ne contient pas de code d'appairage valide. Scannez de nouveau le QR code affiché sur l'écran.</p>
         {% elseif not form %}
             <p class="mb-4 text-sm text-slate-700">Vous n'avez pas encore de dispositif.</p>
-            <twig:Button href="{{ path('app_device_new', {pair: pair_code}) }}">Créer un dispositif</twig:Button>
+            <twig:Button href="{{ path('app_device_new', {pair: raw_code}) }}">Créer un dispositif</twig:Button>
         {% else %}
             <p class="mb-4 text-sm text-slate-700">Choisissez le dispositif que cet écran affichera.</p>
 

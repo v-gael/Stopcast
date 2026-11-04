@@ -66,7 +66,7 @@ final class ScannedPairingTest extends WebTestCase
         $code = $this->displayedCode();
         $this->client->loginUser($this->user);
 
-        $this->client->request('GET', '/devices/pair?code='.str_replace('-', '', $code));
+        $this->client->request('GET', $this->scannedPairingPath($code));
 
         self::assertResponseIsSuccessful();
         $this->client->request('GET', '/display/pairing');
@@ -80,7 +80,7 @@ final class ScannedPairingTest extends WebTestCase
         $code = $this->displayedCode();
         $this->client->loginUser($this->user);
 
-        $crawler = $this->client->request('GET', '/devices/pair?code='.str_replace('-', '', $code));
+        $crawler = $this->client->request('GET', $this->scannedPairingPath($code));
 
         self::assertSame((string) $device->getId(), $this->selectedDevice($crawler->selectButton('Appairer')->form()['scanned_pairing[device]']));
 
@@ -163,7 +163,7 @@ final class ScannedPairingTest extends WebTestCase
         $code = $this->displayedCode();
         $this->client->loginUser($this->user);
 
-        $crawler = $this->client->request('GET', '/devices/pair?code='.str_replace('-', '', $code));
+        $crawler = $this->client->request('GET', $this->scannedPairingPath($code));
         $form = $crawler->selectButton('Appairer')->form();
         $form->disableValidation();
 

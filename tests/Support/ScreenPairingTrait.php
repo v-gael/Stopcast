@@ -46,7 +46,7 @@ trait ScreenPairingTrait
      */
     private function pairScannedCode(string $code, Device $device): void
     {
-        $crawler = $this->browser()->request('GET', '/devices/pair?code='.str_replace('-', '', $code));
+        $crawler = $this->browser()->request('GET', $this->scannedPairingPath($code));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Appairer')->form();
@@ -55,6 +55,14 @@ trait ScreenPairingTrait
         $choice->select((string) $device->getId());
 
         $this->browser()->submit($form);
+    }
+
+    /**
+     * Adresse encodée dans le QR code d'un écran qui affiche ce code.
+     */
+    private function scannedPairingPath(string $code): string
+    {
+        return '/devices/pair?code='.str_replace('-', '', $code);
     }
 
     /**

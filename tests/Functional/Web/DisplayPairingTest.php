@@ -95,7 +95,7 @@ final class DisplayPairingTest extends WebTestCase
 
         self::assertCount(1, $qrCode->filter('svg'));
         self::assertCount(0, $qrCode->filter('[style], script'));
-        self::assertSame('QR code vers https://localhost/devices/pair?code='.str_replace('-', '', $code), $qrCode->attr('aria-label'));
+        self::assertSame('QR code vers https://localhost'.$this->scannedPairingPath($code), $qrCode->attr('aria-label'));
     }
 
     public function testEnteredCodePairsTheScreenWhichThenShowsItsPassages(): void
