@@ -316,6 +316,17 @@ final class DevicesTest extends WebTestCase
         self::assertSame('durationInput', $crawler->filter('#device_screenDuration')->attr('data-device-bench-target'));
     }
 
+    public function testNewFormShowsTheTestScreenAtTheDefaultDuration(): void
+    {
+        $crawler = $this->client->request('GET', '/devices/new');
+
+        $bench = $crawler->filter('[data-controller="device-bench"]');
+        self::assertSame((string) Device::DEFAULT_SCREEN_DURATION, $bench->attr('data-device-bench-saved-duration-value'));
+        self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
+        self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSame('/devices', $crawler->selectLink('Annuler')->attr('href'));
+    }
+
     public function testDetailShowsTheStateWithTheCreationDateOnHover(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);

@@ -10,30 +10,8 @@
 {% block content %}
     <h1 class="mb-6 text-2xl font-bold text-slate-900">Modifier le dispositif</h1>
 
-    {#
-     # Même disposition que la page du dispositif : le formulaire sur un tiers, un écran de test sur deux.
-     # L'écran de test suit la saisie (libellé, durée d'un écran) sans rien enregistrer.
-     #}
-    <div class="grid items-start gap-6 lg:grid-cols-3"
-         data-controller="device-bench"
-         data-device-bench-saved-duration-value="{{ device.screenDuration }}"
-         data-device-bench-empty-label-value="Sans libellé">
-        <twig:Card title="Dispositif">
-            {{ form_start(form) }}
-                {{ form_row(form.label, {attr: {'data-device-bench-target': 'labelInput', 'data-action': 'input->device-bench#updateLabel'}}) }}
-                {{ form_row(form.screenDuration, {attr: {'data-device-bench-target': 'durationInput', 'data-action': 'input->device-bench#updateDuration'}}) }}
-                {{ form_rest(form) }}
-
-                <div class="flex flex-wrap gap-3">
-                    <twig:Button type="submit">Enregistrer</twig:Button>
-                    <twig:Button href="{{ path('app_device_show', {id: device.id}) }}" variant="secondary">Annuler</twig:Button>
-                </div>
-            {{ form_end(form) }}
-        </twig:Card>
-
-        <twig:Card title="Aperçu de l'écran" class="lg:col-span-2">
-            <p class="mb-3 truncate font-medium text-slate-900" data-device-bench-target="labelOutput">{{ device.label }}</p>
-            {{ include('device/_bench.html.twig') }}
-        </twig:Card>
-    </div>
+    {{ include('device/_form.html.twig', {
+        submit_label: 'Enregistrer',
+        cancel_url: path('app_device_show', {id: device.id}),
+    }) }}
 {% endblock %}
