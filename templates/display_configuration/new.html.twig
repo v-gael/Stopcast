@@ -1,19 +1,20 @@
 {% extends 'layout/space.html.twig' %}
 
-{% block title %}Ajouter une configuration d'affichage · Stopcast{% endblock %}
+{% block title %}Ajouter un quai · Stopcast{% endblock %}
 
 {% block content %}
-    <h1 class="mb-6 text-2xl font-bold text-slate-900">Ajouter une configuration d'affichage</h1>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-900">Ajouter un quai</h1>
+        <p class="mt-1 text-slate-600">Sur le dispositif « {{ device.label }} ».</p>
+    </div>
 
     <twig:Card class="max-w-xl">
         {{ form_start(form) }}
             {{ form_widget(form) }}
 
             <div class="flex flex-wrap gap-3">
-                <twig:Button type="submit">Créer</twig:Button>
-                {# Vers le dispositif présélectionné (?device={id}), sinon vers la liste des dispositifs. #}
-                {% set device_id = form.device.vars.value %}
-                <twig:Button href="{{ device_id ? path('app_device_show', {id: device_id}) : path('app_device_index') }}" variant="secondary">Annuler</twig:Button>
+                <twig:Button type="submit">Ajouter</twig:Button>
+                <twig:Button href="{{ path('app_device_show', {id: device.id}) }}" variant="secondary">Annuler</twig:Button>
             </div>
         {{ form_end(form) }}
     </twig:Card>

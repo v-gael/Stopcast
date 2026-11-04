@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\DisplayConfiguration;
-use App\Entity\User;
 use App\Form\DisplayConfigurationType;
 use App\Repository\DeviceRepository;
+use App\Security\Voter\DeviceVoter;
 use App\Security\Voter\DisplayConfigurationVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +17,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -25,37 +24,39 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class DisplayConfigurationController extends AbstractController
 {
     /**
-     * « ?device={id} » présélectionne l'un de ses dispositifs ; celui d'un autre compte est ignoré.
+     * « ?device={id} » est le dispositif qui reçoit le quai : sans lui, 404 ;
+     * celui d'un autre compte, 403.
      */
     #[Route('/new', name: 'app_display_configuration_new', methods: ['GET', 'POST'])]
     public function new(
         Request $request,
-        #[CurrentUser] User $user,
         DeviceRepository $deviceRepository,
         EntityManagerInterface $entityManager,
-        #[MapQueryParameter] ?int $device = null,
+        #[MapQueryParameter] int $device,
     ): Response {
-        $form = $this->createForm(DisplayConfigurationType::class, options: ['owner' => $user]);
+        $target = $deviceRepository->find($device) ?? throw $this->createNotFoundException();
+        $this->denyAccessUnlessGranted(DeviceVoter::EDIT, $target);
 
-        if (null !== $device && !$request->isMethod('POST')) {
-            $form->get('device')->setData($deviceRepository->findOneBy(['id' => $device, 'owner' => $user]));
-        }
-
+        $form = $this->createForm(DisplayConfigurationType::class, options: [
+            'device' => $target,
+            'action' => $this->generateUrl('app_display_configuration_new', ['device' => $target->getId()]),
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $configuration = $form->getData();
             \assert($configuration instanceof DisplayConfiguration);
-            $configuration->getDevice()->appendDisplayConfiguration($configuration);
+            $target->appendDisplayConfiguration($configuration);
             $entityManager->persist($configuration);
             $entityManager->flush();
 
-            $this->addFlash('success', 'La configuration a été créée.');
+            $this->addFlash('success', 'Le quai a été ajouté.');
 
             return $this->redirectToDevice($configuration);
         }
 
         return $this->render('display_configuration/new.html.twig', [
+            'device' => $target,
             'form' => $form,
         ]);
     }
