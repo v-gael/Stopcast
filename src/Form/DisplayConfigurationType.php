@@ -65,6 +65,8 @@ final class DisplayConfigurationType extends AbstractType
                 'label' => 'Affichée',
                 'help' => 'Masquée, la configuration sort de la rotation sans être supprimée.',
                 'required' => false,
+                // Dessinée en interrupteur, comme dans la liste de rotation (templates/form/tailwind_layout.html.twig).
+                'block_prefix' => 'switch',
             ]);
         }
     }

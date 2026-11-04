@@ -330,6 +330,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $form = $crawler->selectButton('Enregistrer')->form();
         self::assertArrayNotHasKey('display_configuration[device]', $form->all());
         self::assertInstanceOf(ChoiceFormField::class, $form['display_configuration[active]']);
+        self::assertSame('switch', $crawler->filter('#display_configuration_active')->attr('role'));
         $form['display_configuration[active]']->untick();
         $form['display_configuration[label]'] = 'Vers la gare';
         $this->client->submit($form);
@@ -375,6 +376,22 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
         $this->client->submit($form);
 
+        self::assertSame(['Premier'], $this->displayedLabels($device));
+    }
+
+    public function testEditPageDeletesTheConfigurationAndReturnsToTheDevice(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $configuration = $this->configure($device, 'Deuxième');
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
+        self::assertSelectorTextContains('main dl', $device->getLabel());
+        $form = $crawler->selectButton('Supprimer')->form();
+        self::assertStringContainsString('Deuxième', $form->getFormNode()->getAttribute('data-turbo-confirm'));
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         self::assertSame(['Premier'], $this->displayedLabels($device));
     }
 

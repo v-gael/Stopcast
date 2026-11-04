@@ -32,6 +32,13 @@
     {{- parent() -}}
 {%- endblock checkbox_widget -%}
 
+{# Case à cocher dessinée en interrupteur (option « block_prefix: switch ») : vert, cochée ; gris, décochée. #}
+{%- block switch_widget -%}
+    {%- set widget_class = 'mr-3 relative h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full border-0 bg-slate-100 ring-1 ring-inset ring-slate-500 transition-colors before:absolute before:top-0.5 before:left-0.5 before:size-4 before:rounded-full before:bg-slate-500 before:shadow before:transition-all checked:bg-emerald-600 checked:bg-none checked:text-emerald-600 checked:ring-0 checked:before:left-[18px] checked:before:bg-white checked:hover:bg-emerald-700 focus:ring-offset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700' -%}
+    {%- set attr = attr|merge({role: 'switch'}) -%}
+    {{- block('checkbox_widget') -}}
+{%- endblock switch_widget -%}
+
 {%- block radio_widget -%}
     {%- set widget_class = widget_class|default('mr-2 border-slate-500 text-amber-600 focus:ring-amber-700') -%}
     {{- parent() -}}
