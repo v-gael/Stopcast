@@ -6,7 +6,7 @@ Stopcast fait désormais la mise en page : la **page d'affichage** (`/display`),
 
 - L'écran sans cookie affiche un code de six caractères et un compte à rebours. Le code change toutes les minutes et reste accepté une minute de plus.
 - Le propriétaire saisit le code sur la fiche de son dispositif.
-- L'écran, qui interroge le serveur toutes les 5 s, reçoit alors un secret aléatoire de 256 bits dans un cookie `HttpOnly`, `Secure`, `SameSite=Strict`, de 400 jours, renvoyé à chaque réponse. Seul son haché SHA-256 est enregistré sur le dispositif.
+- L'écran, qui interroge le serveur toutes les 5 s, reçoit alors un secret aléatoire de 256 bits dans un cookie `HttpOnly`, `SameSite=Strict`, `Secure` en HTTPS (toujours en prod), de 400 jours, renvoyé à chaque réponse. Seul son haché SHA-256 est enregistré sur le dispositif.
 
 Aucun secret n'est configuré sur le Pi : seule l'adresse de l'instance l'est.
 

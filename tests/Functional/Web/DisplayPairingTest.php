@@ -210,6 +210,18 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame('strict', strtolower((string) $cookie->getSameSite()));
     }
 
+    public function testScreenCookiesAreSecureOnlyOverHttps(): void
+    {
+        $this->client->setServerParameters([]);
+        $this->client->request('GET', '/display');
+
+        $cookies = $this->client->getResponse()->headers->getCookies();
+        self::assertCount(1, $cookies);
+        self::assertSame('STOPCAST_DISPLAY_PAIRING', $cookies[0]->getName());
+        self::assertFalse($cookies[0]->isSecure());
+        self::assertTrue($cookies[0]->isHttpOnly());
+    }
+
     public function testCodeGenerationIsLimitedPerAddress(): void
     {
         for ($i = 0; $i < 150; ++$i) {

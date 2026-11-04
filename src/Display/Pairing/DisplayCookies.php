@@ -7,6 +7,7 @@ namespace App\Display\Pairing;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -14,8 +15,12 @@ use Symfony\Component\HttpFoundation\Response;
  * appairé, 400 jours) et celui de la demande d'appairage en cours (le temps de
  * la session du navigateur).
  *
- * HttpOnly, Secure, SameSite=Strict, Path=/ ; préfixés « __Host- » en prod,
- * comme le cookie de remember-me.
+ * HttpOnly, SameSite=Strict, Path=/ ; préfixés « __Host- » en prod, comme le
+ * cookie de remember-me. Secure dès que la requête arrive en HTTPS, comme le
+ * réglage « cookie_secure: auto » des sessions : le navigateur de l'écran
+ * (cog, WPE WebKit) refuse un cookie Secure reçu en HTTP, même sur localhost,
+ * ce qui bloquerait l'appairage contre l'instance de dev. En prod, le site est
+ * en HTTPS et le préfixe « __Host- » impose de toute façon Secure.
  */
 final readonly class DisplayCookies
 {
@@ -27,6 +32,7 @@ final readonly class DisplayCookies
     private string $pairingName;
 
     public function __construct(
+        private RequestStack $requestStack,
         #[Autowire(param: 'app.display_cookie_prefix')]
         string $prefix,
     ) {
@@ -83,6 +89,8 @@ final readonly class DisplayCookies
 
     private function cookie(string $name, #[\SensitiveParameter] string $value, \DateTimeInterface|int $expire): Cookie
     {
-        return Cookie::create($name, $value, $expire, '/', null, true, true, false, Cookie::SAMESITE_STRICT);
+        $secure = $this->requestStack->getMainRequest()?->isSecure() ?? true;
+
+        return Cookie::create($name, $value, $expire, '/', null, $secure, true, false, Cookie::SAMESITE_STRICT);
     }
 }
