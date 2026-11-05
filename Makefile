@@ -90,8 +90,8 @@ fix: ## Applique Rector puis PHP CS Fixer (le hook pre-commit le fait sur les fi
 hooks: ## Active les hooks du dépôt (pre-commit : corrige le style ; pre-push : lance make check)
 	@git config core.hooksPath .githooks
 
-test: ## Lance PHPUnit
-	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox
+test: ## Lance PHPUnit (un fichier ou un dossier : make test f="tests/Functional/Web/LoginTest.php")
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox $(f)
 
 test-verbose: ## Lance PHPUnit avec plus de détails
 	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
