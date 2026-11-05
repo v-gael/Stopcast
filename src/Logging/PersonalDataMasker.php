@@ -15,7 +15,9 @@ final class PersonalDataMasker
 {
     private const string RESET_TOKEN = '#(/reset-password/reset/)[^/?\s"\'&]+#';
 
-    private const string EMAIL = '/(?<![\w.%+-])([A-Za-z0-9])[\w.%+-]*@([A-Za-z0-9])[A-Za-z0-9.-]*\.([A-Za-z]{2,})(?![\w-])/';
+    // Le domaine de premier niveau est facultatif : PostgreSQL tronque les
+    // valeurs de ses messages d'erreur (« jeanne@exam... »).
+    private const string EMAIL = '/(?<![\w.%+-])([A-Za-z0-9])[\w.%+-]*@([A-Za-z0-9])[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*?(?:\.([A-Za-z]{2,}))?(?![\w-]|\.[A-Za-z0-9])/';
 
     private const string OCTET = '(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)';
 
@@ -28,7 +30,11 @@ final class PersonalDataMasker
     public function mask(string $text): string
     {
         $text = preg_replace(self::RESET_TOKEN, '${1}***', $text) ?? $text;
-        $text = preg_replace(self::EMAIL, '${1}***@${2}***.${3}', $text) ?? $text;
+        $text = preg_replace_callback(
+            self::EMAIL,
+            static fn (array $match): string => \sprintf('%s***@%s***%s', $match[1], $match[2], isset($match[3]) ? '.'.$match[3] : ''),
+            $text,
+        ) ?? $text;
         $text = preg_replace_callback(self::IPV6_CANDIDATE, $this->maskIpv6(...), $text) ?? $text;
 
         return preg_replace(self::IPV4, '${1}0', $text) ?? $text;

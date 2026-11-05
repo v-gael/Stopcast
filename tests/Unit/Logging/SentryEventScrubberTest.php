@@ -9,6 +9,7 @@ use App\Logging\SentryEventScrubber;
 use PHPUnit\Framework\TestCase;
 use Sentry\Event;
 use Sentry\ExceptionDataBag;
+use Sentry\UserDataBag;
 
 final class SentryEventScrubberTest extends TestCase
 {
@@ -20,6 +21,7 @@ final class SentryEventScrubberTest extends TestCase
         $event->setExtra(['monolog.context' => ['ip' => '203.0.113.42']]);
         $event->setContext('runtime', ['peer' => '2001:db8:1234:5678::1']);
         $event->setTags(['client' => '198.51.100.7']);
+        $event->setUser(new UserDataBag('42', 'jeanne@example.com', '203.0.113.42'));
         $event->setRequest(['url' => 'https://stopcast.gaelv.com/reset-password/reset/Xk3vQ9pLmN2rT7wY', 'method' => 'GET']);
 
         $scrubbed = new SentryEventScrubber(new PersonalDataMasker())($event);
@@ -31,6 +33,7 @@ final class SentryEventScrubberTest extends TestCase
         self::assertSame(['monolog.context' => ['ip' => '203.0.113.0']], $scrubbed->getExtra());
         self::assertSame(['peer' => '2001:db8:1234::'], $scrubbed->getContexts()['runtime']);
         self::assertSame(['client' => '198.51.100.0'], $scrubbed->getTags());
+        self::assertNull($scrubbed->getUser());
         self::assertSame(['url' => 'https://stopcast.gaelv.com/reset-password/reset/***', 'method' => 'GET'], $scrubbed->getRequest());
     }
 }

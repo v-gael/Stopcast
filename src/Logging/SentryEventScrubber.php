@@ -10,6 +10,8 @@ use Sentry\Event;
  * before_send de Sentry : masque IP, emails et jetons de réinitialisation
  * restés dans un événement (message, exceptions, données ajoutées, contextes,
  * tags, requête), comme PersonalDataMaskingProcessor le fait pour les logs.
+ * L'utilisateur est retiré : data_collection ne le collecte déjà pas, ceci
+ * couvre un ajout par un autre chemin.
  */
 final readonly class SentryEventScrubber
 {
@@ -39,6 +41,7 @@ final readonly class SentryEventScrubber
             $event->setContext($name, $this->masker->maskValues($context));
         }
 
+        $event->setUser(null);
         $event->setTags(array_map($this->masker->mask(...), $event->getTags()));
         $event->setRequest($this->masker->maskValues($event->getRequest()));
 

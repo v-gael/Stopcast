@@ -55,6 +55,8 @@ final class PersonalDataMaskerTest extends TestCase
         yield 'entre guillemets' => ['User "Bob@Example.org" not found', 'User "B***@E***.org" not found'];
         yield 'plusieurs' => ['a@b.fr, cecile@d.io', 'a***@b***.fr, c***@d***.io'];
         yield 'déjà masqué' => ['j***@e***.com', 'j***@e***.com'];
+        yield 'tronqué par PostgreSQL' => ["LINE 1: ... WHERE email = 'essai-sentry@exam...", "LINE 1: ... WHERE email = 'e***@e***..."];
+        yield 'sans domaine de premier niveau' => ['deploy@stopcast-backup', 'd***@s***'];
     }
 
     public function testPasswordResetTokenIsReplaced(): void
