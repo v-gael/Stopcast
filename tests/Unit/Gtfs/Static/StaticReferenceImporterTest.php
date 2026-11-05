@@ -9,6 +9,8 @@ use App\Gtfs\Static\StaticFeedReader;
 use App\Gtfs\Static\StaticReferenceImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -54,6 +56,8 @@ final class StaticReferenceImporterTest extends TestCase
             entityManager: $this->createStub(EntityManagerInterface::class),
             filesystem: new Filesystem(),
             reader: new StaticFeedReader(),
+            cache: new ArrayAdapter(),
+            logger: new NullLogger(),
             feedUrl: 'https://example.test/gtfs-static.zip',
         );
     }
