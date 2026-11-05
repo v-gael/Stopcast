@@ -1,0 +1,3 @@
+# Lue par supercronic dans le service backup (compose.prod.yaml), à l'heure de
+# Paris (TZ du service) : après l'import GTFS (3 h) et la purge (3 h 15).
+30 3 * * * /app/bin/backup

@@ -83,6 +83,41 @@ services:
       database:
         condition: service_healthy
 
+  # Sauvegarde nocturne (3 h 30) de la base et du journal des suppressions
+  # vers restic (bin/backup, ops/backup.crontab). Même image que app ; seul
+  # ce service reçoit les clés du dépôt. Planifiée par supercronic et non par
+  # le Scheduler du worker : les clés n'entrent pas dans le conteneur qui
+  # exécute tout le code de l'application.
+  backup:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    restart: unless-stopped
+    command: ["supercronic", "/app/ops/backup.crontab"]
+    # Fixe : restic range les snapshots par hôte, et l'identifiant d'un
+    # conteneur change à chaque recréation.
+    hostname: stopcast-backup
+    environment:
+      TZ: Europe/Paris
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      RESTIC_CACHE_DIR: /tmp/restic-cache
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      HEALTHCHECKS_BACKUP_URL: ${HEALTHCHECKS_BACKUP_URL:-}
+    volumes:
+      - account_deletions:/app/var/account-deletions:ro
+    # Pas de serveur web : c'est Healthchecks.io qui surveille les sauvegardes.
+    healthcheck:
+      disable: true
+    # Sous www-data, comme app ; n'écoute sur aucun port.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      database:
+        condition: service_healthy
+
   database:
     restart: unless-stopped
     volumes:
