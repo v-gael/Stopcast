@@ -55,11 +55,14 @@ final readonly class StaticReferenceImporter
      */
     public function import(bool $onlyIfChanged = false): ?GtfsImportSummary
     {
+        $sent = $onlyIfChanged ? $this->storedValidators() : new FeedValidators();
         $response = $this->httpClient->request('GET', $this->feedUrl, [
-            'headers' => $onlyIfChanged ? $this->conditionalHeaders() : [],
+            'headers' => $sent->toConditionalHeaders(),
         ]);
 
-        if (304 === $response->getStatusCode()) {
+        // Un 304 ne vaut « inchangé » qu'en réponse à une requête conditionnelle ;
+        // sinon, getContent() le signale comme une erreur HTTP.
+        if (304 === $response->getStatusCode() && !$sent->isEmpty()) {
             return null;
         }
 
@@ -92,41 +95,24 @@ final readonly class StaticReferenceImporter
         }
 
         // Après le commit : un import raté ne fait pas passer le fichier pour importé.
-        $this->rememberValidators($response);
+        $this->rememberValidators(FeedValidators::fromResponse($response));
 
         return $routeSummary
             ->merge($quaySummary)
             ->merge($deactivationSummary);
     }
 
-    /**
-     * @return array<string, string>
-     */
-    private function conditionalHeaders(): array
+    private function storedValidators(): FeedValidators
     {
-        $item = $this->cache->getItem($this->validatorsKey());
-        if (!$item->isHit()) {
-            return [];
-        }
+        $validators = $this->cache->getItem($this->validatorsKey())->get();
 
-        /** @var array{etag?: string, last_modified?: string} $validators */
-        $validators = $item->get();
-
-        return array_filter([
-            'If-None-Match' => $validators['etag'] ?? null,
-            'If-Modified-Since' => $validators['last_modified'] ?? null,
-        ], static fn (?string $value): bool => null !== $value);
+        return $validators instanceof FeedValidators ? $validators : new FeedValidators();
     }
 
-    private function rememberValidators(ResponseInterface $response): void
+    private function rememberValidators(FeedValidators $validators): void
     {
-        $headers = $response->getHeaders(false);
-        $validators = array_filter([
-            'etag' => $headers['etag'][0] ?? null,
-            'last_modified' => $headers['last-modified'][0] ?? null,
-        ], static fn (?string $value): bool => null !== $value);
-
-        if ([] === $validators) {
+        if ($validators->isEmpty()) {
+            // Sans quoi des validateurs périmés repartiraient vers un serveur qui n'en envoie plus.
             $this->cache->deleteItem($this->validatorsKey());
             $this->logger->info('GTFS import: the feed server sends neither ETag nor Last-Modified, every conditional import will download the feed.');
 

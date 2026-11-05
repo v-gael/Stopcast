@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Gtfs\Static\GtfsImportSummary;
 use App\Gtfs\Static\InvalidGtfsFeedException;
 use App\Gtfs\Static\StaticReferenceImporter;
 use App\Monitoring\HealthcheckPinger;
@@ -62,7 +63,7 @@ class GtfsImportCommand extends Command
         }
 
         // Lancée par le scheduler, la sortie console est perdue : le log reste.
-        if (!$summary instanceof \App\Gtfs\Static\GtfsImportSummary) {
+        if (!$summary instanceof GtfsImportSummary) {
             $this->logger->info('GTFS import: the feed is unchanged, import skipped.');
             $io->success('Référentiel inchangé : import sauté.');
         } else {

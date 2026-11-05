@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Command;
 
 use App\Command\GtfsImportCommand;
-use App\Gtfs\Static\StaticFeedReader;
-use App\Gtfs\Static\StaticReferenceImporter;
 use App\Monitoring\HealthcheckPinger;
+use App\Tests\Support\ContainerServiceTrait;
+use App\Tests\Support\StaticFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
@@ -17,16 +17,15 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class GtfsImportCommandTest extends KernelTestCase
 {
+    use ContainerServiceTrait;
     use ResetDatabase;
-
-    private const string FEED_URL = 'https://example.test/gtfs-static.zip';
+    use StaticFeedTrait;
 
     private const string PING_URL = 'https://hc-ping.test/gtfs';
 
@@ -50,7 +49,7 @@ final class GtfsImportCommandTest extends KernelTestCase
 
     public function testASuccessfulImportPingsHealthchecks(): void
     {
-        $tester = $this->command(feed: $this->feedResponse());
+        $tester = $this->command(feed: $this->staticFeedResponse());
 
         $tester->execute([]);
 
@@ -60,7 +59,7 @@ final class GtfsImportCommandTest extends KernelTestCase
 
     public function testAnUnchangedFeedIsSkippedLoggedAndPinged(): void
     {
-        $this->command(feed: $this->feedResponse(etag: '"v1"'))->execute([]);
+        $this->command(feed: $this->staticFeedResponse(etag: '"v1"'))->execute([]);
         $this->pings = [];
 
         $tester = $this->command(feed: new MockResponse('', ['http_code' => 304]));
@@ -74,7 +73,7 @@ final class GtfsImportCommandTest extends KernelTestCase
 
     public function testASuccessfulImportLogsItsSummary(): void
     {
-        $this->command(feed: $this->feedResponse())->execute([]);
+        $this->command(feed: $this->staticFeedResponse())->execute([]);
 
         self::assertTrue($this->logs->hasInfoThatPasses(
             static fn (LogRecord $record): bool => 'GTFS import done: {summary}' === $record->message
@@ -84,7 +83,7 @@ final class GtfsImportCommandTest extends KernelTestCase
 
     public function testAnEmptyHealthcheckUrlSendsNoPing(): void
     {
-        $tester = $this->command(feed: $this->feedResponse(), pingUrl: '');
+        $tester = $this->command(feed: $this->staticFeedResponse(), pingUrl: '');
 
         $tester->execute([]);
 
@@ -104,7 +103,7 @@ final class GtfsImportCommandTest extends KernelTestCase
     #[DataProvider('failedPings')]
     public function testAFailedPingIsLoggedWithoutFailingTheImport(MockResponse $ping): void
     {
-        $tester = $this->command(feed: $this->feedResponse(), ping: $ping);
+        $tester = $this->command(feed: $this->staticFeedResponse(), ping: $ping);
 
         $tester->execute([]);
 
@@ -146,7 +145,7 @@ final class GtfsImportCommandTest extends KernelTestCase
     private function command(MockResponse $feed, ?MockResponse $ping = null, string $pingUrl = self::PING_URL): CommandTester
     {
         $httpClient = new MockHttpClient(function (string $method, string $url) use ($feed, $ping): MockResponse {
-            if (self::FEED_URL === $url) {
+            if (self::STATIC_FEED_URL === $url) {
                 return $feed;
             }
 
@@ -156,36 +155,11 @@ final class GtfsImportCommandTest extends KernelTestCase
         });
         $logger = new Logger('app', [$this->logs]);
 
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
         return new CommandTester(new GtfsImportCommand(
-            new StaticReferenceImporter($httpClient, $entityManager, new Filesystem(), new StaticFeedReader(), $this->cache, $logger, self::FEED_URL),
+            $this->staticReferenceImporter($httpClient, $this->service(EntityManagerInterface::class), $this->cache, $logger),
             new HealthcheckPinger($httpClient, $logger),
             $logger,
             $pingUrl,
         ));
-    }
-
-    private function feedResponse(?string $etag = null): MockResponse
-    {
-        return new MockResponse($this->zip(), ['response_headers' => null !== $etag ? ['ETag' => $etag] : []]);
-    }
-
-    private function zip(): string
-    {
-        $zipPath = (string) tempnam(sys_get_temp_dir(), 'test_zip_');
-        $zip = new \ZipArchive();
-        $zip->open($zipPath, \ZipArchive::OVERWRITE);
-        foreach (glob(\dirname(__DIR__, 2).'/Fixtures/Gtfs/*.txt') ?: [] as $file) {
-            $zip->addFile($file, basename($file));
-        }
-
-        $zip->close();
-
-        $content = (string) file_get_contents($zipPath);
-        unlink($zipPath);
-
-        return $content;
     }
 }

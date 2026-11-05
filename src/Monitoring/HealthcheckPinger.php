@@ -32,6 +32,7 @@ final readonly class HealthcheckPinger
         }
 
         try {
+            // timeout ne borne que l'inactivité ; max_duration borne l'appel entier.
             $this->httpClient->request('GET', $url, ['timeout' => self::TIMEOUT, 'max_duration' => self::TIMEOUT])->getContent();
         } catch (ExceptionInterface $exception) {
             $this->logger->warning('Healthcheck ping failed: {error}', ['error' => $exception->getMessage()]);

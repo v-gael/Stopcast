@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Gtfs\Static;
 
 use App\Gtfs\Static\InvalidGtfsFeedException;
-use App\Gtfs\Static\StaticFeedReader;
 use App\Gtfs\Static\StaticReferenceImporter;
+use App\Tests\Support\StaticFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\Exception\ServerException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -21,6 +18,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
  */
 final class StaticReferenceImporterTest extends TestCase
 {
+    use StaticFeedTrait;
+
     public function testCorruptedArchiveLeavesNoTemporaryFileBehind(): void
     {
         $importer = $this->importer(new MockResponse('not a zip archive'));
@@ -51,15 +50,7 @@ final class StaticReferenceImporterTest extends TestCase
 
     private function importer(MockResponse $response): StaticReferenceImporter
     {
-        return new StaticReferenceImporter(
-            httpClient: new MockHttpClient($response),
-            entityManager: $this->createStub(EntityManagerInterface::class),
-            filesystem: new Filesystem(),
-            reader: new StaticFeedReader(),
-            cache: new ArrayAdapter(),
-            logger: new NullLogger(),
-            feedUrl: 'https://example.test/gtfs-static.zip',
-        );
+        return $this->staticReferenceImporter(new MockHttpClient($response), $this->createStub(EntityManagerInterface::class));
     }
 
     /**
