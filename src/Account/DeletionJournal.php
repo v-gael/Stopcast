@@ -125,6 +125,8 @@ final readonly class DeletionJournal
     }
 
     /**
+     * Sous verrou partagé : une purge en cours finit sa réécriture avant.
+     *
      * @return list<string>
      */
     private function readLines(): array
@@ -133,7 +135,23 @@ final readonly class DeletionJournal
             return [];
         }
 
-        return $this->splitLines($this->filesystem->readFile($this->path));
+        $handle = fopen($this->path, 'r') ?: throw new IOException(\sprintf('Failed to open "%s".', $this->path), path: $this->path);
+
+        try {
+            if (!flock($handle, \LOCK_SH)) {
+                throw new IOException(\sprintf('Failed to lock "%s".', $this->path), path: $this->path);
+            }
+
+            $content = stream_get_contents($handle);
+            if (false === $content) {
+                throw new IOException(\sprintf('Failed to read "%s".', $this->path), path: $this->path);
+            }
+
+            return $this->splitLines($content);
+        } finally {
+            flock($handle, \LOCK_UN);
+            fclose($handle);
+        }
     }
 
     /**

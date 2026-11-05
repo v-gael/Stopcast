@@ -36,9 +36,9 @@ final readonly class DataPurger
     public const string INACTIVITY_WARNING_NOTICE = '30 days';
 
     /**
-     * Durée des sauvegardes (restic, --keep-within-daily 30d) : une ligne
-     * reste au journal tant qu'une sauvegarde antérieure à la suppression peut
-     * être restaurée.
+     * Durée des sauvegardes, annoncée dans la politique de confidentialité :
+     * une ligne reste au journal tant qu'une sauvegarde antérieure à la
+     * suppression peut être restaurée.
      */
     public const string DELETION_JOURNAL_RETENTION = '30 days';
 

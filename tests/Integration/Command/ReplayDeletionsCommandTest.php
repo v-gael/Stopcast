@@ -51,11 +51,7 @@ final class ReplayDeletionsCommandTest extends KernelTestCase
     {
         $recreated = UserFactory::createOne(['email' => 'nouveau@example.com']);
         $this->appendEntryFor($recreated, createdAt: $recreated->getCreatedAt()->modify('-1 day'));
-        $this->appendToDeletionJournal(json_encode([
-            'id' => (int) $recreated->getId() + 1000,
-            'created_at' => '2026-01-01T10:00:00+01:00',
-            'deleted_at' => '2026-02-01T10:00:00+01:00',
-        ], \JSON_THROW_ON_ERROR));
+        $this->appendToDeletionJournal($this->deletionJournalLine((int) $recreated->getId() + 1000, deletedAt: new \DateTimeImmutable('2026-02-01 10:00:00')));
 
         $tester = $this->command();
         $tester->execute([], ['interactive' => false]);
@@ -174,11 +170,11 @@ final class ReplayDeletionsCommandTest extends KernelTestCase
      */
     private function appendEntryFor(User $user, ?\DateTimeImmutable $createdAt = null): void
     {
-        $this->appendToDeletionJournal(json_encode([
-            'id' => $user->getId(),
-            'created_at' => ($createdAt ?? $user->getCreatedAt())->format(\DATE_ATOM),
-            'deleted_at' => new \DateTimeImmutable()->format(\DATE_ATOM),
-        ], \JSON_THROW_ON_ERROR));
+        $this->appendToDeletionJournal($this->deletionJournalLine(
+            (int) $user->getId(),
+            deletedAt: new \DateTimeImmutable(),
+            createdAt: $createdAt ?? $user->getCreatedAt(),
+        ));
     }
 
     private function command(): CommandTester

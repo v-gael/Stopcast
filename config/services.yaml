@@ -12,7 +12,7 @@ parameters:
     app.display_cookie_prefix: ''
     # Journal des suppressions de compte (voir DeletionJournal) : hors base,
     # pour qu'une restauration ne l'écrase pas. En prod, ce dossier est le
-    # volume account_deletions, sauvegardé avec la base.
+    # volume account_deletions de compose.prod.yaml.
     app.account_deletions_log: '%kernel.project_dir%/var/account-deletions/deletions.jsonl'
 
 services:

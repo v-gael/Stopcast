@@ -9,6 +9,7 @@ use App\Account\DeletionJournal;
 use App\Account\DeletionJournalEntry;
 use App\Entity\User;
 use App\Factory\UserFactory;
+use App\Tests\Support\ContainerServiceTrait;
 use App\Tests\Support\DeletionJournalTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -26,6 +27,7 @@ use function Zenstruck\Foundry\Persistence\repository;
 final class AccountDeleterTest extends KernelTestCase
 {
     use ClockSensitiveTrait;
+    use ContainerServiceTrait;
     use DeletionJournalTrait;
     use Factories;
     use ResetDatabase;
@@ -89,20 +91,5 @@ final class AccountDeleterTest extends KernelTestCase
     private function accountDeleter(): AccountDeleter
     {
         return $this->service(AccountDeleter::class);
-    }
-
-    /**
-     * @template T of object
-     *
-     * @param class-string<T> $id
-     *
-     * @return T
-     */
-    private function service(string $id): object
-    {
-        $service = self::getContainer()->get($id);
-        self::assertInstanceOf($id, $service);
-
-        return $service;
     }
 }

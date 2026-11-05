@@ -40,7 +40,19 @@ trait DeletionJournalTrait
     }
 
     /**
-     * Ajoute des lignes telles quelles, pour simuler un journal abîmé.
+     * Une ligne au format qu'écrit DeletionJournal::record().
+     */
+    private function deletionJournalLine(int $id, \DateTimeImmutable $deletedAt, ?\DateTimeImmutable $createdAt = null): string
+    {
+        return json_encode([
+            'id' => $id,
+            'created_at' => ($createdAt ?? new \DateTimeImmutable('2025-01-01 10:00:00'))->format(\DATE_ATOM),
+            'deleted_at' => $deletedAt->format(\DATE_ATOM),
+        ], \JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Ajoute des lignes telles quelles, par exemple pour simuler un journal abîmé.
      */
     private function appendToDeletionJournal(string ...$lines): void
     {

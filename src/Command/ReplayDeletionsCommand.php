@@ -18,9 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * À lancer après la restauration d'une sauvegarde, app et worker arrêtés
- * (voir docs/exploitation.md) : supprime de nouveau les comptes supprimés
- * depuis la sauvegarde.
+ * À lancer après la restauration d'une sauvegarde, app et worker arrêtés :
+ * supprime de nouveau les comptes supprimés depuis la sauvegarde.
  */
 #[AsCommand(
     name: 'app:account:replay-deletions',
@@ -64,7 +63,7 @@ class ReplayDeletionsCommand extends Command
             $user = $this->userRepository->find($entry->id);
             if (null === $user) {
                 $missing[] = $entry->id;
-            } elseif ($user->getCreatedAt()->getTimestamp() !== $entry->createdAt->getTimestamp()) {
+            } elseif (!$entry->designates($user)) {
                 // Créé après la sauvegarde, sous un identifiant déjà utilisé.
                 $recreated[] = $entry->id;
             } else {
