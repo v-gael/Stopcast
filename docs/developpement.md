@@ -191,7 +191,7 @@ PHPStan refuse les appels de débogage (`dump()`, `dd()`, `var_dump()`… : list
 |---|---|
 | `make check` | Tous les contrôles de la CI |
 | `make fix` | Rector puis PHP CS Fixer, en correction |
-| `make test` | PHPUnit |
+| `make test` | PHPUnit ; `make test f="tests/Functional/Web/LoginTest.php"` pour un fichier ou un dossier |
 | `make phpstan` | PHPStan (niveau 10) |
 | `make cs-fixer` / `make cs-fixer-fix` | PHP CS Fixer (règles `@Symfony`) |
 | `make rector` / `make rector-fix` | Rector |
@@ -224,6 +224,8 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 2. Lancer la mise à jour sans `--dry-run`. `bump-after-update` est activé : Composer remonte les contraintes de `composer.json` aux versions installées.
 3. `make composer c="recipes"` liste les recipes à mettre à jour. Chacune se met à jour avec `make composer c="recipes:update <paquet>"`. Flex refuse de tourner tant que l'index git contient des changements : committer entre deux.
 4. Finir par `make audit` puis `make check`.
+
+Un `require` ou un `update` fait resynchroniser par Flex les paquets Symfony UX : `importmap.php` gagne les CSS Bootstrap de tom-select et perd son `declare(strict_types=1)`. Quand le paquet n'apporte pas de JavaScript, annuler ce changement avec `git checkout importmap.php`.
 
 ## Migrations
 
