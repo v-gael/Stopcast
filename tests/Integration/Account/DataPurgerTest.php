@@ -11,14 +11,12 @@ use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\UserFactory;
+use App\Tests\Support\AppLogsTrait;
 use App\Tests\Support\ContainerServiceTrait;
 use App\Tests\Support\DeletionJournalTrait;
 use Doctrine\ORM\EntityManagerInterface;
-use Monolog\Handler\TestHandler;
 use Monolog\Level;
-use Monolog\Logger;
 use Monolog\LogRecord;
-use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
@@ -33,6 +31,7 @@ use function Zenstruck\Foundry\Persistence\repository;
 
 final class DataPurgerTest extends KernelTestCase
 {
+    use AppLogsTrait;
     use ClockSensitiveTrait;
     use ContainerServiceTrait;
     use DeletionJournalTrait;
@@ -69,7 +68,7 @@ final class DataPurgerTest extends KernelTestCase
             '{"id": 12,',
             $this->deletionJournalLine(3, deletedAt: now('-1 day')),
         );
-        $logs = $this->logs();
+        $logs = $this->appLogs();
 
         $summary = $this->service(DataPurger::class)->purge();
 
@@ -238,7 +237,7 @@ final class DataPurgerTest extends KernelTestCase
     public function testLastAdministratorIsNeverDeletedAndAWarningIsLogged(): void
     {
         $admin = $this->createActiveUser('admin@example.com', lastLoginAgo: '-2 years -1 day', warnedAgo: '-31 days', role: Role::Admin);
-        $logs = $this->logs();
+        $logs = $this->appLogs();
 
         $summary = $this->service(DataPurger::class)->purge();
 
@@ -254,7 +253,7 @@ final class DataPurgerTest extends KernelTestCase
     {
         $this->createActiveUser('admin@example.com', lastLoginAgo: '-2 years -1 day', warnedAgo: '-31 days', role: Role::Admin);
         $this->createActiveUser('autre-admin@example.com', lastLoginAgo: '-1 day', role: Role::Admin);
-        $logs = $this->logs();
+        $logs = $this->appLogs();
 
         $summary = $this->service(DataPurger::class)->purge();
 
@@ -363,19 +362,6 @@ final class DataPurgerTest extends KernelTestCase
         self::assertInstanceOf(User::class, $user);
 
         return $user;
-    }
-
-    /**
-     * Journal du canal app pendant la suite du test.
-     */
-    private function logs(): TestHandler
-    {
-        $logger = self::getContainer()->get(LoggerInterface::class);
-        self::assertInstanceOf(Logger::class, $logger);
-        $handler = new TestHandler();
-        $logger->pushHandler($handler);
-
-        return $handler;
     }
 
     private function userExists(string $email): bool

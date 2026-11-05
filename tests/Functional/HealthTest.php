@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\Support\AppLogsTrait;
 use Doctrine\DBAL\DriverManager;
-use Monolog\Handler\TestHandler;
-use Monolog\Logger;
-use Psr\Log\LoggerInterface;
+use Doctrine\DBAL\Exception as DbalException;
+use Monolog\LogRecord;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
@@ -16,6 +16,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
  */
 final class HealthTest extends WebTestCase
 {
+    use AppLogsTrait;
+
     public function testAnswersOkWhenTheDatabaseResponds(): void
     {
         $client = self::createClient();
@@ -32,10 +34,7 @@ final class HealthTest extends WebTestCase
     public function testAnswers503WithoutDetailWhenTheDatabaseIsUnreachable(): void
     {
         $client = self::createClient();
-        $logs = new TestHandler();
-        $logger = self::getContainer()->get(LoggerInterface::class);
-        self::assertInstanceOf(Logger::class, $logger);
-        $logger->pushHandler($logs);
+        $logs = $this->appLogs();
         // Une vraie connexion, vers un hôte qui n'existe pas (.invalid, RFC 2606).
         self::getContainer()->set('doctrine.dbal.default_connection', DriverManager::getConnection([
             'driver' => 'pdo_pgsql',
@@ -51,6 +50,9 @@ final class HealthTest extends WebTestCase
         self::assertResponseStatusCodeSame(503);
         self::assertSame('{"status":"error"}', $client->getResponse()->getContent());
         self::assertStringContainsString('no-store', (string) $client->getResponse()->headers->get('Cache-Control'));
-        self::assertTrue($logs->hasErrorThatContains('Health check: the database is unreachable.'));
+        self::assertTrue($logs->hasErrorThatPasses(
+            static fn (LogRecord $record): bool => 'Health check: the database is unreachable.' === $record->message
+                && ($record->context['exception'] ?? null) instanceof DbalException,
+        ));
     }
 }
