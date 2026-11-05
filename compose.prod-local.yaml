@@ -16,10 +16,29 @@ services:
       target: prod
 
   # Dépôt restic de test, sans R2 : RESTIC_REPOSITORY=/srv/restic dans
-  # .env.prod.local. En mémoire, il disparaît quand le conteneur est recréé.
+  # .env.prod.local. Un volume, pour que les `run` de la procédure de
+  # restauration (docs/exploitation.md) le voient aussi.
   backup:
-    tmpfs:
-      - /srv/restic:mode=1777
+    volumes:
+      - restic_local:/srv/restic
+    depends_on:
+      restic-local-init:
+        condition: service_completed_successfully
+
+  # Un volume neuf sur un chemin absent de l'image appartient à root : il est
+  # donné à www-data, qui fait tourner backup.
+  restic-local-init:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    user: root
+    command: ["chown", "www-data:www-data", "/srv/restic"]
+    volumes:
+      - restic_local:/srv/restic
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  restic_local:
 
 networks:
   edge:
