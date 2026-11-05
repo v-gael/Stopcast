@@ -85,7 +85,17 @@ final class DisplayPairingTest extends WebTestCase
 
         self::assertMatchesRegularExpression(self::CODE_PATTERN, $code);
         self::assertSelectorExists('[data-controller="pairing"]');
-        self::assertSelectorTextContains('.pairing__instruction', 'localhost');
+        self::assertSelectorTextSame('.pairing__instruction', 'Scannez le QR code ou saisissez le code sur localhost → Dispositifs');
+    }
+
+    public function testPairingScreenShowsAQrCodeToThePairingPageOfItsCode(): void
+    {
+        $code = $this->displayedCode();
+        $qrCode = $this->client->getCrawler()->filter('.pairing__qr[role="img"]');
+
+        self::assertCount(1, $qrCode->filter('svg'));
+        self::assertCount(0, $qrCode->filter('[style], script'));
+        self::assertSame('QR code vers https://localhost'.$this->scannedPairingPath($code), $qrCode->attr('aria-label'));
     }
 
     public function testEnteredCodePairsTheScreenWhichThenShowsItsPassages(): void

@@ -233,14 +233,16 @@ body {
     gap: calc(10 * var(--u));
 }
 
-/* Place du QR code, vide tant qu'il n'est pas affiché. */
-.pairing__qr:empty {
-    display: none;
-}
-
+/* Le SVG porte son carré blanc et sa marge : il remplit la place. */
 .pairing__qr {
     width: calc(150 * var(--u));
     height: calc(150 * var(--u));
+}
+
+.pairing__qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .pairing__code {
@@ -265,8 +267,10 @@ body {
     grid-column: 1 / -1;
     margin: 0;
     color: var(--display-header-text);
-    font-size: calc(18 * var(--u));
+    /* Sur une ligne en 480×320, avec le domaine de prod. */
+    font-size: calc(14 * var(--u));
     text-align: center;
+    white-space: nowrap;
 }
 
 .pairing__message {

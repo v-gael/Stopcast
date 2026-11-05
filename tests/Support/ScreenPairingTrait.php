@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\Device;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 
 /**
  * Gestes communs aux tests de l'appairage d'un écran, joués avec le dernier
@@ -37,6 +38,31 @@ trait ScreenPairingTrait
         self::assertResponseIsSuccessful();
 
         $this->browser()->submit($crawler->selectButton('Appairer')->form(['pair_screen[code]' => $code]));
+    }
+
+    /**
+     * Le compte connecté a scanné le QR code de l'écran : il choisit ce
+     * dispositif sur la page ouverte et appaire.
+     */
+    private function pairScannedCode(string $code, Device $device): void
+    {
+        $crawler = $this->browser()->request('GET', $this->scannedPairingPath($code));
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->selectButton('Appairer')->form();
+        $choice = $form['scanned_pairing[device]'];
+        self::assertInstanceOf(ChoiceFormField::class, $choice);
+        $choice->select((string) $device->getId());
+
+        $this->browser()->submit($form);
+    }
+
+    /**
+     * Adresse encodée dans le QR code d'un écran qui affiche ce code.
+     */
+    private function scannedPairingPath(string $code): string
+    {
+        return '/devices/pair?code='.str_replace('-', '', $code);
     }
 
     /**

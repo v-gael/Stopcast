@@ -15,6 +15,7 @@
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
         "dragonmantank/cron-expression": "^3.6",
+        "endroid/qr-code": "^6.2",
         "gtfs-media/gtfs-realtime-php": "^1.1",
         "nelmio/security-bundle": "^3.9",
         "phpdocumentor/reflection-docblock": "^6.0",
