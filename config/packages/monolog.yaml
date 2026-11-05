@@ -54,13 +54,23 @@ when@prod:
                 type: stream
                 path: php://stderr
                 level: debug
-                formatter: monolog.formatter.json
+                # JSON dont la ligne finale est masquée : le processor ne
+                # touche pas au message des exceptions.
+                formatter: App\Logging\MaskingJsonFormatter
             console:
                 type: console
                 process_psr_3_messages: false
                 channels: ["!event", "!doctrine"]
+            # Sentry (config/packages/sentry.yaml), hors fingers_crossed : seules
+            # les erreurs partent, sans les logs qui les précèdent.
+            sentry_exceptions:
+                type: service
+                id: Sentry\Monolog\ExceptionToSentryIssueHandler
+            sentry_messages:
+                type: service
+                id: Sentry\Monolog\LogToSentryIssueHandler
             deprecation:
                 type: stream
                 channels: [deprecation]
                 path: php://stderr
-                formatter: monolog.formatter.json
+                formatter: App\Logging\MaskingJsonFormatter

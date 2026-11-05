@@ -5,12 +5,22 @@
 # app et worker tournent sur l'image construite par la CI et publiée sur GHCR,
 # étiquetée par le SHA du commit (IMAGE_TAG, fourni par bin/deploy) : le serveur
 # n'a pas les sources et ne construit rien. La prod locale remet le build.
+
+# Sortie des conteneurs (docker compose logs) bornée à 5 fichiers de 10 Mo par
+# service ; elle disparaît avec le conteneur, recréé à chaque déploiement.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   app:
     image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
     # Retire le build hérité de compose.yaml.
     build: !reset null
     restart: unless-stopped
+    logging: *logging
     environment:
       APP_ENV: prod
       # ":80" : Caddy sert en HTTP seul, sans certificat ni redirection.
@@ -25,6 +35,8 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
     # Journal des suppressions de compte, hors base pour survivre à une
     # restauration ; partagé avec worker (la purge supprime aussi des comptes).
     volumes:
@@ -59,6 +71,7 @@ services:
   worker:
     image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
     restart: unless-stopped
+    logging: *logging
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET}
@@ -71,6 +84,8 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
     volumes:
       - account_deletions:/app/var/account-deletions:rw
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
@@ -93,6 +108,7 @@ services:
     image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
     restart: unless-stopped
     command: ["supercronic", "/app/ops/backup.crontab"]
+    logging: *logging
     # Fixe : restic range les snapshots par hôte, et l'identifiant d'un
     # conteneur change à chaque recréation.
     hostname: stopcast-backup
@@ -121,6 +137,7 @@ services:
 
   database:
     restart: unless-stopped
+    logging: *logging
     volumes:
       - database_data_prod:/var/lib/postgresql/data:rw
 
