@@ -1,14 +1,15 @@
 #!/bin/sh
 # Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
-# sert le formulaire de connexion, et l'endpoint des dispositifs refuse une
-# requête sans jeton. Lancé par le job `deploy` de `ci.yml` sur l'URL publique,
+# sert le formulaire de connexion, l'endpoint des dispositifs refuse une
+# requête sans jeton, et /health dit que la base répond. Lancé par le job
+# `deploy` de `ci.yml` sur l'URL publique,
 # après bin/deploy ; se lance aussi à la main.
 #
 #   bin/smoke-test https://stopcast.gaelv.com
 #   bin/smoke-test http://localhost              # prod locale (make prod-up)
 #
-# Aucun contrôle n'interroge la base (ni session ni jeton) : ils prouvent que
-# le tunnel, Caddy, PHP et le routage répondent. Chaque contrôle est retenté
+# Ils prouvent que le tunnel, Caddy, PHP, le routage et la base répondent
+# (/health, le seul à interroger la base). Chaque contrôle est retenté
 # (SMOKE_ATTEMPTS fois, SMOKE_DELAY secondes d'écart) pour laisser au tunnel le
 # temps de joindre les nouveaux conteneurs. Voir docs/exploitation.md,
 # « Déploiement ».
@@ -88,6 +89,7 @@ check() {
 
 check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
 check 'Endpoint des dispositifs fermé sans jeton' /api/next-passages 401
+check 'Base de données joignable' /health 200 '"status":"ok"'
 
 if [ "$failed" -ne 0 ]; then
     echo "Contrôles après déploiement en échec sur $base_url." >&2

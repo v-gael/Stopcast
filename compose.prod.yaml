@@ -47,7 +47,8 @@ services:
         aliases:
           - stopcast-app
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/"]
+      # /health interroge la base : app n'est healthy que si elle répond.
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
       interval: 30s
       timeout: 5s
       retries: 3
