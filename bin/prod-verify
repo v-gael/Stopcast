@@ -60,6 +60,11 @@ fail() {
     status=1
 }
 
+# « pg_dump (PostgreSQL) 16.15 » -> « 16 », sur l'entrée standard.
+major_version() {
+    sed -E 's/.* ([0-9]+)\..*/\1/'
+}
+
 # expect <valeur> <attendue> <message OK> <message d'échec>
 expect() {
     if [ "$1" = "$2" ]; then ok "$3"; else fail "$4"; fi
@@ -153,8 +158,8 @@ backup=$(prod ps -q backup)
 if [ -n "$backup" ]; then
     # Un pg_dump plus vieux que le serveur refuse de dumper ; plus récent, il
     # produit un dump que le pg_restore de l'image ne relirait pas forcément.
-    client=$(prod exec -T backup pg_dump --version | sed -E 's/.* ([0-9]+)\..*/\1/')
-    server=$(prod exec -T database postgres --version | sed -E 's/.* ([0-9]+)\..*/\1/')
+    client=$(prod exec -T backup pg_dump --version | major_version)
+    server=$(prod exec -T database postgres --version | major_version)
     expect "$client" "$server" "backup : pg_dump $client, même version majeure que le serveur" "backup : pg_dump $client, serveur PostgreSQL $server (POSTGRES_VERSION de l'image)"
 
     if prod exec -T backup ls /app/var/account-deletions >/dev/null; then

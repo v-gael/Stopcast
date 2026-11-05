@@ -63,17 +63,6 @@ FROM base AS ci
 
 ENV APP_ENV=test
 
-# Outils du service backup (compose.prod.yaml), qui tourne sur cette image :
-# restic, supercronic pour le planifier, le client PostgreSQL de la même
-# version majeure que le serveur (POSTGRES_VERSION, contrôlée par
-# bin/prod-verify) et tzdata pour l'heure de Paris de supercronic.
-ARG POSTGRES_VERSION=16
-RUN apk add --no-cache \
-        "postgresql${POSTGRES_VERSION}-client" \
-        restic \
-        supercronic \
-        tzdata
-
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
 COPY . .
 

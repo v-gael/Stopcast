@@ -38,17 +38,17 @@ restic() {
 }
 
 # Code 10 : le dépôt n'existe pas encore (première sauvegarde).
-status=0
-restic cat config >/dev/null 2>&1 || status=$?
-case $status in
+repo_status=0
+restic cat config >/dev/null 2>&1 || repo_status=$?
+case $repo_status in
     0) ;;
     10)
         echo '==> Création du dépôt'
         restic init
         ;;
     *)
-        echo "Dépôt illisible (code $status) : RESTIC_REPOSITORY, RESTIC_PASSWORD ou la clé R2 ?" >&2
-        exit "$status"
+        echo "Dépôt illisible (code $repo_status) : RESTIC_REPOSITORY, RESTIC_PASSWORD ou la clé R2 ?" >&2
+        exit "$repo_status"
         ;;
 esac
 
