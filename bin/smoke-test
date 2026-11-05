@@ -88,6 +88,7 @@ check() {
 
 check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
 check 'Endpoint des dispositifs fermé sans jeton' /api/next-passages 401
+check 'Base de données joignable' /health 200 '"status":"ok"'
 
 if [ "$failed" -ne 0 ]; then
     echo "Contrôles après déploiement en échec sur $base_url." >&2
