@@ -20,6 +20,7 @@ final readonly class AccountDeleter
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MailerInterface $mailer,
+        private DeletionJournal $journal,
     ) {
     }
 
@@ -27,6 +28,11 @@ final readonly class AccountDeleter
     {
         $email = $user->getEmail();
         $wasPending = $user->isPending();
+
+        // Avant la suppression : un compte ne disparaît jamais sans trace.
+        // Si le flush échoue ensuite, le rejeu supprimera un compte dont la
+        // suppression avait bien été demandée.
+        $this->journal->record($user);
 
         $this->entityManager->remove($user);
         $this->entityManager->flush();
@@ -42,5 +48,15 @@ final readonly class AccountDeleter
             ->htmlTemplate('email/account_deleted.html.twig')
             ->textTemplate('email/account_deleted.txt.twig')
         );
+    }
+
+    /**
+     * Rejoue une suppression du journal après une restauration : la personne
+     * a déjà reçu son email, et la ligne est déjà au journal.
+     */
+    public function replay(User $user): void
+    {
+        $this->entityManager->remove($user);
+        $this->entityManager->flush();
     }
 }

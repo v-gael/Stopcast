@@ -24,6 +24,10 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+    # Journal des suppressions de compte, hors base pour survivre à une
+    # restauration ; partagé avec worker (la purge supprime aussi des comptes).
+    volumes:
+      - account_deletions:/app/var/account-deletions:rw
     # L'image tourne sous www-data ; le conteneur ne garde que la capacité
     # d'écouter sur le port 80. no-new-privileges empêche la capacité de
     # fichier de frankenphp (setcap, voir Dockerfile) de s'appliquer : le port
@@ -64,6 +68,8 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+    volumes:
+      - account_deletions:/app/var/account-deletions:rw
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
       disable: true
@@ -82,6 +88,7 @@ services:
 
 volumes:
   database_data_prod:
+  account_deletions:
 
 networks:
   edge:

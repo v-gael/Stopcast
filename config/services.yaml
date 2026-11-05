@@ -10,6 +10,10 @@ parameters:
     # Préfixe des cookies de l'écran d'affichage (voir DisplayCookies) :
     # « __Host- » en prod, qui impose Secure, Path=/ et aucun Domain.
     app.display_cookie_prefix: ''
+    # Journal des suppressions de compte (voir DeletionJournal) : hors base,
+    # pour qu'une restauration ne l'écrase pas. En prod, ce dossier est le
+    # volume account_deletions, sauvegardé avec la base.
+    app.account_deletions_log: '%kernel.project_dir%/var/account-deletions/deletions.jsonl'
 
 services:
     # default configuration for services in *this* file
@@ -24,6 +28,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    parameters:
+        app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
 
 when@prod:
     parameters:

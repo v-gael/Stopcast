@@ -77,6 +77,8 @@ La prod locale (`make prod-up`, [developpement.md](developpement.md#environnemen
 | `Device` | Un dispositif d'affichage, activable/désactivable, qui appartient à un `User` (son propriétaire) ; son écran appairé s'authentifie par un cookie dont le haché est enregistré sur le dispositif, l'API par un jeton (`X-Device-Token`) |
 | `DisplayConfiguration` | La configuration d'affichage d'un `Device` : quel `Quay` afficher, sous quel libellé, dans quel ordre (`position`) en cas de rotation |
 
+Chaque suppression de compte (par son titulaire, un administrateur ou la purge) est d'abord inscrite dans un journal hors base, `var/account-deletions/deletions.jsonl` (`DeletionJournal`) : l'identifiant et la date de création du compte, sans email. Après la restauration d'une sauvegarde, `app:account:replay-deletions` supprime de nouveau ces comptes, pour qu'ils ne reviennent pas (droit à l'effacement). Le journal garde 30 jours, la durée des sauvegardes ; `app:purge` retire les lignes plus anciennes.
+
 ## Fuseau horaire
 
 PHP tourne partout en `Europe/Paris`, le fuseau du réseau : il est fixé dans l'image par `frankenphp/conf.d/10-timezone.ini` (dev, CI Docker et prod) et passé à `setup-php` dans les workflows GitHub. Les heures de passage de l'API portent donc le décalage de Paris (`+01:00` en hiver, `+02:00` en été). Les colonnes de date (`createdAt`, `updatedAt`, `deprecatedAt`, `messenger_messages`) sont sans fuseau : elles contiennent l'heure de Paris, ambiguë une heure par an au passage à l'heure d'hiver, ce qui ne touche que des dates d'audit. Un test (`tests/Unit/TimezoneTest.php`) échoue si le réglage disparaît.

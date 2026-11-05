@@ -2,7 +2,8 @@
 # Vérifie l'image de prod en prod locale, sur l'hôte : ce que ni `make check`
 # ni la CI n'exécutent avant main. Construit l'image `local`, contrôle sa
 # taille, la déploie par bin/deploy (migrations comprises), contrôle les
-# conteneurs (utilisateur, capacités, fuseau, mode worker, écriture dans var/)
+# conteneurs (utilisateur, capacités, fuseau, mode worker, écriture dans var/
+# et dans le journal des suppressions)
 # puis lance bin/smoke-test. Tous les contrôles tournent avant de conclure.
 # Arrête la prod locale à la fin (volumes gardés), sauf avec --keep.
 #
@@ -135,6 +136,16 @@ if [ -n "$app" ]; then
     else
         fail 'app : var/ non accessible en écriture'
     fi
+
+    # Le volume account_deletions reprend le propriétaire du dossier de l'image :
+    # sans lui, Docker le crée en root et aucune suppression de compte ne passe.
+    for service in app worker; do
+        if prod exec -T "$service" sh -c 'touch var/account-deletions/.prod-verify && rm var/account-deletions/.prod-verify'; then
+            ok "$service : journal des suppressions accessible en écriture"
+        else
+            fail "$service : var/account-deletions/ non accessible en écriture (volume account_deletions)"
+        fi
+    done
 fi
 
 worker=$(prod ps -q worker)

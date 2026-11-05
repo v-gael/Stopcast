@@ -14,6 +14,7 @@ final readonly class PurgeSummary
         public int $inactivityWarnings,
         public int $inactiveAccounts,
         public int $resetPasswordRequests,
+        public int $deletionJournalEntries,
     ) {
     }
 }

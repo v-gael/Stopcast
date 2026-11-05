@@ -10,6 +10,7 @@ use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\UserFactory;
+use App\Tests\Support\DeletionJournalTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
@@ -31,6 +32,7 @@ use function Zenstruck\Foundry\Persistence\repository;
 final class DataPurgerTest extends KernelTestCase
 {
     use ClockSensitiveTrait;
+    use DeletionJournalTrait;
     use Factories;
     use ResetDatabase;
 
@@ -40,6 +42,48 @@ final class DataPurgerTest extends KernelTestCase
     {
         // Sans argument, l'horloge simulée serait en UTC et non dans le fuseau de PHP.
         self::mockTime(new \DateTimeImmutable());
+        $this->clearDeletionJournal();
+    }
+
+    public function testDeletionJournalLinesOlderThan30DaysAreRemoved(): void
+    {
+        $this->appendToDeletionJournal(
+            $this->journalLine(1, deletedAt: now('-30 days -1 minute')),
+            $this->journalLine(2, deletedAt: now('-29 days -23 hours')),
+            $this->journalLine(3, deletedAt: now('-1 day')),
+        );
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->deletionJournalEntries);
+        self::assertSame([2, 3], array_map(static fn ($entry): int => $entry->id, $this->deletionJournal()->entries()));
+    }
+
+    public function testUnreadableDeletionJournalLineIsKeptAndAWarningIsLogged(): void
+    {
+        $this->appendToDeletionJournal(
+            $this->journalLine(1, deletedAt: now('-31 days')),
+            '{"id": 12,',
+            $this->journalLine(3, deletedAt: now('-1 day')),
+        );
+        $logs = $this->logs();
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->deletionJournalEntries);
+        self::assertSame(
+            '{"id": 12,'."\n".$this->journalLine(3, deletedAt: now('-1 day'))."\n",
+            file_get_contents($this->deletionJournalPath()),
+        );
+        self::assertTrue($logs->hasWarning(['message' => 'Purge: line {line} of the deletion journal cannot be read, it is kept.', 'context' => ['line' => 2]]));
+    }
+
+    public function testMissingDeletionJournalPurgesNothing(): void
+    {
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(0, $summary->deletionJournalEntries);
+        self::assertFileDoesNotExist($this->deletionJournalPath());
     }
 
     public function testPendingAccountIsDeleted31DaysAfterItsInvitationExpired(): void
@@ -240,6 +284,16 @@ final class DataPurgerTest extends KernelTestCase
         self::assertStringContainsString('Comptes inactifs avertis 0', $display);
         self::assertStringContainsString('Comptes inactifs supprimés 0', $display);
         self::assertStringContainsString('Demandes de réinitialisation supprimées 1', $display);
+        self::assertStringContainsString('Lignes du journal des suppressions retirées 0', $display);
+    }
+
+    private function journalLine(int $id, \DateTimeImmutable $deletedAt): string
+    {
+        return json_encode([
+            'id' => $id,
+            'created_at' => '2025-01-01T10:00:00+01:00',
+            'deleted_at' => $deletedAt->format(\DATE_ATOM),
+        ], \JSON_THROW_ON_ERROR);
     }
 
     private function invite(string $email): User

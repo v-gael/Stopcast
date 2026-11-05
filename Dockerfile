@@ -96,13 +96,17 @@ RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --opt
     && php bin/console tailwind:build --minify --env=prod \
     && php bin/console asset-map:compile --env=prod \
     && php bin/console cache:warmup --env=prod \
+    && mkdir -p var/account-deletions \
     && chown -R www-data:www-data var /config/caddy /data/caddy
 
 # FrankenPHP tourne sous www-data (doc FrankenPHP, « Running as a non-root
 # user ») : l'image de base donne déjà au binaire la capacité de fichier
 # cap_net_bind_service, qui lui garde le port 80, et www-data possède var/
-# (cache, sessions) ainsi que les dossiers de Caddy (XDG_CONFIG_HOME et
-# XDG_DATA_HOME de l'image). Le chown est dans le RUN qui remplit var/ : dans
+# (cache, sessions, journal des suppressions) ainsi que les dossiers de Caddy
+# (XDG_CONFIG_HOME et XDG_DATA_HOME de l'image). var/account-deletions/ existe
+# dans l'image pour que le volume account_deletions de compose.prod.yaml
+# reprenne son propriétaire au premier montage, au lieu d'être créé en root.
+# Le chown est dans le RUN qui remplit var/ : dans
 # un RUN à part, il recopierait tout var/ dans une nouvelle couche. Le dev et
 # la CI restent en root (bind mount, Composer).
 
