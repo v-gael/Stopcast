@@ -41,6 +41,7 @@ class PurgeCommand extends Command
             ['Comptes inactifs avertis' => $summary->inactivityWarnings],
             ['Comptes inactifs supprimés' => $summary->inactiveAccounts],
             ['Demandes de réinitialisation supprimées' => $summary->resetPasswordRequests],
+            ['Lignes du journal des suppressions retirées' => $summary->deletionJournalEntries],
         );
         $io->success('Purge terminée.');
 

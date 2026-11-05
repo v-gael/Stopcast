@@ -17,7 +17,8 @@ use Symfony\Component\Mailer\MailerInterface;
  * Applique les durées de conservation : supprime les comptes en attente dont
  * la dernière invitation a expiré depuis plus de 30 jours, avertit puis
  * supprime les comptes activés sans connexion depuis 2 ans, et supprime enfin
- * les demandes de réinitialisation et d'invitation expirées des comptes actifs.
+ * les demandes de réinitialisation et d'invitation expirées des comptes actifs,
+ * puis les lignes du journal des suppressions plus vieilles que les sauvegardes.
  *
  * Les demandes d'un compte en attente restent jusqu'à sa suppression : la
  * plus récente date sa dernière invitation, et elles partent en cascade avec
@@ -34,10 +35,18 @@ final readonly class DataPurger
      */
     public const string INACTIVITY_WARNING_NOTICE = '30 days';
 
+    /**
+     * Durée des sauvegardes, annoncée dans la politique de confidentialité :
+     * une ligne reste au journal tant qu'une sauvegarde antérieure à la
+     * suppression peut être restaurée.
+     */
+    public const string DELETION_JOURNAL_RETENTION = '30 days';
+
     public function __construct(
         private UserRepository $userRepository,
         private ResetPasswordRequestRepository $resetPasswordRequestRepository,
         private AccountDeleter $accountDeleter,
+        private DeletionJournal $deletionJournal,
         private EntityManagerInterface $entityManager,
         private MailerInterface $mailer,
         private ClockInterface $clock,
@@ -64,13 +73,16 @@ final readonly class DataPurger
             inactivityWarnings: $this->warnInactiveAccounts($now),
             inactiveAccounts: $this->deleteInactiveAccounts($now),
             resetPasswordRequests: $this->resetPasswordRequestRepository->removeExpiredRequestsOfActiveUsers($now),
+            // En dernier : les suppressions de cette purge sont au journal.
+            deletionJournalEntries: $this->deletionJournal->purgeBefore($now->modify('-'.self::DELETION_JOURNAL_RETENTION)),
         );
 
-        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted and {resetPasswordRequests} expired reset password requests deleted.', [
+        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted, {resetPasswordRequests} expired reset password requests deleted and {deletionJournalEntries} deletion journal lines removed.', [
             'pendingAccounts' => $summary->pendingAccounts,
             'inactivityWarnings' => $summary->inactivityWarnings,
             'inactiveAccounts' => $summary->inactiveAccounts,
             'resetPasswordRequests' => $summary->resetPasswordRequests,
+            'deletionJournalEntries' => $summary->deletionJournalEntries,
         ]);
 
         return $summary;
