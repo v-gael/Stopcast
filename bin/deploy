@@ -164,12 +164,12 @@ if [ "$pending" -eq 1 ]; then
     compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 fi
 
-# `--wait` refuse un service sans healthcheck : worker n'en a pas (pas de
-# serveur web). On attend qu'app soit healthy, puis on remplace worker.
+# `--wait` refuse un service sans healthcheck : worker et backup n'en ont pas
+# (pas de serveur web). On attend qu'app soit healthy, puis on les remplace.
 echo '==> Mise à jour des conteneurs'
 replacing=1
 compose up -d --wait --wait-timeout 300 --remove-orphans app
-compose up -d worker
+compose up -d worker backup
 
 printf '%s\n' "$IMAGE_TAG" > "$state_file"
 echo "Déployé : $IMAGE_TAG (version précédente : $previous)"

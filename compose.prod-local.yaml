@@ -15,6 +15,12 @@ services:
       context: .
       target: prod
 
+  # Dépôt restic de test, sans R2 : RESTIC_REPOSITORY=/srv/restic dans
+  # .env.prod.local. En mémoire, il disparaît quand le conteneur est recréé.
+  backup:
+    tmpfs:
+      - /srv/restic:mode=1777
+
 networks:
   edge:
     external: false

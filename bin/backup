@@ -1,0 +1,71 @@
+#!/bin/sh
+# Sauvegarde la base et le journal des suppressions de compte dans le dépôt
+# restic RESTIC_REPOSITORY (Cloudflare R2 en prod), chiffré côté client par
+# RESTIC_PASSWORD, puis ne garde que les 30 derniers jours. Signale chaque
+# réussite à HEALTHCHECKS_BACKUP_URL, et chaque échec à son /fail.
+#
+# Lancé chaque nuit à 3 h 30 par supercronic dans le service backup
+# (ops/backup.crontab), ou à la main : make prod-backup. Restauration :
+# docs/exploitation.md, « Sauvegardes ».
+
+set -eu
+
+if [ -z "${RESTIC_REPOSITORY:-}" ]; then
+    echo 'Sauvegarde désactivée : RESTIC_REPOSITORY est vide.'
+    exit 0
+fi
+
+# notify <suffixe> : un ping raté ne change pas le résultat de la sauvegarde.
+notify() {
+    if [ -n "${HEALTHCHECKS_BACKUP_URL:-}" ]; then
+        curl -fsS -m 10 --retry 3 -o /dev/null "$HEALTHCHECKS_BACKUP_URL$1" || echo 'Ping Healthchecks.io raté.' >&2
+    fi
+}
+
+on_exit() {
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        echo "Échec de la sauvegarde (code $status)." >&2
+        notify /fail
+    fi
+}
+trap on_exit EXIT
+
+# Un déploiement qui recrée le conteneur pendant une sauvegarde peut laisser un
+# verrou : restic attend sa libération au lieu d'échouer tout de suite.
+restic() {
+    command restic --retry-lock 5m "$@"
+}
+
+# Code 10 : le dépôt n'existe pas encore (première sauvegarde).
+status=0
+restic cat config >/dev/null 2>&1 || status=$?
+case $status in
+    0) ;;
+    10)
+        echo '==> Création du dépôt'
+        restic init
+        ;;
+    *)
+        echo "Dépôt illisible (code $status) : RESTIC_REPOSITORY, RESTIC_PASSWORD ou la clé R2 ?" >&2
+        exit "$status"
+        ;;
+esac
+
+# Le dump passe directement de pg_dump à restic, sans fichier temporaire ;
+# restic échoue si pg_dump échoue. Toutes les tables, référentiel GTFS compris
+# (device référence quay). Le mot de passe passe par l'environnement.
+echo '==> Base de données'
+PGPASSWORD=$POSTGRES_PASSWORD
+export PGPASSWORD
+restic backup --tag database --stdin-filename database.pgdump --stdin-from-command -- \
+    pg_dump -h database -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom
+
+echo '==> Journal des suppressions de compte'
+restic backup --tag deletion-journal /app/var/account-deletions
+
+echo '==> Rétention : 30 jours'
+restic forget --keep-within-daily 30d --prune
+
+notify ''
+echo 'Sauvegarde terminée.'
