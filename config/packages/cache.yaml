@@ -23,6 +23,9 @@ framework:
             # requête, et un appairage en enchaîne plusieurs. Les clés sont
             # aléatoires, rien ne déborde d'un test à l'autre.
             display_pairing.cache: null
+            # ETag et Last-Modified du dernier import GTFS statique réussi (voir
+            # StaticReferenceImporter). Perdu au redéploiement : au pire un import de plus.
+            gtfs_static.cache: null
 
 when@test:
     framework:
@@ -30,6 +33,8 @@ when@test:
             pools:
                 # En mémoire : rien ne survit d'un test à l'autre.
                 gtfs_realtime.cache:
+                    adapter: cache.adapter.array
+                gtfs_static.cache:
                     adapter: cache.adapter.array
                 # Tentatives de connexion (login_throttling) : sans quoi les
                 # échecs s'additionnent d'un test et d'un lancement à l'autre.

@@ -17,6 +17,8 @@ make import                  # importe le référentiel GTFS statique
 make fixtures                # (optionnel) crée un compte admin et des dispositifs de démo (voir plus bas)
 ```
 
+`make import` importe toujours le référentiel ; `app:gtfs:import --if-changed` ne l'importe que si le serveur annonce un nouveau fichier, comme l'import nocturne de la prod ([exploitation.md](exploitation.md#import-gtfs-planifié)).
+
 La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`, et la documentation de l'API sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.

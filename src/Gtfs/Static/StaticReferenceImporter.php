@@ -8,10 +8,13 @@ use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Importe le référentiel statique : télécharge l'archive GTFS, la lit, puis
@@ -21,6 +24,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * (jamais supprimés) quand ils disparaissent, pour préserver les
  * configurations d'affichage. Les trajets, que rien ne référence, sont
  * remplacés intégralement.
+ *
+ * L'import conditionnel envoie l'ETag et le Last-Modified du dernier import
+ * réussi de la même URL, et s'arrête sur un 304 : le fichier n'a pas changé.
  */
 final readonly class StaticReferenceImporter
 {
@@ -31,18 +37,36 @@ final readonly class StaticReferenceImporter
         private EntityManagerInterface $entityManager,
         private Filesystem $filesystem,
         private StaticFeedReader $reader,
+        #[Autowire(service: 'gtfs_static.cache')]
+        private CacheItemPoolInterface $cache,
+        private LoggerInterface $logger,
         #[Autowire(env: 'GTFS_STATIC_FEED_URL')]
         private string $feedUrl,
     ) {
     }
 
     /**
+     * @param bool $onlyIfChanged sauter l'import si le serveur répond que le fichier n'a pas changé
+     *
+     * @return GtfsImportSummary|null null quand l'import est sauté
+     *
      * @throws InvalidGtfsFeedException     archive illisible ou incomplète
-     * @throws HttpClientExceptionInterface téléchargement impossible
+     * @throws HttpClientExceptionInterface téléchargement impossible, ou réponse 4xx/5xx
      */
-    public function import(): GtfsImportSummary
+    public function import(bool $onlyIfChanged = false): ?GtfsImportSummary
     {
-        $feed = $this->download();
+        $sent = $onlyIfChanged ? $this->storedValidators() : new FeedValidators();
+        $response = $this->httpClient->request('GET', $this->feedUrl, [
+            'headers' => $sent->toConditionalHeaders(),
+        ]);
+
+        // Un 304 ne vaut « inchangé » qu'en réponse à une requête conditionnelle ;
+        // sinon, getContent() le signale comme une erreur HTTP.
+        if (304 === $response->getStatusCode() && !$sent->isEmpty()) {
+            return null;
+        }
+
+        $feed = $this->read($response);
 
         $this->entityManager->beginTransaction();
 
@@ -70,19 +94,50 @@ final readonly class StaticReferenceImporter
             throw $throwable;
         }
 
+        // Après le commit : un import raté ne fait pas passer le fichier pour importé.
+        $this->rememberValidators(FeedValidators::fromResponse($response));
+
         return $routeSummary
             ->merge($quaySummary)
             ->merge($deactivationSummary);
     }
 
+    private function storedValidators(): FeedValidators
+    {
+        $validators = $this->cache->getItem($this->validatorsKey())->get();
+
+        return $validators instanceof FeedValidators ? $validators : new FeedValidators();
+    }
+
+    private function rememberValidators(FeedValidators $validators): void
+    {
+        if ($validators->isEmpty()) {
+            // Sans quoi des validateurs périmés repartiraient vers un serveur qui n'en envoie plus.
+            $this->cache->deleteItem($this->validatorsKey());
+            $this->logger->info('GTFS import: the feed server sends neither ETag nor Last-Modified, every conditional import will download the feed.');
+
+            return;
+        }
+
+        $this->cache->save($this->cache->getItem($this->validatorsKey())->set($validators));
+    }
+
     /**
-     * Télécharge l'archive dans un fichier temporaire, le temps de la lire.
+     * Par URL : changer de flux ne réutilise pas les validateurs de l'ancien.
      */
-    private function download(): StaticFeed
+    private function validatorsKey(): string
+    {
+        return 'validators.'.hash('xxh128', $this->feedUrl);
+    }
+
+    /**
+     * Écrit l'archive dans un fichier temporaire, le temps de la lire.
+     */
+    private function read(ResponseInterface $response): StaticFeed
     {
         // Contenu récupéré avant de créer le fichier temporaire, pour ne rien
         // laisser derrière soi si le téléchargement échoue.
-        $content = $this->httpClient->request('GET', $this->feedUrl)->getContent();
+        $content = $response->getContent();
 
         $archivePath = $this->filesystem->tempnam(sys_get_temp_dir(), 'gtfs_', '.zip');
 
