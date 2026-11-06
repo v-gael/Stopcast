@@ -72,3 +72,7 @@ Stopcast importe le référentiel statique de ce jeu de données (lignes, arrêt
 [MIT](LICENSE)
 
 Ressources tierces : la police [Roboto Condensed](https://github.com/googlefonts/roboto-classic) de la page d'affichage (`assets/fonts/`, instance statique au poids 700), © The Roboto Project Authors, est distribuée sous [SIL Open Font License 1.1](assets/fonts/OFL.txt).
+
+---
+
+<sub>Projet personnel, développé pour mon propre usage : les contributions ne sont pas attendues. Faille de sécurité : voir [SECURITY.md](SECURITY.md).</sub>
