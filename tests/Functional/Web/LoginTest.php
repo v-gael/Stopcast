@@ -65,6 +65,17 @@ final class LoginTest extends WebTestCase
     }
 
     /**
+     * Cloudflare en panne : la connexion passe, seules les limites de débit
+     * protègent le formulaire.
+     */
+    public function testLoginGoesThroughWhenCloudflareIsDown(): void
+    {
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD, turnstileToken: TurnstileSiteverifyMock::OUTAGE_TOKEN);
+
+        self::assertResponseRedirects('/devices');
+    }
+
+    /**
      * Le captcha est vérifié après la limite de débit : un captcha raté
      * consomme un des 5 essais, et la limite atteinte refuse même un envoi
      * complet, sans appeler Cloudflare.

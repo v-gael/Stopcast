@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\User;
+use App\Security\TurnstileVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\DomCrawler\Crawler;
@@ -62,7 +63,7 @@ trait WebTestTrait
      */
     private function submitWithTurnstile(Form $form, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
     {
-        $this->browser()->request($form->getMethod(), $form->getUri(), [...$form->getPhpValues(), 'cf-turnstile-response' => $turnstileToken]);
+        $this->browser()->request($form->getMethod(), $form->getUri(), [...$form->getPhpValues(), TurnstileVerifier::RESPONSE_FIELD => $turnstileToken]);
     }
 
     /**

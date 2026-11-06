@@ -8,9 +8,10 @@ import { Controller } from '@hotwired/stimulus';
  * (300 s), il en obtient un nouveau.
  */
 
-// Nonce de la CSP de la première page, lu au chargement du module : après une
-// visite Turbo, le document garde la CSP de cette page, qui refuserait le
-// nonce de la nouvelle.
+// La CSP autorise le script par son hôte (script-src) : le nonce n'est qu'un
+// complément, que Cloudflare recommande et propage à ce qu'il charge. Il est lu
+// au chargement du module, dès la première page (contrôleur chargé au
+// démarrage) : après une visite Turbo, le document garde la CSP de cette page.
 const nonce = document.querySelector('meta[name="csp-nonce"]')?.content;
 
 let api;

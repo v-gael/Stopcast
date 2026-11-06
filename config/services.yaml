@@ -34,6 +34,8 @@ when@test:
         app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
 
     services:
+        # tests/ n'est pas chargé comme services : mock_response_factory de
+        # turnstile.client (framework.yaml) attend un id de service.
         App\Tests\Support\TurnstileSiteverifyMock: ~
 
 when@prod:

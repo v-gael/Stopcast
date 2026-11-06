@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Web;
 
+use App\Tests\Support\TurnstileSiteverifyMock;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -58,6 +59,6 @@ final class HomeTest extends WebTestCase
 
         $crawler = $client->request('GET', '/');
 
-        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-controller="turnstile"][data-turnstile-site-key-value="1x00000000000000000000AA"]'));
+        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"]'));
     }
 }

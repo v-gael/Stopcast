@@ -19,6 +19,16 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final readonly class TurnstileVerifier
 {
     /**
+     * Champ que le widget ajoute au formulaire qui l'entoure.
+     */
+    public const string RESPONSE_FIELD = 'cf-turnstile-response';
+
+    /**
+     * Message unique d'un refus, quelle qu'en soit la cause.
+     */
+    public const string FAILURE_MESSAGE = 'La vérification anti-robot a échoué. Réessayez.';
+
+    /**
      * Erreurs de configuration ou de Cloudflare, pas du jeton.
      */
     private const array REPORTED_ERROR_CODES = ['missing-input-secret', 'invalid-input-secret', 'internal-error', 'bad-request'];
@@ -37,7 +47,7 @@ final readonly class TurnstileVerifier
     }
 
     /**
-     * @param string|null $token le champ cf-turnstile-response du formulaire
+     * @param string|null $token le champ RESPONSE_FIELD du formulaire
      */
     public function verify(?string $token): bool
     {

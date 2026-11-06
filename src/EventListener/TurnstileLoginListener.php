@@ -32,8 +32,8 @@ final readonly class TurnstileLoginListener
             return;
         }
 
-        if (!$this->turnstileVerifier->verify($request->request->getString('cf-turnstile-response'))) {
-            throw new CustomUserMessageAuthenticationException('La vérification anti-robot a échoué. Réessayez.');
+        if (!$this->turnstileVerifier->verify($request->request->getString(TurnstileVerifier::RESPONSE_FIELD))) {
+            throw new CustomUserMessageAuthenticationException(TurnstileVerifier::FAILURE_MESSAGE);
         }
     }
 }

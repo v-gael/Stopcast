@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Validator;
 
+use App\Security\TurnstileVerifier;
 use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint;
 
 /**
- * Captcha Turnstile d'un formulaire public : le jeton cf-turnstile-response
- * que le widget ajoute à la requête. Posée sur le formulaire entier, elle
+ * Captcha Turnstile d'un formulaire public : le jeton que le widget ajoute
+ * à la requête (TurnstileVerifier::RESPONSE_FIELD). Posée sur le formulaire entier, elle
  * affiche son erreur au-dessus des champs.
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
@@ -21,7 +22,7 @@ final class Turnstile extends Constraint
         self::FAILED_ERROR => 'FAILED_ERROR',
     ];
 
-    public string $message = 'La vérification anti-robot a échoué. Réessayez.';
+    public string $message = TurnstileVerifier::FAILURE_MESSAGE;
 
     /**
      * @param list<string>|null $groups

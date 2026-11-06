@@ -52,7 +52,7 @@ final class ResetPasswordTest extends WebTestCase
     {
         $crawler = $this->client->request('GET', '/reset-password');
 
-        self::assertCount(1, $crawler->filter('main form[name="reset_password_request"] [data-controller="turnstile"][data-turnstile-site-key-value="1x00000000000000000000AA"]'));
+        self::assertCount(1, $crawler->filter('main form[name="reset_password_request"] [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"]'));
     }
 
     public function testRequestWithAnInvalidTurnstileTokenSendsNothing(): void
@@ -62,6 +62,14 @@ final class ResetPasswordTest extends WebTestCase
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('main form', 'La vérification anti-robot a échoué. Réessayez.');
         self::assertQueuedEmailCount(0);
+    }
+
+    public function testRequestStillSendsTheLinkWhenCloudflareIsDown(): void
+    {
+        $this->requestPasswordReset(self::EMAIL, TurnstileSiteverifyMock::OUTAGE_TOKEN);
+
+        self::assertQueuedEmailCount(1);
+        $this->assertConfirmationPage();
     }
 
     public function testUnknownEmailShowsTheSamePageWithoutSendingAnything(): void

@@ -28,7 +28,7 @@ final class TurnstileValidator extends ConstraintValidator
             throw new UnexpectedTypeException($constraint, Turnstile::class);
         }
 
-        $token = $this->requestStack->getCurrentRequest()?->request->getString('cf-turnstile-response');
+        $token = $this->requestStack->getCurrentRequest()?->request->getString(TurnstileVerifier::RESPONSE_FIELD);
         if ($this->turnstileVerifier->verify($token)) {
             return;
         }

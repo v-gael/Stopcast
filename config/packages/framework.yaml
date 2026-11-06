@@ -48,5 +48,4 @@ when@test:
             scoped_clients:
                 # Aucun appel à Cloudflare : la réponse dépend du jeton envoyé.
                 turnstile.client:
-                    base_uri: 'https://challenges.cloudflare.com'
                     mock_response_factory: App\Tests\Support\TurnstileSiteverifyMock
