@@ -18,6 +18,8 @@ when@prod:
             # SENTRY_RELEASE : IMAGE_TAG, le SHA déployé (compose.prod.yaml).
             traces_sample_rate: 0
             enable_metrics: false
+            # Pas de fil d'événements (breadcrumbs) : seule l'erreur part.
+            max_breadcrumbs: 0
             # Les scans de robots ne consomment pas le quota.
             ignore_exceptions:
                 - Symfony\Component\HttpKernel\Exception\NotFoundHttpException

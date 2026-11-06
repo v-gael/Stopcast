@@ -7,7 +7,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 1er novembre 2026.
+Dernière mise à jour : 6 novembre 2026.
 
 ## Traitements
 

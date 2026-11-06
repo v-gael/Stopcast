@@ -59,6 +59,12 @@ final class PersonalDataMaskerTest extends TestCase
         yield 'sans domaine de premier niveau' => ['deploy@stopcast-backup', 'd***@s***'];
     }
 
+    #[DataProvider('emailProvider')]
+    public function testEmailKeepsOnlyItsFirstLettersAndTopLevelDomain(string $input, string $expected): void
+    {
+        self::assertSame($expected, new PersonalDataMasker()->mask($input));
+    }
+
     public function testPasswordResetTokenIsReplaced(): void
     {
         self::assertSame(
@@ -85,11 +91,5 @@ final class PersonalDataMaskerTest extends TestCase
     public function testTextWithoutPersonalDataIsLeftUnchanged(string $input): void
     {
         self::assertSame($input, new PersonalDataMasker()->mask($input));
-    }
-
-    #[DataProvider('emailProvider')]
-    public function testEmailKeepsOnlyItsFirstLettersAndTopLevelDomain(string $input, string $expected): void
-    {
-        self::assertSame($expected, new PersonalDataMasker()->mask($input));
     }
 }

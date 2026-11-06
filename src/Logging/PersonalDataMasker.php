@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Logging;
 
 /**
- * Masque les adresses IP et les emails d'un texte : IPv4 tronquées en /24,
- * IPv6 en /48, emails réduits à leurs premières lettres et à leur domaine de.
+ * Masque les données personnelles et les secrets d'un texte.
  *
- * premier niveau (j***@e***.com). Le jeton d'un lien de réinitialisation du mot
- * de passe, secret tant qu'il est valable, est remplacé.
+ * - IPv4 tronquées en /24, IPv6 en /48 ;
+ * - emails réduits à leurs premières lettres et à leur domaine de premier
+ *   niveau (voir EMAIL) ;
+ * - jeton d'un lien de réinitialisation du mot de passe remplacé : il est
+ *   secret tant qu'il est valable.
  */
 final class PersonalDataMasker
 {
     private const string RESET_TOKEN = '#(/reset-password/reset/)[^/?\s"\'&]+#';
 
-    // Le domaine de premier niveau est facultatif : PostgreSQL tronque les
-    // valeurs de ses messages d'erreur (« jeanne@exam... »).
+    // jeanne@example.com devient j***@e***.com. Le domaine de premier niveau
+    // est facultatif : PostgreSQL tronque les valeurs de ses messages d'erreur
+    // (« jeanne@exam... »).
     private const string EMAIL = '/(?<![\w.%+-])([A-Za-z0-9])[\w.%+-]*@([A-Za-z0-9])[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*?(?:\.([A-Za-z]{2,}))?(?![\w-]|\.[A-Za-z0-9])/';
 
     private const string OCTET = '(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)';
