@@ -1,0 +1,57 @@
+# Suivi des erreurs de prod (docs/exploitation.md, « Logs et erreurs »). Le
+# bundle n'est chargé qu'en prod (config/bundles.php) ; sans SENTRY_DSN, rien
+# n'est envoyé.
+when@prod:
+    sentry:
+        dsn: '%env(SENTRY_DSN)%'
+        # Les erreurs arrivent par les handlers Monolog (monolog.yaml), au
+        # niveau error : les écouteurs du bundle les enverraient une seconde
+        # fois, et celui de Messenger aussi à chaque nouvelle tentative.
+        register_error_listener: false
+        register_error_handler: false
+        messenger:
+            enabled: false
+        tracing:
+            enabled: false
+        options:
+            environment: '%env(SENTRY_ENVIRONMENT)%'
+            # SENTRY_RELEASE : IMAGE_TAG, le SHA déployé (compose.prod.yaml).
+            traces_sample_rate: 0
+            enable_metrics: false
+            # Pas de fil d'événements (breadcrumbs) : seule l'erreur part.
+            max_breadcrumbs: 0
+            # Les scans de robots ne consomment pas le quota ; les autres 4xx
+            # sont écartés par SentryBeforeSend.
+            ignore_exceptions:
+                - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+                - Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException
+            # Erreurs client écartées, puis masquage (src/Logging/).
+            before_send: App\Logging\SentryBeforeSend
+            # Rien sur l'utilisateur ni la requête au-delà de la méthode et de
+            # l'URL : pas d'IP, de cookies, d'en-têtes, de corps (formulaire de
+            # connexion compris), de paramètres d'URL ni de variables des
+            # frames. Remplace send_default_pii, plus large par défaut.
+            data_collection:
+                user_info: false
+                cookies: { mode: 'off' }
+                http_headers: { mode: 'off' }
+                http_bodies: []
+                url_query_params: { mode: 'off' }
+                database_query_data: false
+                queues: false
+                stack_frame_variables: false
+
+    services:
+        # Logs portant une exception (requête, console, Messenger).
+        Sentry\Monolog\ExceptionToSentryIssueHandler:
+            arguments:
+                $hub: '@Sentry\State\HubInterface'
+                $level: error
+        # Logs d'erreur sans exception ; les {placeholders} du message sont
+        # remplacés par les valeurs du contexte, déjà masquées.
+        Sentry\Monolog\LogToSentryIssueHandler:
+            arguments:
+                $hub: '@Sentry\State\HubInterface'
+                $level: error
+            calls:
+                - pushProcessor: [!service { class: Monolog\Processor\PsrLogMessageProcessor }]

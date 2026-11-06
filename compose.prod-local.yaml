@@ -9,11 +9,16 @@ services:
       target: prod
     ports:
       - "80:80"
+    # Les erreurs d'essai restent à part des vraies dans Sentry.
+    environment:
+      SENTRY_ENVIRONMENT: prod-local
 
   worker:
     build:
       context: .
       target: prod
+    environment:
+      SENTRY_ENVIRONMENT: prod-local
 
   # Dépôt restic de test, sans R2 : RESTIC_REPOSITORY=/srv/restic dans
   # .env.prod.local. Un volume, pour que les `run` de la procédure de
