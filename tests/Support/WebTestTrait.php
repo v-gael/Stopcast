@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\User;
+use App\Security\TurnstileVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
+use Symfony\Component\DomCrawler\Form;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mime\Email;
@@ -21,9 +23,10 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 trait WebTestTrait
 {
     /**
-     * Connexion depuis le formulaire de la vitrine.
+     * Connexion depuis le formulaire de la vitrine, avec le jeton Turnstile
+     * que le widget y aurait ajouté.
      */
-    private function logIn(string $email, string $password, bool $rememberMe = false): void
+    private function logIn(string $email, string $password, bool $rememberMe = false, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
     {
         $crawler = $this->browser()->request('GET', '/');
         $form = $crawler->selectButton('Se connecter')->form([
@@ -37,7 +40,30 @@ trait WebTestTrait
             $checkbox->tick();
         }
 
-        $this->browser()->submit($form);
+        $this->submitWithTurnstile($form, $turnstileToken);
+    }
+
+    /**
+     * Demande d'un lien de réinitialisation depuis « mot de passe oublié ».
+     */
+    private function requestPasswordReset(string $email, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
+    {
+        $crawler = $this->browser()->request('GET', '/reset-password');
+        self::assertResponseIsSuccessful();
+
+        $this->submitWithTurnstile($crawler->selectButton('Envoyer le lien')->form([
+            'reset_password_request[email]' => $email,
+        ]), $turnstileToken);
+    }
+
+    /**
+     * Envoi d'un formulaire protégé par Turnstile. Le champ
+     * cf-turnstile-response est ajouté par le JavaScript du widget : absent
+     * du HTML, il est ajouté ici aux valeurs du formulaire.
+     */
+    private function submitWithTurnstile(Form $form, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
+    {
+        $this->browser()->request($form->getMethod(), $form->getUri(), [...$form->getPhpValues(), TurnstileVerifier::RESPONSE_FIELD => $turnstileToken]);
     }
 
     /**

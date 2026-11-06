@@ -68,7 +68,7 @@ final class AccessibilityTest extends WebTestCase
         $this->assertHeadingOutline('/');
         $this->assertHeadingOutline('/reset-password');
 
-        $this->client->submit($this->client->getCrawler()->selectButton('Envoyer le lien')->form([
+        $this->submitWithTurnstile($this->client->getCrawler()->selectButton('Envoyer le lien')->form([
             'reset_password_request[email]' => $this->admin->getEmail(),
         ]));
         $link = '/reset-password/reset/'.$this->tokenFromEmail('#http://localhost/reset-password/reset/(\S+)#');
