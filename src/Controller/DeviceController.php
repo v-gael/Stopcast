@@ -20,7 +20,6 @@ use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -31,11 +30,6 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/devices')]
 final class DeviceController extends AbstractController
 {
-    /**
-     * Jeton qui vient d'être créé ou régénéré, montré une seule fois sur le détail.
-     */
-    private const string NEW_TOKEN_FLASH = 'device_token';
-
     /**
      * Dispositifs par page, le bloc d'ajout complétant la grille de trois colonnes.
      */
@@ -96,13 +90,10 @@ final class DeviceController extends AbstractController
             $pairingCode = PairingCode::normalize($pair);
 
             if (null !== $pairingCode) {
-                // Le jeton reste en flash : la fiche le montrera après l'appairage.
-                $this->addFlash(self::NEW_TOKEN_FLASH, $device->getToken());
-
                 return $this->redirectToRoute('app_device_pair_scanned', ['code' => $pairingCode, 'device' => $device->getId()], Response::HTTP_SEE_OTHER);
             }
 
-            return $this->redirectToShowWithNewToken($device);
+            return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('device/new.html.twig', [
@@ -164,11 +155,10 @@ final class DeviceController extends AbstractController
 
     #[Route('/{id}', name: 'app_device_show', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, 'device')]
-    public function show(Request $request, Device $device): Response
+    public function show(Device $device): Response
     {
         return $this->render('device/show.html.twig', [
             'device' => $device,
-            'new_token' => $this->takeNewToken($request, $device),
         ]);
     }
 
@@ -255,19 +245,6 @@ final class DeviceController extends AbstractController
         return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/{id}/regenerate-token', name: 'app_device_regenerate_token', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
-    #[IsGranted(DeviceVoter::EDIT, 'device')]
-    #[IsCsrfTokenValid(new Expression('"regenerate-device-token-" ~ args["device"].getId()'))]
-    public function regenerateToken(Device $device, EntityManagerInterface $entityManager): Response
-    {
-        $device->regenerateToken();
-        $entityManager->flush();
-
-        $this->addFlash('success', 'Un nouveau jeton a été généré. L\'ancien ne fonctionne plus.');
-
-        return $this->redirectToShowWithNewToken($device);
-    }
-
     /**
      * Message d'erreur d'un appairage refusé, null s'il est accepté.
      */
@@ -285,29 +262,5 @@ final class DeviceController extends AbstractController
         $this->addFlash('success', \sprintf("Code accepté : l'écran affichera « %s » dans quelques secondes.", $device->getLabel()));
 
         return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
-    }
-
-    private function redirectToShowWithNewToken(Device $device): Response
-    {
-        $this->addFlash(self::NEW_TOKEN_FLASH, $device->getToken());
-
-        return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
-    }
-
-    /**
-     * Lire le flash le consomme : le jeton n'apparaît plus au rechargement. Il
-     * n'est rendu que s'il est encore celui de ce dispositif.
-     */
-    private function takeNewToken(Request $request, Device $device): ?string
-    {
-        $session = $request->hasPreviousSession() ? $request->getSession() : null;
-
-        if (!$session instanceof FlashBagAwareSessionInterface) {
-            return null;
-        }
-
-        $tokens = $session->getFlashBag()->get(self::NEW_TOKEN_FLASH);
-
-        return \in_array($device->getToken(), $tokens, true) ? $device->getToken() : null;
     }
 }

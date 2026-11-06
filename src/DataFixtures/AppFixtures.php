@@ -15,7 +15,6 @@ use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectManager;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Chargées avec --append (make fixtures) pour garder le référentiel importé :
@@ -36,29 +35,20 @@ final class AppFixtures extends Fixture
     public function __construct(
         private readonly DevelopmentQuaySelector $quaySelector,
         private readonly LoggerInterface $logger,
-        #[Autowire(env: 'FIXTURES_DEVICE_TOKEN')]
-        private readonly string $fixedDeviceToken,
     ) {
     }
 
     public function load(ObjectManager $manager): void
     {
-        // Construits avant la purge : un jeton invalide arrête tout sans rien supprimer.
         $devUser = UserFactory::new([
             'email' => self::DEV_USER_EMAIL,
             'role' => Role::Admin,
             'password' => self::DEV_USER_PASSWORD,
         ])->withoutPersisting()->create();
-        $fixedDevice = '' !== $this->fixedDeviceToken ? new Device($devUser, self::FIXED_DEVICE_LABEL, $this->fixedDeviceToken) : null;
 
         $this->removeDevices($manager);
         $this->replaceDevUser($manager, $devUser);
-
-        if ($fixedDevice instanceof Device) {
-            $this->loadFixedDevice($manager, $fixedDevice);
-        } else {
-            $this->logger->warning('FIXTURES_DEVICE_TOKEN vide : pas d\'appareil de développement. Le définir dans .env.local (voir docs/developpement.md).');
-        }
+        $this->loadFixedDevice($manager, new Device($devUser, self::FIXED_DEVICE_LABEL));
 
         foreach (DeviceFactory::createMany(5, ['owner' => $devUser]) as $device) {
             $configCount = random_int(2, 4);

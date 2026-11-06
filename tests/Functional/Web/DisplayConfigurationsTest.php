@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Web;
 
+use App\Display\DisplayAssembler;
+use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
@@ -16,7 +18,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Zenstruck\Foundry\Test\Factories;
@@ -468,33 +469,29 @@ final class DisplayConfigurationsTest extends WebTestCase
     }
 
     /**
-     * Libellés servis au dispositif par l'API, dans l'ordre de rotation.
+     * Libellés des écrans que la page d'affichage montre au dispositif, dans
+     * l'ordre de rotation.
      *
      * @return list<string|null>
      */
     private function displayedLabels(Device $device): array
     {
-        // Noyau neuf pour remplacer les services, puis sans reboot pour qu'ils restent en place.
+        // Noyau neuf, pour que le flux remplacé serve au prochain service qui le lit.
         $kernel = $this->client->getKernel();
         $kernel->shutdown();
         $kernel->boot();
 
-        $this->client->disableReboot();
-        $container = self::getContainer();
-        $container->set('http_client', new MockHttpClient(self::feedResponse([])));
-        $container->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
+        self::getContainer()->set('http_client', new MockHttpClient(self::feedResponse([])));
+        $displayAssembler = self::getContainer()->get(DisplayAssembler::class);
+        self::assertInstanceOf(DisplayAssembler::class, $displayAssembler);
 
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $device->getToken()]);
+        $entityManager = $this->entityManager();
+        $entityManager->clear();
 
-        self::assertResponseIsSuccessful();
-        $response = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($response);
-        self::assertIsArray($response['displays']);
+        $device = $entityManager->find(Device::class, $device->getId());
+        self::assertInstanceOf(Device::class, $device);
 
-        /** @var list<string|null> $labels */
-        $labels = array_column($response['displays'], 'label');
-
-        return $labels;
+        return array_map(static fn (DisplayItem $item): ?string => $item->label, $displayAssembler->forDevice($device));
     }
 
     /**

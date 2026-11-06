@@ -13,10 +13,10 @@ Au-delà de l'affichage lui-même (relativement simple), l'essentiel du travail 
 ```
 ┌─────────────────────┐      ┌─────────────────┐      ┌───────────────────┐
 │   GTFS statique     │      │   GTFS-RT (RT)  │      │   Raspberry Pi    │
-│  (import ponctuel,  │      │  (récupéré à    │      │  (script Python,  │
-│   CLI Symfony)      │      │   intervalle    │      │   écran 480x320)  │
-└──────────┬──────────┘      │   régulier)     │      └──────────┬────────┘
-           │                 └─────────┬───────┘                 │
+│  (import ponctuel,  │      │  (récupéré à    │      │  (navigateur en   │
+│   CLI Symfony)      │      │   intervalle    │      │  kiosque, écran   │
+└──────────┬──────────┘      │   régulier)     │      │  480x320)         │
+           │                 └─────────┬───────┘      └──────────┬────────┘
            ▼                           │                         │
    ┌────────────────┐                  │                         │
    │  Base de       │                  │                         │
@@ -26,20 +26,20 @@ Au-delà de l'affichage lui-même (relativement simple), l'essentiel du travail 
            │                                                     │
            ▼                                                     │
    ┌───────────────────────────────────┐                         │
-   │  API Symfony (endpoint prochains  │◄────────────────────────┘
-   │  passages pour un Device donné)   │   GET /api/next-passages
-   └───────────────────────────────────┘        (header X-Device-Token)
+   │  Page d'affichage Symfony         │◄────────────────────────┘
+   │  (prochains passages du Device)   │   GET /display
+   └───────────────────────────────────┘   (cookie de l'écran appairé)
 ```
 
 1. **Import du référentiel statique** (`bin/console app:gtfs:import`, ou `make import`), exécuté ponctuellement (à chaque changement d'horaires du réseau). Upsert sur les identifiants naturels GTFS (`stop_id`, `route_id`) pour ne jamais casser les configurations déjà enregistrées.
-2. **Enregistrement du dispositif et sélection du/des quai(s)**, une fois, à la configuration initiale — depuis l'espace web, par le propriétaire du dispositif (voir [ADR 0003](adr/0003-front-twig.md)). Le jeton du dispositif n'y est affiché qu'une fois, à sa création ou à sa régénération. Le libellé d'aide au choix (lignes desservies, destinations principales) est calculé à l'import pour rendre le sens de circulation intuitif sans jargon GTFS.
-3. **En fonctionnement courant**, le Raspberry Pi interroge uniquement `GET /api/next-passages` avec son token dans le header `X-Device-Token` — pas d'identifiant dans l'URL. L'API résout le dispositif à partir du token, télécharge/parse le flux GTFS-RT une seule fois (mis en cache le temps de `GTFS_REALTIME_CACHE_TTL` secondes, partagé entre tous les devices), et renvoie pour chaque quai configuré (en rotation, dans l'ordre de `position`) les prochains passages (ligne, destination, couleurs, heure attendue), sans les bus qui terminent leur course à ce quai.
+2. **Enregistrement du dispositif et sélection du/des quai(s)**, une fois, à la configuration initiale — depuis l'espace web, par le propriétaire du dispositif (voir [ADR 0003](adr/0003-front-twig.md)). Son écran y est appairé par un code (voir [Appairage d'un écran](#appairage-dun-écran)). Le libellé d'aide au choix (lignes desservies, destinations principales) est calculé à l'import pour rendre le sens de circulation intuitif sans jargon GTFS.
+3. **En fonctionnement courant**, le navigateur du Raspberry Pi ouvre `/display`, authentifié par le cookie de son écran appairé — pas d'identifiant dans l'URL — puis relit les écrans (`/display?fragment=1`) à la cadence du dispositif. Stopcast résout le dispositif à partir du cookie, télécharge/parse le flux GTFS-RT une seule fois (mis en cache le temps de `GTFS_REALTIME_CACHE_TTL` secondes, partagé entre tous les dispositifs), et rend pour chaque quai configuré (en rotation, dans l'ordre de `position`) les prochains passages (ligne, destination, couleurs, délai), sans les bus qui terminent leur course à ce quai.
 
 ## Page d'affichage
 
 Stopcast fait lui-même la mise en page de l'écran, sous forme de page HTML : la page d'affichage. Elle reprend la disposition de l'image dessinée par le client Python du Raspberry Pi (barre du haut avec le nom du quai et l'heure, en-têtes de colonnes, cinq passages par écran avec la pastille de la ligne aux couleurs GTFS, le délai et la destination), ses couleurs et sa police, Roboto Condensed Bold. L'espace web en montre un aperçu ; l'écran l'affiche sur ses vraies données dans un navigateur en kiosque, sur `/display`, après un appairage par code (voir [ADR 0008](adr/0008-affichage-html-et-appairage.md)).
 
-- **Données** : `App\Display\DisplayAssembler` assemble ce qu'un dispositif affiche, une entrée (`DisplayItem`) par configuration active dans l'ordre de rotation. `forDevice()` lit les passages réels du flux temps réel (c'est ce qu'appelle `NextPassagesProvider` pour `/api/next-passages`) ; `sampleForDevice()` et `sampleForConfiguration()` prennent les passages d'exemple de `App\Display\SamplePassages`, fictifs, écrits dans le code et identiques pour toute configuration. `App\Display\ScreenPaginator` découpe ensuite chaque configuration en écrans de cinq passages, sans les passages déjà partis ; une configuration sans passage donne l'écran « aucun passage ».
+- **Données** : `App\Display\DisplayAssembler` assemble ce qu'un dispositif affiche, une entrée (`DisplayItem`) par configuration active dans l'ordre de rotation. `forDevice()` lit les passages réels du flux temps réel (c'est ce qu'appelle `DisplayController` pour `/display`) ; `sampleForDevice()` et `sampleForConfiguration()` prennent les passages d'exemple de `App\Display\SamplePassages`, fictifs, écrits dans le code et identiques pour toute configuration. `App\Display\ScreenPaginator` découpe ensuite chaque configuration en écrans de cinq passages, sans les passages déjà partis ; une configuration sans passage donne l'écran « aucun passage ».
 - **Page** : `templates/display/page.html.twig`, autonome (sans le layout de l'espace web), avec son propre point d'entrée AssetMapper `display` (`assets/display.js`, `assets/styles/display.css`), sans Tailwind ni Turbo. Les écrans sont dans `templates/display/_screens.html.twig`, avec l'écran « aucun quai affiché » quand aucune configuration n'est active.
 - **Mise à l'échelle** : la page remplit la fenêtre, en paysage. Tailles, marges et pastilles se mesurent en `--u`, un 320ᵉ de la hauteur (un 480ᵉ de la largeur si la fenêtre est plus étroite que 3:2) : en 480×320, `--u` vaut un pixel et la page reproduit l'image du client Python. Les colonnes se placent en pourcentage de la largeur : sur un écran plus large, les lignes s'étirent ; sur un écran plus haut, les cinq passages se partagent la hauteur. Les couleurs sont des variables CSS (`--display-background`, `--display-header-background`…).
 - **Contrôleur Stimulus** `display` (`assets/controllers/display_controller.js`) : il montre un écran à la fois et passe au suivant après la durée d'écran du dispositif ; il relit les écrans (`?fragment=1`) à la cadence de rafraîchissement, sans recharger la page, et relit à chaque fois les deux cadences. Si un rafraîchissement échoue, les écrans restent affichés et le pictogramme `no_signal` apparaît dans les en-têtes de colonnes jusqu'au prochain rafraîchissement réussi ; un 401 (écran dissocié ou remplacé) recharge la page, qui montre alors l'écran d'appairage. Il tient l'heure et les délais à jour entre deux rafraîchissements. Les couleurs des lignes passent par le CSSOM : la CSP refuse les attributs `style`.
@@ -74,11 +74,11 @@ La prod locale (`make prod-up`, [developpement.md](developpement.md#environnemen
 | `Route` | Une ligne (numéro, couleurs d'affichage officielles du réseau) |
 | `Trip` | Un trajet du référentiel statique, retrouvé par le `trip_id` du flux temps réel et conservé uniquement pour sa destination (`trip_headsign`) et son terminus, où ses passages ne sont pas affichés — voir [ADR 0001](adr/0001-destination-par-trajet.md) et [ADR 0002](adr/0002-terminus-par-trajet.md) |
 | `User` | Un compte de l'espace web (email, mot de passe haché, rôle `ROLE_USER` ou `ROLE_ADMIN`) ; en attente tant qu'un invité n'a pas choisi son mot de passe, actif ensuite |
-| `Device` | Un dispositif d'affichage, activable/désactivable, qui appartient à un `User` (son propriétaire) ; son écran appairé s'authentifie par un cookie dont le haché est enregistré sur le dispositif, l'API par un jeton (`X-Device-Token`) |
+| `Device` | Un dispositif d'affichage, activable/désactivable, qui appartient à un `User` (son propriétaire) ; son écran appairé s'authentifie par un cookie dont le haché est enregistré sur le dispositif |
 | `DisplayConfiguration` | La configuration d'affichage d'un `Device` : quel `Quay` afficher, sous quel libellé, dans quel ordre (`position`) en cas de rotation |
 
 Chaque suppression de compte (par son titulaire, un administrateur ou la purge) est d'abord inscrite dans un journal hors base, `var/account-deletions/deletions.jsonl` (`DeletionJournal`) : l'identifiant et la date de création du compte, sans email. Après la restauration d'une sauvegarde, `app:account:replay-deletions` supprime de nouveau ces comptes, pour qu'ils ne reviennent pas (droit à l'effacement). Le journal garde 30 jours, la durée des sauvegardes ; `app:purge` retire les lignes plus anciennes.
 
 ## Fuseau horaire
 
-PHP tourne partout en `Europe/Paris`, le fuseau du réseau : il est fixé dans l'image par `frankenphp/conf.d/10-timezone.ini` (dev, CI Docker et prod) et passé à `setup-php` dans les workflows GitHub. Les heures de passage de l'API portent donc le décalage de Paris (`+01:00` en hiver, `+02:00` en été). Les colonnes de date (`createdAt`, `updatedAt`, `deprecatedAt`, `messenger_messages`) sont sans fuseau : elles contiennent l'heure de Paris, ambiguë une heure par an au passage à l'heure d'hiver, ce qui ne touche que des dates d'audit. Un test (`tests/Unit/TimezoneTest.php`) échoue si le réglage disparaît.
+PHP tourne partout en `Europe/Paris`, le fuseau du réseau : il est fixé dans l'image par `frankenphp/conf.d/10-timezone.ini` (dev, CI Docker et prod) et passé à `setup-php` dans les workflows GitHub. L'horloge de la page d'affichage suit donc l'heure de Paris, quel que soit le fuseau du navigateur de l'écran (`data-display-time-zone-value`) ; les délais se calculent sur des instants, sans fuseau. Les colonnes de date (`createdAt`, `updatedAt`, `deprecatedAt`, `messenger_messages`) sont sans fuseau : elles contiennent l'heure de Paris, ambiguë une heure par an au passage à l'heure d'hiver, ce qui ne touche que des dates d'audit. Un test (`tests/Unit/TimezoneTest.php`) échoue si le réglage disparaît.

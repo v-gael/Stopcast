@@ -35,7 +35,7 @@ Un écran d'affichage s'authentifie par un cookie reçu à l'appairage (voir [AD
 
 ## En-têtes de sécurité HTTP
 
-L'application pose elle-même ses en-têtes de sécurité (`nelmio/security-bundle`, configuré dans `config/packages/nelmio_security.yaml`), sur toutes les réponses, API comprise :
+L'application pose elle-même ses en-têtes de sécurité (`nelmio/security-bundle`, configuré dans `config/packages/nelmio_security.yaml`), sur toutes les réponses, page d'affichage comprise :
 
 - `X-Content-Type-Options: nosniff` ;
 - `X-Frame-Options: DENY` ;

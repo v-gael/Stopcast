@@ -115,6 +115,9 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame(['CENTRE VILLE'], $crawler->filter('.screen__stop')->each(static fn ($stop): string => $stop->text()));
         self::assertSame(['1'], $crawler->filter('.passage__route')->each(static fn ($route): string => $route->text()));
         self::assertSame('/display?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
+        // Les passages sont des instants ; seule l'horloge de l'écran dépend
+        // du fuseau, celui du réseau quel que soit celui du navigateur.
+        self::assertSame('Europe/Paris', $crawler->filter('body')->attr('data-display-time-zone-value'));
     }
 
     public function testReloadingWithinTheMinuteKeepsTheCodeThenANewOneComes(): void

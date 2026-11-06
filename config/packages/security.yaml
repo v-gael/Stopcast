@@ -18,20 +18,6 @@ security:
             # Ensure dev tools and static assets are always allowed
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
-        # Le dispositif d'affichage s'authentifie par son propre jeton
-        # (X-Device-Token), à part des comptes utilisateurs : une session
-        # n'ouvre pas ce firewall, et le jeton d'un dispositif n'ouvre pas main.
-        device:
-            pattern: ^/api/next-passages$
-            stateless: true
-            # Chaque badge charge son DeviceUser : le provider des comptes n'est
-            # jamais appelé ici.
-            provider: app_user_provider
-            entry_point: App\Security\DeviceUnauthorizedHandler
-            access_token:
-                token_handler: App\Security\DeviceTokenHandler
-                token_extractors: App\Security\DeviceTokenExtractor
-                failure_handler: App\Security\DeviceUnauthorizedHandler
         # L'écran d'affichage s'authentifie par le cookie reçu à l'appairage, à
         # part des comptes : une session n'ouvre pas la page d'affichage, et le
         # cookie n'ouvre pas main. Sans cookie, l'écran passe en anonyme et
@@ -69,10 +55,9 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        - { path: ^/api/next-passages$, roles: ROLE_DEVICE }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/(account|devices|display-configurations), roles: ROLE_USER }
-        # Le reste est public, dont /api et sa documentation.
+        # Le reste est public.
 
 when@prod:
     security:

@@ -90,17 +90,17 @@ final class AccountExportTest extends WebTestCase
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $this->configure($device, $this->quay('S1', 'CENTRE VILLE'), 'Vers la gare');
-        $other = DeviceFactory::createOne(['label' => 'Écran de Noé']);
+        DeviceFactory::createOne(['label' => 'Écran de Noé']);
+        $this->pairScreen($device, 'secret-de-l-ecran');
 
         $this->download();
         $content = (string) $this->client->getResponse()->getContent();
 
-        self::assertStringNotContainsString($device->getToken(), $content);
-        self::assertStringNotContainsString($other->getToken(), $content);
+        self::assertStringNotContainsString(Device::hashScreenSecret('secret-de-l-ecran'), $content);
+        self::assertStringNotContainsString('"screenSecretHash"', $content);
         self::assertStringNotContainsString('Écran de Noé', $content);
         self::assertStringNotContainsString((string) $this->user->getPassword(), $content);
         self::assertStringNotContainsString('"id"', $content);
-        self::assertStringNotContainsString('"token"', $content);
         self::assertStringNotContainsString('"password"', $content);
     }
 
@@ -183,6 +183,13 @@ final class AccountExportTest extends WebTestCase
         $configuration = new DisplayConfiguration($device, $quay)->setLabel($label)->setActive($active);
         $device->appendDisplayConfiguration($configuration);
         $entityManager->persist($configuration);
+        $entityManager->flush();
+    }
+
+    private function pairScreen(Device $device, string $screenSecret): void
+    {
+        $entityManager = $this->entityManager();
+        $entityManager->find(Device::class, $device->getId())?->pairScreen($screenSecret);
         $entityManager->flush();
     }
 

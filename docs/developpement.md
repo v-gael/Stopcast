@@ -10,7 +10,7 @@ L'application tourne dans un conteneur FrankenPHP (PHP 8.5), avec une base Postg
 ## Démarrage
 
 ```bash
-cp .env .env.local           # puis renseigner les URLs GTFS (voir docs/api.md)
+cp .env .env.local           # puis renseigner les URLs GTFS (voir docs/configuration.md)
 make up                      # démarre les conteneurs de dev et active le hook pre-push
 make migrate                 # applique les migrations
 make import                  # importe le référentiel GTFS statique
@@ -19,7 +19,7 @@ make fixtures                # (optionnel) crée un compte admin et des disposit
 
 `make import` importe toujours le référentiel ; `app:gtfs:import --if-changed` ne l'importe que si le serveur annonce un nouveau fichier, comme l'import nocturne de la prod ([exploitation.md](exploitation.md#import-gtfs-planifié)).
 
-La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`, et la documentation de l'API sur `http://localhost/api`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'interroger via l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
+La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'ouvrir par l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.
 
@@ -39,9 +39,9 @@ La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. 
 
 « Mot de passe oublié ? », sous le formulaire de connexion, envoie par email un lien valable 1 h et utilisable une fois. La page de confirmation est la même que l'email corresponde à un compte ou non, et une seule demande par heure est acceptée pour un même compte. Changer son mot de passe ferme les autres sessions et invalide les cookies « Se souvenir de moi ».
 
-Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs jetons cessent de fonctionner. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé, que la suppression vienne de la personne ou d'un administrateur : « Votre compte Stopcast a été supprimé, avec ses écrans d'affichage. Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur. » Un compte en attente ne reçoit rien : le supprimer annule simplement son invitation.
+Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs écrans appairés reviennent à l'écran d'appairage. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé, que la suppression vienne de la personne ou d'un administrateur : « Votre compte Stopcast a été supprimé, avec ses écrans d'affichage. Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur. » Un compte en attente ne reçoit rien : le supprimer annule simplement son invitation.
 
-Depuis « Mon compte », « Télécharger mes données » renvoie un fichier JSON, `stopcast-donnees-AAAA-MM-JJ.json`, pour les droits d'accès et de portabilité : le compte (email, rôle, date de création, date de dernière connexion), ses dispositifs et leurs configurations d'affichage (quai, libellé, position, état, dates en ISO 8601). Il ne contient ni le hash du mot de passe, ni les jetons des dispositifs, ni les identifiants internes ; les logs se demandent par email. La réponse n'est pas mise en cache (`Cache-Control: no-store`).
+Depuis « Mon compte », « Télécharger mes données » renvoie un fichier JSON, `stopcast-donnees-AAAA-MM-JJ.json`, pour les droits d'accès et de portabilité : le compte (email, rôle, date de création, date de dernière connexion), ses dispositifs et leurs configurations d'affichage (quai, libellé, position, état, dates en ISO 8601). Il ne contient ni le hash du mot de passe, ni le haché du cookie des écrans, ni les identifiants internes ; les logs se demandent par email. La réponse n'est pas mise en cache (`Cache-Control: no-store`).
 
 Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, statut (« Actif » ou « Invitation en attente »), nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`. « Modifier » change le rôle d'un compte, jamais son email ; ses sessions ouvertes sont alors déconnectées. « Supprimer » supprime un autre compte, avec ses dispositifs et leurs configurations, après une confirmation qui annonce combien de dispositifs partent avec lui ; un administrateur supprime son propre compte depuis « Mon compte », avec son mot de passe.
 
@@ -75,8 +75,6 @@ Les emails s'appuient sur le layout `templates/email/base.html.twig` (styles en 
 
 Chaque dispositif appartient à un compte, son propriétaire : lui seul le voit et le gère depuis `/devices`, administrateurs compris. La liste montre 5 dispositifs par page, plus le bloc d'ajout. Au-delà de 5 dispositifs, une recherche sur le libellé apparaît : elle filtre en direct, dans un cadre Turbo, et la pagination garde le terme cherché. Supprimer un compte supprime ses dispositifs et leurs configurations.
 
-Le jeton d'un dispositif (à recopier dans la configuration de StopcastDisplay) n'est affiché qu'une fois, juste après la création du dispositif ou la régénération de son jeton. Un jeton perdu ne se retrouve pas : en régénérer un, ce qui invalide l'ancien.
-
 Une base qui contient des dispositifs d'avant l'introduction des propriétaires ne peut pas être migrée (la migration `Version20260929175027` échoue). En dev, supprimer les dispositifs de démo, migrer, puis recharger les fixtures :
 
 ```bash
@@ -98,7 +96,7 @@ Pour essayer sur le Raspberry Pi contre le dev, le Pi en kiosque ouvre `http://l
 Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis le détail de leur dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
 
 - Le quai se choisit par son nom dans un champ à autocomplétion qui ne propose que les quais actifs, suivis de leurs destinations desservies (« MAIRIE → Centre-ville, Hôtel de ville ») pour distinguer les deux sens de circulation.
-- Une nouvelle configuration se place en fin de rotation. Les boutons « Monter » et « Descendre » changent l'ordre dans lequel `/api/next-passages` renvoie les quais. Une configuration masquée garde sa place, mais sort de la réponse de l'API.
+- Une nouvelle configuration se place en fin de rotation. Les boutons « Monter » et « Descendre » changent l'ordre dans lequel l'écran fait tourner les quais. Une configuration masquée garde sa place, mais n'est plus affichée.
 - Une configuration dont le quai a disparu du dernier import porte le badge « Quai absent du dernier import ». Elle reste modifiable sans changer de quai.
 
 ## Front : Twig et Tailwind
@@ -108,7 +106,7 @@ Les pages sont rendues en Twig (voir [ADR 0003](adr/0003-front-twig.md)), stylé
 - `templates/base.html.twig` : squelette commun. `templates/layout/public.html.twig` pour la vitrine, `templates/layout/space.html.twig` pour les pages connectées (navigation de l'espace, messages flash en haut du contenu).
 - `templates/components/` : Twig Components anonymes `Button` (`primary`, `secondary`, `danger`, lien si `href`), `Card` (`title` optionnel), `Badge` (`neutral`, `success`, `warning`) et `Flash` (messages flash `success`, `error`, `warning`).
 - `templates/form/tailwind_layout.html.twig` : thème de formulaire global, déclaré dans `config/packages/twig.yaml`. Il ajoute trois commandes : l'interrupteur (option `'block_prefix' => 'switch'` d'une case à cocher), le curseur de durée (`SecondsSliderType`, bornes en attributs `min` et `max`) et les durées préréglées avec « Autre » (`SecondsPresetsType`, option `presets`), chacune avec son contrôleur Stimulus (`seconds-slider`, `seconds-presets`). Sans JavaScript, les durées préréglées se réduisent au champ nombre.
-- `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`). Sous `/api`, un client qui demande du JSON garde la réponse d'erreur JSON.
+- `templates/bundles/TwigBundle/Exception/` : pages d'erreur de la prod, sur le layout de la vitrine : `error404.html.twig`, `error403.html.twig` et `error.html.twig` pour tout autre code. Elles n'affichent que le statut HTTP, jamais le message de l'exception. Hors debug seulement : en dev, Symfony affiche sa page de debug ; l'aperçu est sur `http://localhost/_error/404` (ou `403`, `500`).
 - `templates/display/` : page d'affichage des écrans, autonome, stylée sans Tailwind par `assets/styles/display.css` et chargée par son propre point d'entrée `display` (`assets/display.js`) ; voir [architecture.md](architecture.md#page-daffichage).
 - `templates/device/_bench.html.twig` : écran de test du formulaire d'un dispositif, avec sa CSS (`assets/styles/device_bench.css`) et son contrôleur Stimulus (`device-bench`). Il fait tourner trois écrans fictifs à la durée saisie et recopie le libellé tapé, sans rien enregistrer. Volontairement séparé de la page d'affichage, dont il ne reprend que l'allure : les réglages à essayer en direct (plus tard, les thèmes) n'y ajoutent aucune contrainte.
 - `assets/styles/app.css` : point d'entrée Tailwind. Les dossiers scannés pour trouver les classes y sont listés (`@source`) : un template placé ailleurs doit y être ajouté.
@@ -136,30 +134,11 @@ Les tests (CI GitHub, `make ci-run`) ne compilent pas la CSS. En environnement `
 
 - un compte administrateur de développement, recréé à chaque chargement : `admin@stopcast.local`, mot de passe `stopcast-admin`. Il possède tous les dispositifs de démo ;
 - 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
-- si `FIXTURES_DEVICE_TOKEN` est défini, un dispositif « Écran de développement » à jeton fixe, pour le client d'affichage StopcastDisplay.
+- un dispositif « Écran de développement », sur des quais qui ont des passages, pour essayer la page d'affichage.
 
-Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les renvoie `/api/next-passages`. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
+Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les affiche la page d'affichage. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
 
-Pour brancher StopcastDisplay, sur la machine de développement comme sur le Raspberry Pi :
-
-1. Générer un jeton (64 caractères max) et le définir dans `.env.local` :
-
-   ```bash
-   php -r 'echo bin2hex(random_bytes(16)), PHP_EOL;'
-   # .env.local
-   FIXTURES_DEVICE_TOKEN=<jeton>
-   ```
-
-2. Lancer `make fixtures`. Le jeton reste le même d'un chargement à l'autre.
-3. Dans StopcastDisplay, recopier ce jeton dans `TOKEN`, dans `.env.local` sur la machine et dans `.env.pi.local` sur le Pi. `API_URL` pointe sur l'IP de la machine de développement sur le réseau local (par ex. `http://192.168.1.20`), le Pi ne pouvant pas joindre `localhost`.
-
-Vérifier que l'écran a des passages :
-
-```bash
-curl -H 'X-Device-Token: <jeton>' http://localhost/api/next-passages
-```
-
-StopcastDisplay appelle cette route toutes les 10 secondes : le profiler ne la profile pas, pour que ces appels ne noient pas ceux du navigateur. Pour en profiler un, ajouter `?_profile=1` (`http://localhost/api/next-passages?_profile=1`) ; le profil apparaît alors dans `/_profiler`.
+Pour le voir sur un écran, appairer `http://localhost/display` (ou le Pi, voir [Dispositifs](#dispositifs)) à ce dispositif. `make fixtures` supprime les dispositifs : un écran appairé revient alors à l'écran d'appairage.
 
 ## Logs
 
@@ -172,8 +151,6 @@ En dev, trois sources, chacune avec sa commande :
 | Profiler | Détail d'une requête (logs, requêtes SQL, sécurité…) | `http://localhost/_profiler` |
 
 Le fichier Symfony est dans `var/log/`, qui est le volume Docker `app_var` : il n'est pas visible depuis la machine hôte, seulement dans les conteneurs. Monolog écrit un fichier par jour, `dev-AAAA-MM-JJ.log`, et garde les 7 derniers. Il retient le niveau `info` sur tous les canaux (sauf `event`), et tout le canal `app` dès `debug`. `make dev-log` suit le fichier du jour ; après minuit, relancer la commande pour passer au nouveau fichier. Pour lire un autre jour : `make sh`, puis `ls var/log/`.
-
-Le profiler ne garde pas les appels de StopcastDisplay à `/api/next-passages`, sauf avec `?_profile=1` (voir [Fixtures et écran de développement](#fixtures-et-écran-de-développement)).
 
 ## Qualité de code
 
@@ -221,7 +198,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - Le conteneur de dev ne reconstruit que son cache de dev. Les caches de test et de prod (`var/cache/test`, `var/cache/prod`) peuvent dater d'avant l'ajout d'un bundle ou d'une config : un test qui devrait échouer reste vert, et une commande `--env=prod` répond « Container extension "…" is not registered ». Après un changement de bundle ou de config propre à un environnement, lancer `make cc` avant toute commande `--env=…` ou tout test qui en dépend : il supprime ces caches avec celui de dev.
 - Un pool de cache `cache.adapter.array` est vidé à chaque requête (`kernel.reset`), même avec `disableReboot()`. Les demandes d'appairage (`display_pairing.cache`) restent donc sur disque en test : un appairage enchaîne plusieurs requêtes.
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
-- `MockClock` lit une date donnée en texte en UTC, et `mockTime()` sans argument fige l'heure en UTC, alors que PHP tourne en `Europe/Paris` (voir [Fuseau horaire](architecture.md#fuseau-horaire)) : passer le fuseau de PHP (`new MockClock(self::NOW, date_default_timezone_get())`, `mockTime(new \DateTimeImmutable())`), sinon l'horloge simulée est décalée d'une ou deux heures par rapport aux dates des tests et des entités. Les tests du fuseau (`TimezoneTest`, `NextPassagesTimezoneTest`) échouent hors de l'image si `date.timezone` n'est pas réglé.
+- `MockClock` lit une date donnée en texte en UTC, et `mockTime()` sans argument fige l'heure en UTC, alors que PHP tourne en `Europe/Paris` (voir [Fuseau horaire](architecture.md#fuseau-horaire)) : passer le fuseau de PHP (`new MockClock(self::NOW, date_default_timezone_get())`, `mockTime(new \DateTimeImmutable())`), sinon l'horloge simulée est décalée d'une ou deux heures par rapport aux dates des tests et des entités. Les tests du fuseau (`TimezoneTest`, et celui de l'horloge de l'écran dans `DisplayPairingTest`) échouent hors de l'image si `date.timezone` n'est pas réglé.
 
 ## Mettre à jour les dépendances
 

@@ -21,15 +21,6 @@ class DeviceRepository extends ServiceEntityRepository
     }
 
     /**
-     * Utilisé par l'authentification du Raspberry Pi sur l'API :
-     * ne retourne un dispositif que s'il est actif
-     */
-    public function findOneActiveByToken(string $token): ?Device
-    {
-        return $this->findOneBy(['token' => $token, 'active' => true]);
-    }
-
-    /**
      * Le dispositif dont l'écran appairé détient ce secret, actif ou non.
      */
     public function findOneByScreenSecretHash(string $screenSecretHash): ?Device

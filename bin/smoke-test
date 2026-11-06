@@ -1,9 +1,9 @@
 #!/bin/sh
 # Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
-# sert le formulaire de connexion, l'endpoint des dispositifs refuse une
-# requête sans jeton, et /health dit que la base répond. Lancé par le job
-# `deploy` de `ci.yml` sur l'URL publique,
-# après bin/deploy ; se lance aussi à la main.
+# sert le formulaire de connexion, la page d'affichage refuse un
+# rafraîchissement sans cookie d'écran, et /health dit que la base répond.
+# Lancé par le job `deploy` de `ci.yml` sur l'URL publique, après bin/deploy ;
+# se lance aussi à la main.
 #
 #   bin/smoke-test https://stopcast.gaelv.com
 #   bin/smoke-test http://localhost              # prod locale (make prod-up)
@@ -88,7 +88,7 @@ check() {
 }
 
 check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
-check 'Endpoint des dispositifs fermé sans jeton' /api/next-passages 401
+check "Page d'affichage fermée sans cookie d'écran" '/display?fragment=1' 401
 check 'Base de données joignable' /health 200 '"status":"ok"'
 
 if [ "$failed" -ne 0 ]; then

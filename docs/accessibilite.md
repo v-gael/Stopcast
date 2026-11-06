@@ -67,7 +67,6 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Badge avertissement | amber-800 `#973c00` | amber-50 `#fffbeb` | 6,84 | 4,5 |
 | Flash et encadré d'erreur | red-800 `#9f0712` | red-50 `#fef2f2` | 7,64 | 4,5 |
 | Erreur sous un champ | red-700 `#c10007` | blanc | 6,42 | 4,5 |
-| Encadré du jeton | slate-700 `#314158` | amber-50 `#fffbeb` | 9,99 | 4,5 |
 | Option active de Tom Select | slate-900 `#0f172b` | amber-50 `#fffbeb` | 17,19 | 4,5 |
 | En-tête de l'espace | blanc | slate-900 `#0f172b` | 17,83 | 4,5 |
 | Survol et focus dans l'en-tête de l'espace | amber-400 `#ffb900` | slate-900 `#0f172b` | 10,35 | 4,5 |

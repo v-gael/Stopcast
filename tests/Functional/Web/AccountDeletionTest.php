@@ -81,8 +81,8 @@ final class AccountDeletionTest extends WebTestCase
 
     public function testCorrectPasswordDeletesTheAccountAndItsDevices(): void
     {
-        $token = $this->createDeviceWithConfiguration($this->user);
-        $otherToken = $this->createDeviceWithConfiguration(UserFactory::createOne());
+        $this->createDeviceWithConfiguration($this->user);
+        $otherDeviceId = $this->createDeviceWithConfiguration(UserFactory::createOne());
 
         $this->client->loginUser($this->user);
         $this->deleteAccount(UserFactory::DEFAULT_PASSWORD);
@@ -103,11 +103,8 @@ final class AccountDeletionTest extends WebTestCase
 
         UserFactory::assert()->notExists(['email' => self::EMAIL]);
         DeviceFactory::assert()->count(1);
-        DeviceFactory::assert()->exists(['token' => $otherToken]);
+        DeviceFactory::assert()->exists(['id' => $otherDeviceId]);
         DisplayConfigurationFactory::assert()->count(1);
-
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
-        self::assertResponseStatusCodeSame(401);
 
         $this->client->request('GET', '/account');
         self::assertResponseRedirects('http://localhost/');
@@ -142,13 +139,13 @@ final class AccountDeletionTest extends WebTestCase
     }
 
     /**
-     * @return string le jeton du dispositif
+     * @return int l'identifiant du dispositif
      */
-    private function createDeviceWithConfiguration(User $owner): string
+    private function createDeviceWithConfiguration(User $owner): int
     {
         $device = DeviceFactory::createOne(['owner' => $owner]);
         DisplayConfigurationFactory::createOne(['device' => $device, 'quay' => $this->quay]);
 
-        return $device->getToken();
+        return (int) $device->getId();
     }
 }

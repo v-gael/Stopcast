@@ -12,14 +12,6 @@
     {# L'état du dispositif est dans la colonne « Dispositif », pas en badge à côté du titre. #}
     <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ device.label }}</h1>
 
-    {% if new_token %}
-        <div class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-6" data-new-token>
-            <h2 class="text-lg font-semibold text-slate-900">Jeton du dispositif</h2>
-            <p class="mt-1 text-sm text-slate-700">Copiez-le maintenant dans la configuration de l'afficheur : il ne sera plus jamais affiché. En cas de perte, régénérez-en un.</p>
-            <code class="mt-4 block select-all break-all rounded-md border border-amber-200 bg-white px-4 py-3 font-mono text-sm text-slate-900">{{ new_token }}</code>
-        </div>
-    {% endif %}
-
     {# Un tiers pour la rotation, deux pour le dispositif : son écran, et à côté ses réglages, à la hauteur de l'écran. #}
     <div class="grid items-start gap-6 lg:grid-cols-3">
         <twig:Card title="Quais">
@@ -73,12 +65,6 @@
                         {% endif %}
 
                         <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
-
-                        <form method="post" action="{{ path('app_device_regenerate_token', {id: device.id}) }}" data-turbo-action="advance"
-                              data-turbo-confirm="Générer un nouveau jeton ? L'ancien cessera immédiatement de fonctionner : l'afficheur devra être reconfiguré.">
-                            <input type="hidden" name="_token" value="{{ csrf_token('regenerate-device-token-' ~ device.id) }}">
-                            <twig:Button type="submit" variant="secondary" class="w-full">Régénérer le jeton</twig:Button>
-                        </form>
 
                         <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
                               data-turbo-confirm="Supprimer « {{ device.label }} » et ses quais ? Cette action est définitive.">
