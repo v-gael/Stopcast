@@ -64,7 +64,7 @@ Dernière mise à jour : 6 novembre 2026.
 | Personnes concernées | Utilisateurs et visiteurs. |
 | Base légale | Intérêt légitime (sécurité du service). Pas de consentement pour le captcha : la CNIL en dispense les traceurs destinés à la sécurité d'un mécanisme d'authentification, et Turnstile ne protège que la connexion et « mot de passe oublié », sans son cookie de pre-clearance ; Cloudflare qualifie ses signaux de strictement nécessaires à la détection des robots. |
 | Durée | Journaux : jusqu'au déploiement suivant, qui recrée les conteneurs, et au plus 50 Mo par service (rotation par taille). Compteurs des limites : 15 minutes après le dernier essai. Captcha et contrôle des mots de passe : rien n'est conservé par Stopcast. |
-| Destinataires et sous-traitants | OVH, Cloudflare (proxy, Turnstile). Cloudflare est aussi responsable de traitement distinct des signaux Turnstile, au titre de son intérêt légitime, pour améliorer sa détection des robots ([politique Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/)) ; la politique de confidentialité le dit. Have I Been Pwned est un service tiers, pas un sous-traitant : il ne reçoit aucune donnée personnelle. |
+| Destinataires et sous-traitants | OVH, Cloudflare (proxy, Turnstile). Cloudflare est aussi responsable de traitement distinct des signaux Turnstile, au titre de son intérêt légitime, pour améliorer sa détection des robots ([politique Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/)). Have I Been Pwned est un service tiers, pas un sous-traitant : il ne reçoit aucune donnée personnelle. |
 
 ### Suivi des erreurs
 
