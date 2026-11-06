@@ -109,6 +109,8 @@ final class InvitationTest extends WebTestCase
 
         $this->followInvitationLink($link);
         self::assertSelectorTextContains('main', 'Choisissez votre mot de passe');
+        // Le jeton du lien protège déjà la page : pas de captcha.
+        self::assertSelectorNotExists('[data-controller="turnstile"]');
         $this->choosePassword(self::PASSWORD);
 
         self::assertResponseRedirects('/', 303);
@@ -182,8 +184,7 @@ final class InvitationTest extends WebTestCase
     {
         UserFactory::createOne(['email' => self::EMAIL]);
         $this->client->getCookieJar()->clear();
-        $crawler = $this->client->request('GET', '/reset-password');
-        $this->client->submit($crawler->selectButton('Envoyer le lien')->form(['reset_password_request[email]' => self::EMAIL]));
+        $this->requestPasswordReset(self::EMAIL);
         $token = $this->tokenFromEmail('#http://localhost/reset-password/reset/(\S+)#');
 
         $this->followInvitationLink('/invitation/'.$token);
@@ -198,8 +199,7 @@ final class InvitationTest extends WebTestCase
         self::mockTime('2026-10-31 09:30:00');
         UserFactory::new()->pending()->create(['email' => self::EMAIL]);
         $this->client->getCookieJar()->clear();
-        $crawler = $this->client->request('GET', '/reset-password');
-        $this->client->submit($crawler->selectButton('Envoyer le lien')->form(['reset_password_request[email]' => self::EMAIL]));
+        $this->requestPasswordReset(self::EMAIL);
         $this->client->request('GET', '/reset-password/reset/'.$this->tokenFromEmail('#http://localhost/reset-password/reset/(\S+)#'));
 
         $crawler = $this->client->followRedirect();

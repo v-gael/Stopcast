@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\TurnstileSiteverifyMock;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -46,6 +47,61 @@ final class LoginTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('#connexion [role="alert"]', 'Identifiants invalides.');
         self::assertSame(self::EMAIL, $crawler->filter('input[name="_username"]')->attr('value'));
+
+        $this->client->request('GET', '/account');
+        self::assertResponseRedirects('/');
+    }
+
+    public function testLoginWithAnInvalidTurnstileTokenIsRefused(): void
+    {
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD, turnstileToken: TurnstileSiteverifyMock::INVALID_TOKEN);
+
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#connexion [role="alert"]', 'La vérification anti-robot a échoué. Réessayez.');
+
+        $this->client->request('GET', '/account');
+        self::assertResponseRedirects('/');
+    }
+
+    /**
+     * Le captcha est vérifié après la limite de débit : un captcha raté
+     * consomme un des 5 essais, et la limite atteinte refuse même un envoi
+     * complet, sans appeler Cloudflare.
+     */
+    public function testFailedTurnstileChecksCountTowardsTheLoginLimit(): void
+    {
+        // Le compteur vit en mémoire dans le conteneur : il doit survivre
+        // d'une requête à l'autre.
+        $this->client->disableReboot();
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD, turnstileToken: TurnstileSiteverifyMock::INVALID_TOKEN);
+        }
+
+        $this->logIn(self::EMAIL, UserFactory::DEFAULT_PASSWORD);
+
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#connexion [role="alert"]', 'tentatives de connexion');
+        $this->client->request('GET', '/account');
+        self::assertResponseRedirects('/');
+    }
+
+    /**
+     * Sans JavaScript, le widget n'ajoute pas le champ du jeton.
+     */
+    public function testLoginWithoutTurnstileTokenIsRefused(): void
+    {
+        $crawler = $this->client->request('GET', '/');
+        $this->client->submit($crawler->selectButton('Se connecter')->form([
+            '_username' => self::EMAIL,
+            '_password' => UserFactory::DEFAULT_PASSWORD,
+        ]));
+
+        self::assertResponseRedirects('/');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#connexion [role="alert"]', 'La vérification anti-robot a échoué. Réessayez.');
 
         $this->client->request('GET', '/account');
         self::assertResponseRedirects('/');

@@ -33,6 +33,9 @@ when@test:
     parameters:
         app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
 
+    services:
+        App\Tests\Support\TurnstileSiteverifyMock: ~
+
 when@prod:
     parameters:
         app.display_cookie_prefix: '__Host-'

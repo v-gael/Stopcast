@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\TurnstileSiteverifyMock;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -34,7 +35,7 @@ final class ResetPasswordTest extends WebTestCase
 
     public function testRequestSendsAResetLinkToTheAccount(): void
     {
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
 
         self::assertQueuedEmailCount(1);
         $email = self::getMailerMessage();
@@ -47,9 +48,25 @@ final class ResetPasswordTest extends WebTestCase
         $this->assertConfirmationPage();
     }
 
+    public function testRequestFormCarriesTheTurnstileWidget(): void
+    {
+        $crawler = $this->client->request('GET', '/reset-password');
+
+        self::assertCount(1, $crawler->filter('main form[name="reset_password_request"] [data-controller="turnstile"][data-turnstile-site-key-value="1x00000000000000000000AA"]'));
+    }
+
+    public function testRequestWithAnInvalidTurnstileTokenSendsNothing(): void
+    {
+        $this->requestPasswordReset(self::EMAIL, TurnstileSiteverifyMock::INVALID_TOKEN);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('main form', 'La vérification anti-robot a échoué. Réessayez.');
+        self::assertQueuedEmailCount(0);
+    }
+
     public function testUnknownEmailShowsTheSamePageWithoutSendingAnything(): void
     {
-        $this->requestReset('inconnu@example.com');
+        $this->requestPasswordReset('inconnu@example.com');
 
         self::assertQueuedEmailCount(0);
         $this->assertConfirmationPage();
@@ -57,10 +74,10 @@ final class ResetPasswordTest extends WebTestCase
 
     public function testSecondRequestWithinTheHourSendsNothingMore(): void
     {
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
         self::assertQueuedEmailCount(1);
 
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
 
         self::assertQueuedEmailCount(0);
         $this->assertConfirmationPage();
@@ -160,7 +177,7 @@ final class ResetPasswordTest extends WebTestCase
      */
     private function requestResetLink(): string
     {
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
 
         $email = self::getMailerMessage();
         self::assertInstanceOf(Email::class, $email);
@@ -187,16 +204,6 @@ final class ResetPasswordTest extends WebTestCase
         $this->client->submit($this->client->getCrawler()->selectButton('Enregistrer')->form([
             'reset_password[newPassword][first]' => $password,
             'reset_password[newPassword][second]' => $confirmation,
-        ]));
-    }
-
-    private function requestReset(string $email): void
-    {
-        $crawler = $this->client->request('GET', '/reset-password');
-        self::assertResponseIsSuccessful();
-
-        $this->client->submit($crawler->selectButton('Envoyer le lien')->form([
-            'reset_password_request[email]' => $email,
         ]));
     }
 }

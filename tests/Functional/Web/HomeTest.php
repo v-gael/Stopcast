@@ -48,4 +48,16 @@ final class HomeTest extends WebTestCase
 
         self::assertSame('/reset-password', $crawler->filter('#connexion')->selectLink('Mot de passe oublié ?')->attr('href'));
     }
+
+    /**
+     * Clé de site de test de .env : le widget s'affiche sans compte Cloudflare.
+     */
+    public function testLoginFormCarriesTheTurnstileWidget(): void
+    {
+        $client = self::createClient();
+
+        $crawler = $client->request('GET', '/');
+
+        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-controller="turnstile"][data-turnstile-site-key-value="1x00000000000000000000AA"]'));
+    }
 }
