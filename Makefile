@@ -74,8 +74,9 @@ ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
 console: ## Lance bin/console avec les arguments passés (ex: make console c="make:entity")
 	docker compose exec app php bin/console $(c)
 
-cc: ## Vide le cache Symfony (cache:clear)
+cc: ## Vide le cache Symfony des trois environnements (dev reconstruit, test et prod supprimés)
 	docker compose exec app php bin/console cache:clear
+	docker compose exec app rm -rf var/cache/test var/cache/prod
 
 composer: ## Lance composer avec les arguments passés (ex: make composer c="require --dev foo/bar")
 	docker compose exec app composer $(c)
