@@ -46,6 +46,9 @@ ENV APP_ENV=dev \
 
 RUN install-php-extensions xdebug
 
+# Chrome des tests navigateur (Panther, groupe browser), pas en prod.
+RUN apk add --no-cache chromium chromium-chromedriver
+
 COPY frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/conf.d/
 
 # /app est un bind mount qui n'appartient pas à root : sans cette exception,
@@ -62,6 +65,9 @@ RUN git config --system --add safe.directory /app
 FROM base AS ci
 
 ENV APP_ENV=test
+
+# Chrome des tests navigateur (Panther, groupe browser).
+RUN apk add --no-cache chromium chromium-chromedriver
 
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
 COPY . .

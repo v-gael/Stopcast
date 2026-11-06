@@ -6,6 +6,7 @@ namespace App\Security;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -39,6 +40,7 @@ final readonly class TurnstileVerifier
     private const int MAX_TOKEN_LENGTH = 2048;
 
     public function __construct(
+        #[Target('turnstile.client')]
         private HttpClientInterface $turnstileClient,
         private LoggerInterface $logger,
         #[Autowire(env: 'TURNSTILE_SECRET_KEY')]

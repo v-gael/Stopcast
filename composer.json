@@ -129,6 +129,7 @@
         "symfony/css-selector": "8.1.*",
         "symfony/debug-bundle": "8.1.*",
         "symfony/maker-bundle": "^1.68",
+        "symfony/panther": "^2.4",
         "symfony/stopwatch": "8.1.*",
         "symfony/web-profiler-bundle": "8.1.*",
         "zenstruck/foundry": "^2.12"
