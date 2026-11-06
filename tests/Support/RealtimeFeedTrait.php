@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Gtfs\Realtime\NextPassageFinder;
+use App\Gtfs\Realtime\TripUpdatesFeed;
 use App\Repository\RouteRepository;
 use App\Repository\TripRepository;
-use Google\Transit\Realtime\FeedEntity;
-use Google\Transit\Realtime\FeedHeader;
-use Google\Transit\Realtime\FeedMessage;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
  * Prochains passages branchés sur un flux temps réel simulé, sans appel réseau,
@@ -21,9 +18,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
  */
 trait RealtimeFeedTrait
 {
-    private const string NOW = '2026-09-28 08:00:00';
+    use RealtimeFeedMessageTrait;
 
-    private function nextPassageFinder(MockHttpClient $httpClient, int $limit = 5): NextPassageFinder
+    private function nextPassageFinder(MockHttpClient $httpClient, int $limit = 5, ?MockClock $clock = null): NextPassageFinder
     {
         $container = self::getContainer();
         $routeRepository = $container->get(RouteRepository::class);
@@ -31,46 +28,15 @@ trait RealtimeFeedTrait
         self::assertInstanceOf(RouteRepository::class, $routeRepository);
         self::assertInstanceOf(TripRepository::class, $tripRepository);
 
+        $clock ??= new MockClock(self::NOW, date_default_timezone_get());
+
         return new NextPassageFinder(
-            httpClient: $httpClient,
+            tripUpdatesFeed: new TripUpdatesFeed($httpClient, $clock, 'https://gtfs-rt.test/trip-updates', 300),
             cache: new ArrayAdapter(),
             routeRepository: $routeRepository,
             tripRepository: $tripRepository,
-            clock: new MockClock(self::NOW, date_default_timezone_get()),
-            tripUpdatesUrl: 'https://gtfs-rt.test/trip-updates',
             cacheTtl: 20,
             limit: $limit,
         );
-    }
-
-    /**
-     * @param FeedEntity[] $entities identifiés par leur rang dans le flux
-     */
-    private static function feedResponse(array $entities): MockResponse
-    {
-        return new MockResponse(self::serializedFeed($entities));
-    }
-
-    /**
-     * @param FeedEntity[] $entities identifiés par leur rang dans le flux
-     */
-    private static function serializedFeed(array $entities): string
-    {
-        foreach (array_values($entities) as $i => $entity) {
-            $entity->setId((string) $i);
-        }
-
-        return new FeedMessage()
-            ->setHeader(new FeedHeader()->setGtfsRealtimeVersion('2.0')->setTimestamp(self::at(0)))
-            ->setEntity(array_values($entities))
-            ->serializeToString();
-    }
-
-    /**
-     * Timestamp à quelques minutes de l'heure fixée (négatif : dans le passé).
-     */
-    private static function at(int $minutes): int
-    {
-        return new \DateTimeImmutable(self::NOW)->getTimestamp() + $minutes * 60;
     }
 }

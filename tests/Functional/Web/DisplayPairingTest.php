@@ -471,10 +471,12 @@ final class DisplayPairingTest extends WebTestCase
      */
     private function serveRealtimeFeed(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => self::feedResponse([
+        // Daté de l'horloge du test à chaque requête : un flux à l'heure fixée
+        // serait périmé une fois l'horloge avancée.
+        self::getContainer()->set('http_client', new MockHttpClient(fn (): MockResponse => self::feedResponse([
             new FeedEntity()->setTripUpdate(new TripUpdate()
                 ->setTrip(new TripDescriptor()->setTripId('T1')->setRouteId('R1'))
                 ->setStopTimeUpdate([new StopTimeUpdate()->setStopId('S1')->setDeparture(new StopTimeEvent()->setTime(self::at(5)))])),
-        ])));
+        ], $this->clock->now()->getTimestamp())));
     }
 }

@@ -21,6 +21,7 @@ use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -271,6 +272,44 @@ final class NextPassageFinderTest extends KernelTestCase
 
         self::assertSame(1, $httpClient->getRequestsCount());
         self::assertCount(1, $passagesByStopId['S1']);
+    }
+
+    public function testCachedFeedThatBecomesStaleIsRefused(): void
+    {
+        $clock = new MockClock(self::NOW, date_default_timezone_get());
+        $httpClient = new MockHttpClient([
+            self::feedResponse([$this->tripUpdate('T1', [$this->departureAt('S1', 5)])], self::at(0) - 290),
+        ]);
+        $finder = $this->nextPassageFinder($httpClient, clock: $clock);
+
+        $finder->forQuays([$this->quay]);
+
+        $clock->sleep(15);
+
+        $this->expectException(InvalidGtfsRealtimeFeedException::class);
+        $this->expectExceptionMessage('périmé');
+
+        $finder->forQuays([$this->quay]);
+    }
+
+    public function testStaleFeedIsCachedAndNotDownloadedAgain(): void
+    {
+        $httpClient = new MockHttpClient([
+            self::feedResponse([], self::at(-10)),
+            self::feedResponse([]),
+        ]);
+        $finder = $this->nextPassageFinder($httpClient);
+
+        foreach ([1, 2] as $call) {
+            try {
+                $finder->forQuays([$this->quay]);
+                self::fail(\sprintf('Appel %d : un flux périmé doit lever une exception.', $call));
+            } catch (InvalidGtfsRealtimeFeedException $exception) {
+                self::assertStringContainsString('périmé', $exception->getMessage());
+            }
+        }
+
+        self::assertSame(1, $httpClient->getRequestsCount());
     }
 
     #[DataProvider('invalidBodies')]

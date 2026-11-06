@@ -487,7 +487,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $kernel->boot();
 
         $this->client->disableReboot();
-        self::getContainer()->set('http_client', new MockHttpClient(self::feedResponse([])));
+        // Daté de maintenant : ce test tourne sur la vraie horloge, et un flux
+        // à l'heure fixée du trait serait périmé.
+        self::getContainer()->set('http_client', new MockHttpClient(self::feedResponse([], time())));
 
         $this->client->getCookieJar()->set(new Cookie('STOPCAST_DISPLAY', 'secret-de-l-ecran'));
         $crawler = $this->client->request('GET', '/display?fragment=1');
