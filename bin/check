@@ -29,9 +29,7 @@ run() {
     fi
 }
 
-# La config `when@prod` et les bundles chargés en prod seulement (Sentry)
-# n'entrent pas dans le conteneur de test. Cache de prod reconstruit : un cache
-# antérieur à l'ajout d'un bundle fausse le résultat.
+# Pourquoi un lint en prod : docs/developpement.md, « Qualité de code ».
 lint_prod_container() {
     rm -rf var/cache/prod
     APP_ENV=prod APP_DEBUG=0 php bin/console lint:container
