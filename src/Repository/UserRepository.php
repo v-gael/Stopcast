@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Account\EmailNormalizer;
 use App\Entity\Device;
 use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
@@ -11,6 +12,7 @@ use App\Enum\Role;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
@@ -18,11 +20,20 @@ use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
 /**
  * @extends ServiceEntityRepository<User>
  */
-class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
+class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface, UserLoaderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, User::class);
+    }
+
+    /**
+     * Compte d'un email saisi, quelles que soient sa casse et les espaces
+     * autour : connexion, « Se souvenir de moi » et mot de passe oublié.
+     */
+    public function loadUserByIdentifier(string $identifier): ?User
+    {
+        return $this->findOneBy(['email' => EmailNormalizer::normalize($identifier)]);
     }
 
     /**

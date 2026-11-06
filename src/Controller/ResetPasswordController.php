@@ -59,7 +59,7 @@ final class ResetPasswordController extends AbstractController
                 /** @var string $email */
                 $email = $form->get('email')->getData();
 
-                return $this->sendResetEmail($userRepository->findOneBy(['email' => $email]), $mailer);
+                return $this->sendResetEmail($userRepository->loadUserByIdentifier($email), $mailer);
             }
 
             $form->addError(new FormError('Trop de demandes. Réessayez plus tard.'));

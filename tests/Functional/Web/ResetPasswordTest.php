@@ -48,6 +48,16 @@ final class ResetPasswordTest extends WebTestCase
         $this->assertConfirmationPage();
     }
 
+    public function testRequestFindsTheAccountWhateverTheCaseOfTheEmail(): void
+    {
+        $this->requestPasswordReset('LEA@Example.com');
+
+        self::assertQueuedEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertNotNull($email);
+        self::assertEmailAddressContains($email, 'To', self::EMAIL);
+    }
+
     public function testRequestFormCarriesTheTurnstileWidget(): void
     {
         $crawler = $this->client->request('GET', '/reset-password');
