@@ -45,6 +45,10 @@ when@test:
         session:
             storage_factory_id: session.storage.factory.mock_file
         http_client:
+            # Aucun appel réseau : flux GTFS-RT simulé à partir de la base, 404
+            # pour toute autre URL. Les tests qui remplacent http_client dans le
+            # conteneur gardent la main.
+            mock_response_factory: App\Tests\Support\RealtimeFeedMock
             scoped_clients:
                 # Aucun appel à Cloudflare : la réponse dépend du jeton envoyé.
                 turnstile.client:
