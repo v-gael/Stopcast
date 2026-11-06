@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -13,6 +14,7 @@ final class LegalPrivacyTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     public function testPrivacyPolicyIsPublic(): void
     {
@@ -25,8 +27,8 @@ final class LegalPrivacyTest extends WebTestCase
         self::assertSelectorTextContains('main', 'v-gael');
         self::assertSelectorTextContains('main', 'contact@gaelv.com');
         self::assertSelectorTextContains('main', 'CNIL');
-        self::assertSame('page', $crawler->filter('footer nav')->selectLink('Confidentialité')->attr('aria-current'));
-        self::assertResponseNotHasCookie('PHPSESSID');
+        self::assertSame('page', $this->footerNav($crawler)->selectLink('Confidentialité')->attr('aria-current'));
+        self::assertSame([], $client->getResponse()->headers->getCookies());
     }
 
     public function testPrivacyPolicyStatesTheRetentionPeriods(): void
@@ -69,7 +71,7 @@ final class LegalPrivacyTest extends WebTestCase
 
         $crawler = $client->request('GET', '/');
 
-        self::assertSame('/confidentialite', $crawler->filter('footer nav')->selectLink('Confidentialité')->attr('href'));
+        self::assertSame('/confidentialite', $this->footerNav($crawler)->selectLink('Confidentialité')->attr('href'));
     }
 
     public function testSpaceFooterLinksToThePrivacyPolicy(): void
@@ -80,6 +82,6 @@ final class LegalPrivacyTest extends WebTestCase
         $crawler = $client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        self::assertSame('/confidentialite', $crawler->filter('footer nav')->selectLink('Confidentialité')->attr('href'));
+        self::assertSame('/confidentialite', $this->footerNav($crawler)->selectLink('Confidentialité')->attr('href'));
     }
 }
