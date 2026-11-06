@@ -19,7 +19,7 @@ final class HomeTest extends WebTestCase
         self::assertSame('fr', $crawler->filter('html')->attr('lang'));
         self::assertSelectorTextContains('h1', 'Le panneau de votre arrêt de bus');
         // Aucune session ouverte pour un simple visiteur.
-        self::assertResponseNotHasCookie('PHPSESSID');
+        self::assertSame([], $client->getResponse()->headers->getCookies());
 
         $images = $crawler->filter('main img')->each(static fn (Crawler $image): string => (string) $image->attr('src'));
         self::assertCount(2, $images);

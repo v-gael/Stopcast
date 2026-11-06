@@ -50,6 +50,17 @@ trait WebTestTrait
     }
 
     /**
+     * Liens du pied de page commun (pages légales et sources des données).
+     */
+    private function footerNav(Crawler $crawler): Crawler
+    {
+        $nav = $crawler->filter('footer nav[aria-label="Informations légales"]');
+        self::assertCount(1, $nav);
+
+        return $nav;
+    }
+
+    /**
      * Ligne d'un compte dans la liste des comptes.
      */
     private function accountRow(Crawler $crawler, string $email): Crawler

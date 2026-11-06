@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
@@ -18,6 +19,7 @@ final class DataSourcesTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     public function testDataSourcesPageCitesTheProducerAndTheLicence(): void
     {
@@ -31,8 +33,9 @@ final class DataSourcesTest extends WebTestCase
         $main = $crawler->filter('main');
         self::assertSame('https://transport.data.gouv.fr/datasets/donnees-tcat-troyes-champagne-metropole-1', $main->selectLink('TCAT – Troyes Champagne Métropole')->attr('href'));
         self::assertSame('https://opendatacommons.org/licenses/odbl/1.0/', $main->selectLink('licence ODbL')->attr('href'));
+        self::assertSame('page', $this->footerNav($crawler)->selectLink('Sources des données')->attr('aria-current'));
         // Aucune session ouverte pour un simple visiteur.
-        self::assertResponseNotHasCookie('PHPSESSID');
+        self::assertSame([], $client->getResponse()->headers->getCookies());
     }
 
     /**
@@ -55,6 +58,6 @@ final class DataSourcesTest extends WebTestCase
         $crawler = $client->request('GET', $path);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('/sources', $crawler->filter('footer nav')->selectLink('Sources des données')->attr('href'));
+        self::assertSame('/sources', $this->footerNav($crawler)->selectLink('Sources des données')->attr('href'));
     }
 }

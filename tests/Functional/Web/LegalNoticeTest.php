@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\DomCrawler\Crawler;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -14,6 +14,7 @@ final class LegalNoticeTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     public function testLegalNoticeIsPublic(): void
     {
@@ -28,7 +29,7 @@ final class LegalNoticeTest extends WebTestCase
         self::assertSelectorTextContains('main', 'OVH SAS');
         self::assertSelectorTextContains('main', 'Cloudflare, Inc.');
         // Aucune session ouverte pour un simple visiteur.
-        self::assertResponseNotHasCookie('PHPSESSID');
+        self::assertSame([], $client->getResponse()->headers->getCookies());
     }
 
     public function testPublicFooterLinksToTheLegalNotice(): void
@@ -59,13 +60,5 @@ final class LegalNoticeTest extends WebTestCase
         $crawler = $client->request('GET', '/mentions-legales');
 
         self::assertSame('page', $this->footerNav($crawler)->selectLink('Mentions légales')->attr('aria-current'));
-    }
-
-    private function footerNav(Crawler $crawler): Crawler
-    {
-        $nav = $crawler->filter('footer nav[aria-label="Informations légales"]');
-        self::assertCount(1, $nav);
-
-        return $nav;
     }
 }
