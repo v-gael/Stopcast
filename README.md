@@ -61,6 +61,12 @@ make up && make migrate && make import
 
 Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, page d'affichage appairée par code. Comptes utilisateurs, connexion, gestion de ses dispositifs et de leurs configurations d'affichage (choix des quais, ordre de rotation) dans l'espace web en place ; emails et gestion des comptes par un administrateur sont en cours. Prochaine étape : script d'installation du Raspberry Pi en kiosque.
 
+## Sources des données
+
+Données : [TCAT – Troyes Champagne Métropole](https://transport.data.gouv.fr/datasets/donnees-tcat-troyes-champagne-metropole-1), [licence ODbL](https://opendatacommons.org/licenses/odbl/1.0/), via transport.data.gouv.fr.
+
+Stopcast importe le référentiel statique de ce jeu de données (lignes, arrêts, quais, trajets) et interroge son flux temps réel pour afficher les prochains passages. L'application publie la même attribution sur sa page `/sources`, liée depuis le pied de page.
+
 ## Licence
 
 [MIT](LICENSE)

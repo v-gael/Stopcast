@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Pages légales : des pages statiques, publiques.
+ * Pages légales et sources des données : des pages statiques, publiques.
  */
 final class LegalController extends AbstractController
 {
@@ -29,5 +29,14 @@ final class LegalController extends AbstractController
     public function privacy(): Response
     {
         return $this->render('legal/privacy.html.twig');
+    }
+
+    /**
+     * Attribution des données GTFS exigée par leur licence (ODbL).
+     */
+    #[Route('/sources', name: 'app_data_sources', methods: ['GET'])]
+    public function dataSources(): Response
+    {
+        return $this->render('legal/data_sources.html.twig');
     }
 }

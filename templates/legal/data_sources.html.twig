@@ -1,0 +1,19 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Sources des données · Stopcast{% endblock %}
+
+{% block content %}
+    <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Sources des données</h1>
+
+        <div class="mt-8 space-y-4 text-slate-700">
+            <p>
+                Données : <a href="https://transport.data.gouv.fr/datasets/donnees-tcat-troyes-champagne-metropole-1" class="font-medium text-amber-700 underline hover:text-amber-600">TCAT – Troyes Champagne Métropole</a>,
+                <a href="https://opendatacommons.org/licenses/odbl/1.0/" class="font-medium text-amber-700 underline hover:text-amber-600">licence ODbL</a>, via transport.data.gouv.fr.
+            </p>
+            <p>
+                Stopcast importe le référentiel statique de ce jeu de données (lignes, arrêts, quais, trajets) et interroge son flux temps réel pour afficher les prochains passages.
+            </p>
+        </div>
+    </article>
+{% endblock %}
