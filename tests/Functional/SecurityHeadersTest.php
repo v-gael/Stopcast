@@ -27,8 +27,9 @@ final class SecurityHeadersTest extends WebTestCase
             "base-uri 'none'",
             "form-action 'self'",
             "frame-ancestors 'none'",
-            // Widget Turnstile de la connexion et de « mot de passe oublié ».
-            'frame-src https://challenges.cloudflare.com',
+            // Aperçus de l'écran d'affichage, et widget Turnstile de la
+            // connexion et de « mot de passe oublié ».
+            "frame-src 'self' https://challenges.cloudflare.com",
             "img-src 'self' data:",
             "object-src 'none'",
             "script-src 'self' https://challenges.cloudflare.com 'nonce-{$nonce}'",
