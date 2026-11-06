@@ -20,11 +20,13 @@ when@prod:
             enable_metrics: false
             # Pas de fil d'événements (breadcrumbs) : seule l'erreur part.
             max_breadcrumbs: 0
-            # Les scans de robots ne consomment pas le quota.
+            # Les scans de robots ne consomment pas le quota ; les autres 4xx
+            # sont écartés par SentryBeforeSend.
             ignore_exceptions:
                 - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
                 - Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException
-            before_send: App\Logging\SentryEventScrubber
+            # Erreurs client écartées, puis masquage (src/Logging/).
+            before_send: App\Logging\SentryBeforeSend
             # Rien sur l'utilisateur ni la requête au-delà de la méthode et de
             # l'URL : pas d'IP, de cookies, d'en-têtes, de corps (formulaire de
             # connexion compris), de paramètres d'URL ni de variables des

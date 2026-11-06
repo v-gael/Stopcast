@@ -7,11 +7,12 @@ namespace App\Logging;
 use Sentry\Event;
 
 /**
- * before_send de Sentry : masque IP, emails et jetons de réinitialisation
- * restés dans un événement (message, exceptions, données ajoutées, contextes,
- * tags, requête), comme PersonalDataMaskingProcessor le fait pour les logs.
- * L'utilisateur est retiré : data_collection ne le collecte déjà pas, ceci
- * couvre un ajout par un autre chemin.
+ * Masque les données personnelles restées dans un événement Sentry.
+ *
+ * Appelé par SentryBeforeSend, il applique les règles de PersonalDataMasker au
+ * message, aux exceptions, aux données ajoutées, aux contextes, aux tags et à
+ * la requête. L'utilisateur est retiré : data_collection ne le collecte déjà
+ * pas, ceci couvre un ajout par un autre chemin.
  */
 final readonly class SentryEventScrubber
 {
