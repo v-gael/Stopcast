@@ -22,6 +22,11 @@ final class UserTest extends TestCase
         self::assertFalse($user->isPending());
     }
 
+    public function testEmailIsStoredNormalized(): void
+    {
+        self::assertSame('alice@stopcast.test', new User(' Alice@Stopcast.TEST ')->getEmail());
+    }
+
     public function testPendingAccountCanBeSerializedForTheSession(): void
     {
         $user = new User('alice@stopcast.test');

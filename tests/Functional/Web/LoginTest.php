@@ -39,6 +39,13 @@ final class LoginTest extends WebTestCase
         self::assertSelectorTextContains('main h1', 'Mes dispositifs');
     }
 
+    public function testLoginIgnoresTheCaseAndSurroundingSpacesOfTheEmail(): void
+    {
+        $this->logIn(' LEA@Example.com ', UserFactory::DEFAULT_PASSWORD);
+
+        self::assertResponseRedirects('/devices');
+    }
+
     public function testFailedLoginShowsTheShowcaseAgainWithTheErrorAndTheEmail(): void
     {
         $this->logIn(self::EMAIL, 'mauvais-mot-de-passe');

@@ -82,6 +82,17 @@ final class InvitationTest extends WebTestCase
         self::assertQueuedEmailCount(0);
     }
 
+    public function testEmailDifferingOnlyByCaseIsRefused(): void
+    {
+        UserFactory::createOne(['email' => self::EMAIL]);
+
+        $this->invite(strtoupper(self::EMAIL), Role::User);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('main form', 'Un compte existe déjà avec cet email.');
+        self::assertQueuedEmailCount(0);
+    }
+
     public function testInviteIsForbiddenToAUser(): void
     {
         $this->client->loginUser(UserFactory::createOne());
