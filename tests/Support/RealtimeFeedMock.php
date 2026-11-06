@@ -28,7 +28,7 @@ final readonly class RealtimeFeedMock
     /**
      * Minutes d'attente des passages servis à chaque quai.
      */
-    public const array MINUTES = [3, 12];
+    private const array MINUTES = [3, 12];
 
     public function __construct(
         private RouteRepository $routeRepository,

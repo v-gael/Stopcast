@@ -41,7 +41,7 @@ final class PublicPagesTest extends PantherTestCase
     #[DataProvider('pages')]
     public function testPageHasACleanConsole(string $path): void
     {
-        $this->visit($this->anonymousClient(), $path);
+        $this->visitWithCleanConsole($this->anonymousClient(), $path);
     }
 
     /**
@@ -51,7 +51,7 @@ final class PublicPagesTest extends PantherTestCase
     public function testLoginFormGetsATurnstileToken(): void
     {
         $client = $this->anonymousClient();
-        $this->visit($client, '/');
+        $this->visitWithCleanConsole($client, '/');
 
         $this->waitForTurnstileToken($client);
         $this->assertNoBrowserErrors($client, 'widget Turnstile');
@@ -67,7 +67,7 @@ final class PublicPagesTest extends PantherTestCase
         $token = $resetPasswordHelper->generateResetToken($invitee, UserInviter::INVITATION_LIFETIME)->getToken();
 
         $client = $this->anonymousClient();
-        $this->visit($client, '/invitation/'.$token);
+        $this->visitWithCleanConsole($client, '/invitation/'.$token);
 
         self::assertSelectorTextContains('main', 'Choisissez votre mot de passe');
     }
@@ -78,7 +78,7 @@ final class PublicPagesTest extends PantherTestCase
     public function testDisplayPairingScreenHasACleanConsole(): void
     {
         $client = $this->anonymousClient();
-        $this->visit($client, '/display');
+        $this->visitWithCleanConsole($client, '/display');
 
         $client->waitFor('.pairing__code');
         $this->assertNoBrowserErrors($client, "code d'appairage");

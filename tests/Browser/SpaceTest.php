@@ -12,9 +12,11 @@ use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\BrowserTestTrait;
+use App\Tests\Support\ContainerServiceTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Facebook\WebDriver\WebDriver;
 use Facebook\WebDriver\WebDriverBy;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\PantherTestCase;
@@ -30,6 +32,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class SpaceTest extends PantherTestCase
 {
     use BrowserTestTrait;
+    use ContainerServiceTrait;
     use Factories;
     use ResetDatabase;
 
@@ -54,7 +57,7 @@ final class SpaceTest extends PantherTestCase
      */
     public function testTurboVisitOpensTheDeviceWithItsPreview(): void
     {
-        $this->visit($this->client, '/devices');
+        $this->visitWithCleanConsole($this->client, '/devices');
         $this->markWindow();
 
         $this->client->clickLink('Cuisine');
@@ -70,7 +73,7 @@ final class SpaceTest extends PantherTestCase
      */
     public function testMovingAQuayMorphsTheDevicePage(): void
     {
-        $this->visit($this->client, $this->devicePath());
+        $this->visitWithCleanConsole($this->client, $this->devicePath());
         self::assertSame(['MAIRIE', 'GARE'], $this->rotation());
         $this->markWindow();
 
@@ -86,7 +89,7 @@ final class SpaceTest extends PantherTestCase
      */
     public function testQuayAutocompleteOffersQuaysWithItsStyles(): void
     {
-        $this->visit($this->client, '/display-configurations/new?device='.$this->device->getId());
+        $this->visitWithCleanConsole($this->client, '/display-configurations/new?device='.$this->device->getId());
 
         $this->client->waitFor('.ts-control');
         $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector('.ts-control input'))->sendKeys('mai');
@@ -100,14 +103,22 @@ final class SpaceTest extends PantherTestCase
         $this->assertNoBrowserErrors($this->client, 'autocomplétion du quai');
     }
 
-    public function testOtherPagesOfTheSpaceHaveACleanConsole(): void
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function otherPages(): iterable
     {
-        foreach (['/devices/new', '/account', '/admin/users'] as $path) {
-            $this->visit($this->client, $path);
-        }
+        yield 'nouveau dispositif' => ['/devices/new', 'Ajouter un dispositif'];
+        yield 'compte' => ['/account', 'Mon compte'];
+        yield 'utilisateurs' => ['/admin/users', 'Utilisateurs'];
+    }
 
-        // L'assertion de visit() suffit ; PHPUnit attend au moins une assertion par test.
-        self::assertSelectorExists('main');
+    #[DataProvider('otherPages')]
+    public function testPageOfTheSpaceHasACleanConsole(string $path, string $heading): void
+    {
+        $this->visitWithCleanConsole($this->client, $path);
+
+        self::assertSelectorTextContains('main h1', $heading);
     }
 
     private function devicePath(): string
@@ -121,8 +132,7 @@ final class SpaceTest extends PantherTestCase
      */
     private function deviceWithTwoQuays(): Device
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager = $this->service(EntityManagerInterface::class);
 
         $route = new Route('R1', '12', 'E2001A', 'FFFFFF');
         $entityManager->persist($route);

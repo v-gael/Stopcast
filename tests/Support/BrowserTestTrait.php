@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use PHPUnit\Framework\Attributes\After;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\DomCrawler\Crawler;
 use Symfony\Component\Panther\PantherTestCase;
@@ -33,7 +34,7 @@ trait BrowserTestTrait
     /**
      * Visite une page puis vérifie que la console est restée propre.
      */
-    private function visit(Client $client, string $path): Crawler
+    private function visitWithCleanConsole(Client $client, string $path): Crawler
     {
         $crawler = $client->request('GET', $path);
         $this->assertNoBrowserErrors($client, $path);
@@ -64,7 +65,7 @@ trait BrowserTestTrait
      */
     private function logInFromShowcase(Client $client, string $email, string $password): void
     {
-        $crawler = $this->visit($client, '/');
+        $crawler = $this->visitWithCleanConsole($client, '/');
         $this->waitForTurnstileToken($client);
 
         $client->submit($crawler->selectButton('Se connecter')->form([
@@ -73,6 +74,19 @@ trait BrowserTestTrait
         ]));
         $client->waitFor('header nav');
         $this->assertNoBrowserErrors($client, 'connexion');
+    }
+
+    /**
+     * Dernière lecture de la console, après chaque test : une erreur arrivée
+     * après le dernier contrôle (requête, contrôleur Stimulus, iframe) n'est
+     * pas perdue, ni reportée sur le test suivant.
+     */
+    #[After]
+    protected function assertNoBrowserErrorsAtTheEnd(): void
+    {
+        if (self::$pantherClient instanceof Client) {
+            $this->assertNoBrowserErrors(self::$pantherClient, 'fin du test');
+        }
     }
 
     private function waitForTurnstileToken(Client $client): void
