@@ -55,8 +55,8 @@ final class SecurityHeadersTest extends WebTestCase
     public static function responses(): iterable
     {
         yield 'page HTML' => ['/'];
-        yield "documentation de l'API" => ['/api/docs.jsonopenapi'];
-        yield 'API refusée sans jeton' => ['/api/next-passages'];
+        yield "écran d'appairage" => ['/display'];
+        yield 'rafraîchissement refusé sans cookie' => ['/display?fragment=1'];
     }
 
     #[DataProvider('responses')]
@@ -67,8 +67,7 @@ final class SecurityHeadersTest extends WebTestCase
         $client->request('GET', $path);
 
         self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
-        // API Platform pose déjà « deny » sur ses réponses, que le bundle garde.
-        self::assertSame('DENY', strtoupper((string) $client->getResponse()->headers->get('X-Frame-Options')));
+        self::assertResponseHeaderSame('X-Frame-Options', 'DENY');
         self::assertResponseHeaderSame('Referrer-Policy', 'strict-origin-when-cross-origin');
         self::assertResponseHeaderSame('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
         self::assertResponseHeaderSame('Cross-Origin-Opener-Policy', 'same-origin');

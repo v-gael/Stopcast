@@ -12,8 +12,8 @@ use App\Repository\DeviceRepository;
 /**
  * Données d'un compte remises à son titulaire (droits d'accès et de
  * portabilité) : le compte, ses dispositifs et leurs configurations
- * d'affichage. Jamais le hash du mot de passe, le jeton d'un dispositif ni
- * les identifiants internes.
+ * d'affichage. Jamais le hash du mot de passe, le haché du secret d'un écran
+ * ni les identifiants internes.
  */
 final readonly class AccountDataExporter
 {

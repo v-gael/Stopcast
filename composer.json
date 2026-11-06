@@ -1,6 +1,6 @@
 {
     "name": "v-gael/stopcast",
-    "description": "API Symfony qui reproduit le panneau d'un arrêt de bus en temps réel (GTFS + GTFS-RT) pour un écran Raspberry Pi.",
+    "description": "Application Symfony qui reproduit le panneau d'un arrêt de bus en temps réel (GTFS + GTFS-RT) sur l'écran d'un Raspberry Pi.",
     "type": "project",
     "license": "MIT",
     "minimum-stability": "stable",
@@ -10,7 +10,6 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-zip": "*",
-        "api-platform/core": "^4.3",
         "doctrine/doctrine-bundle": "^3.3",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",

@@ -166,7 +166,6 @@ final class DevicesTest extends WebTestCase
         yield 'édition' => ['GET', '/devices/%d/edit'];
         yield 'enregistrement' => ['POST', '/devices/%d/edit'];
         yield 'suppression' => ['POST', '/devices/%d/delete'];
-        yield 'régénération du jeton' => ['POST', '/devices/%d/regenerate-token'];
         yield "saisie d'un code d'appairage" => ['GET', '/devices/%d/pair'];
         yield "envoi d'un code d'appairage" => ['POST', '/devices/%d/pair'];
         yield "dissociation de l'écran" => ['POST', '/devices/%d/unpair'];
@@ -176,16 +175,15 @@ final class DevicesTest extends WebTestCase
     public function testAnotherUsersDeviceIsForbiddenEvenToAnAdministrator(string $method, string $path): void
     {
         $this->client->loginUser(UserFactory::createOne(['role' => Role::Admin]));
-        $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $token = $device->getToken();
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
 
         $this->client->request($method, \sprintf($path, $device->getId()));
 
         self::assertResponseStatusCodeSame(403);
-        self::assertSame($token, $this->reload($device)?->getToken());
+        self::assertSame('Salon', $this->reload($device)?->getLabel());
     }
 
-    public function testCreatedDeviceShowsItsTokenOnlyOnce(): void
+    public function testCreatedDeviceBelongsToItsCreator(): void
     {
         $crawler = $this->client->request('GET', '/devices/new');
         $this->client->submit($crawler->selectButton('Créer')->form(['device[label]' => 'Écran de la cuisine']));
@@ -197,12 +195,6 @@ final class DevicesTest extends WebTestCase
 
         $this->client->followRedirect();
         self::assertSelectorTextContains('[data-flash-stack] [data-controller="flash"] [role="status"]', 'Le dispositif a été créé.');
-        self::assertSelectorTextSame('[data-new-token] code', $device->getToken());
-
-        $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        self::assertResponseIsSuccessful();
-        self::assertSelectorNotExists('[data-new-token]');
-        self::assertStringNotContainsString($device->getToken(), (string) $this->client->getResponse()->getContent());
     }
 
     public function testEmptyLabelIsRefused(): void
@@ -358,11 +350,9 @@ final class DevicesTest extends WebTestCase
         self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
     }
 
-    public function testDisabledDeviceIsRejectedByTheApi(): void
+    public function testDeviceCanBeDisabled(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $this->callApi($device->getToken());
-        self::assertResponseIsSuccessful();
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
         $form = $crawler->selectButton('Enregistrer')->form();
@@ -374,33 +364,7 @@ final class DevicesTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $crawler = $this->client->followRedirect();
         self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
-
-        $this->callApi($device->getToken());
-        self::assertResponseStatusCodeSame(401);
-    }
-
-    public function testRegeneratedTokenReplacesTheOldOne(): void
-    {
-        $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $oldToken = $device->getToken();
-
-        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        $form = $crawler->selectButton('Régénérer le jeton')->form();
-        // Pas un rafraîchissement Turbo : la page s'affiche en haut, avec le nouveau jeton.
-        self::assertSame('advance', $form->getFormNode()->getAttribute('data-turbo-action'));
-        $this->client->submit($form);
-
-        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        $this->client->followRedirect();
-        $newToken = $this->reload($device)?->getToken();
-        self::assertIsString($newToken);
-        self::assertNotSame($oldToken, $newToken);
-        self::assertSelectorTextSame('[data-new-token] code', $newToken);
-
-        $this->callApi($oldToken);
-        self::assertResponseStatusCodeSame(401);
-        $this->callApi($newToken);
-        self::assertResponseIsSuccessful();
+        self::assertFalse($this->reload($device)?->isActive());
     }
 
     public function testDeletingRemovesTheDeviceAndItsConfigurations(): void
@@ -425,7 +389,6 @@ final class DevicesTest extends WebTestCase
     {
         yield 'suppression sans jeton' => ['/devices/%d/delete', []];
         yield 'suppression avec un jeton invalide' => ['/devices/%d/delete', ['_token' => 'invalide']];
-        yield 'régénération sans jeton' => ['/devices/%d/regenerate-token', []];
     }
 
     /**
@@ -435,12 +398,11 @@ final class DevicesTest extends WebTestCase
     public function testPostWithoutAValidCsrfTokenChangesNothing(string $path, array $parameters): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
-        $token = $device->getToken();
 
         $this->client->request('POST', \sprintf($path, $device->getId()), $parameters);
 
         self::assertFalse($this->client->getResponse()->isSuccessful());
-        self::assertSame($token, $this->reload($device)?->getToken());
+        self::assertInstanceOf(Device::class, $this->reload($device));
     }
 
     public function testDetailListsTheConfigurationsInRotationOrder(): void
@@ -461,11 +423,6 @@ final class DevicesTest extends WebTestCase
     {
         $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
         $this->client->submit($crawler->selectButton('Enregistrer')->form($values));
-    }
-
-    private function callApi(string $token): void
-    {
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
     }
 
     private function createDevices(int $count): void

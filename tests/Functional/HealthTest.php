@@ -9,14 +9,19 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception as DbalException;
 use Monolog\LogRecord;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
  * /health : appelé par le healthcheck Docker, bin/smoke-test et la sonde
  * d'uptime, sans compte.
+ *
+ * ResetDatabase crée la base de test : sans lui, le test réussit seulement si
+ * un test passé avant l'a créée.
  */
 final class HealthTest extends WebTestCase
 {
     use AppLogsTrait;
+    use ResetDatabase;
 
     public function testAnswersOkWhenTheDatabaseResponds(): void
     {

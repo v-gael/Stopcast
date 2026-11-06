@@ -49,9 +49,9 @@ final class AdminUserDeletionTest extends WebTestCase
     public function testAdministratorDeletesAnAccountWithItsDevices(): void
     {
         $lea = UserFactory::createOne(['email' => self::EMAIL]);
-        $token = $this->createDeviceWithConfiguration($lea);
         $this->createDeviceWithConfiguration($lea);
-        $adminToken = $this->createDeviceWithConfiguration($this->admin);
+        $this->createDeviceWithConfiguration($lea);
+        $adminDeviceId = $this->createDeviceWithConfiguration($this->admin);
 
         $form = $this->deleteForm(self::EMAIL);
         self::assertSame('Supprimer le compte lea@example.com et ses 2 dispositifs ? Cette action est définitive.', $form->getFormNode()->getAttribute('data-turbo-confirm'));
@@ -68,11 +68,8 @@ final class AdminUserDeletionTest extends WebTestCase
 
         UserFactory::assert()->notExists(['email' => self::EMAIL]);
         DeviceFactory::assert()->count(1);
-        DeviceFactory::assert()->exists(['token' => $adminToken]);
+        DeviceFactory::assert()->exists(['id' => $adminDeviceId]);
         DisplayConfigurationFactory::assert()->count(1);
-
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $token]);
-        self::assertResponseStatusCodeSame(401);
     }
 
     public function testConfirmationNamesTheDevicesToDelete(): void
@@ -139,11 +136,14 @@ final class AdminUserDeletionTest extends WebTestCase
         return $this->accountRow($crawler, $email)->selectButton('Supprimer')->form();
     }
 
-    private function createDeviceWithConfiguration(User $owner): string
+    /**
+     * @return int l'identifiant du dispositif
+     */
+    private function createDeviceWithConfiguration(User $owner): int
     {
         $device = DeviceFactory::createOne(['owner' => $owner]);
         DisplayConfigurationFactory::createOne(['device' => $device, 'quay' => $this->quay]);
 
-        return $device->getToken();
+        return (int) $device->getId();
     }
 }

@@ -9,18 +9,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: DeviceRepository::class)]
 #[ORM\Table(name: 'device')]
-#[ORM\UniqueConstraint(name: 'uniq_device_token', columns: ['token'])]
 #[ORM\UniqueConstraint(name: 'uniq_device_screen_secret_hash', columns: ['screen_secret_hash'])]
 #[ORM\HasLifecycleCallbacks]
 class Device
 {
-    public const int TOKEN_MAX_LENGTH = 64;
-
     public const int DEFAULT_SCREEN_DURATION = 5;
 
     public const int MIN_SCREEN_DURATION = 3;
@@ -53,12 +49,6 @@ class Device
     #[Assert\NotBlank]
     #[Assert\Length(max: 255)]
     private string $label;
-
-    /**
-     * Jeton d'authentification du Raspberry Pi auprès de l'API.
-     */
-    #[ORM\Column(type: Types::STRING, length: self::TOKEN_MAX_LENGTH)]
-    private string $token;
 
     /**
      * Haché SHA-256 du secret de l'écran appairé, que l'écran garde dans son
@@ -102,19 +92,10 @@ class Device
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $updatedAt;
 
-    /**
-     * Jeton généré si aucun n'est fourni. En imposer un sert aux fixtures, pour
-     * un appareil de développement au jeton stable.
-     */
-    public function __construct(User $owner, string $label, ?string $token = null)
+    public function __construct(User $owner, string $label)
     {
-        if (null !== $token && ('' === $token || \strlen($token) > self::TOKEN_MAX_LENGTH)) {
-            throw new \InvalidArgumentException(\sprintf('Le jeton doit faire entre 1 et %d caractères, %d reçus.', self::TOKEN_MAX_LENGTH, \strlen($token)));
-        }
-
         $this->owner = $owner;
         $this->label = $label;
-        $this->token = $token ?? Uuid::v4()->toRfc4122();
         $this->displayConfigurations = new ArrayCollection();
     }
 
@@ -150,18 +131,6 @@ class Device
     public function setLabel(string $label): static
     {
         $this->label = $label;
-
-        return $this;
-    }
-
-    public function getToken(): string
-    {
-        return $this->token;
-    }
-
-    public function regenerateToken(): static
-    {
-        $this->token = Uuid::v4()->toRfc4122();
 
         return $this;
     }

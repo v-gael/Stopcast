@@ -16,7 +16,7 @@ Stopcast croise les deux flux de données ouvertes publiés par la plupart des r
 - le **GTFS statique** (lignes, arrêts, quais, destinations des trajets), importé en base ;
 - le **GTFS-RT** (horaires en temps réel), interrogé et mis en cache à la volée.
 
-Ce dépôt contient l'**API Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et la sert à un écran Raspberry Pi authentifié par token. Le client d'affichage (Python) vit dans un dépôt séparé : [StopcastDisplay](https://github.com/v-gael/StopcastDisplay).
+Ce dépôt contient l'**application Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et le sert sous forme de page d'affichage au navigateur en kiosque d'un Raspberry Pi, appairé par un code.
 
 L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de plusieurs quais (un par sens), une ligne peut avoir plusieurs terminus, et les identifiants des flux statique et temps réel doivent concorder. Détails dans [docs/architecture.md](docs/architecture.md).
 
@@ -28,58 +28,17 @@ flowchart LR
     RT["Flux temps réel<br/>(GTFS-RT du réseau)"]
     subgraph Back["Backend Symfony · Docker"]
         I["Import<br/>app:gtfs:import"] --> DB[("PostgreSQL<br/>Quay · Route · Trip")]
-        DB --> A["GET /api/next-passages"]
+        DB --> A["GET /display"]
         C[("Cache partagé<br/>20 s")] --> A
     end
     ST -- "à chaque changement d'horaires" --> I
     RT -- "à la demande" --> C
-    A -- "JSON, 1×/min<br/>(X-Device-Token)" --> D["Dispositif<br/>(StopcastDisplay sur Raspberry Pi)"]
-```
-
-## Exemple de réponse
-
-`GET /api/next-passages`, avec le token du dispositif dans le header `X-Device-Token` :
-
-```json
-{
-    "@context": "/api/contexts/NextPassagesResponse",
-    "@id": "/api/next-passages",
-    "@type": "NextPassagesResponse",
-    "generatedAt": "2026-09-14T11:51:37+00:00",
-    "displays": [
-        {
-            "@type": "DisplayItem",
-            "@id": "/api/.well-known/genid/c0a153f21e347dbd678f",
-            "label": "Direction centre-ville",
-            "quayName": "MAIRIE",
-            "nextPassages": [
-                {
-                    "@type": "NextPassage",
-                    "@id": "/api/.well-known/genid/fb7fefd37b17d28cc134",
-                    "routeShortName": "4",
-                    "routeColor": "F29400",
-                    "routeTextColor": "000000",
-                    "headsign": "CENTRE VILLE",
-                    "expectedAt": "2026-09-14T12:05:15+00:00"
-                },
-                {
-                    "@type": "NextPassage",
-                    "@id": "/api/.well-known/genid/0bbe514449415a404eff",
-                    "routeShortName": "4",
-                    "routeColor": "F29400",
-                    "routeTextColor": "000000",
-                    "headsign": "HÔTEL DE VILLE",
-                    "expectedAt": "2026-09-14T12:21:57+00:00"
-                }
-            ]
-        }
-    ]
-}
+    A -- "HTML, rafraîchi 1×/min<br/>(cookie de l'écran)" --> D["Dispositif<br/>(navigateur en kiosque sur Raspberry Pi)"]
 ```
 
 ## Stack
 
-PHP 8.5 · Symfony 8.1 · API Platform 4 · Doctrine ORM · Twig · Tailwind CSS · PostgreSQL 16 · FrankenPHP · Docker  
+PHP 8.5 · Symfony 8.1 · Doctrine ORM · Twig · Tailwind CSS · PostgreSQL 16 · FrankenPHP · Docker  
 Qualité : PHPUnit, PHPStan niveau 10, PHP CS Fixer, Rector, CI GitHub Actions.
 
 ## Démarrage rapide
@@ -92,7 +51,7 @@ make up && make migrate && make import
 ## Documentation
 
 - [Architecture et modèle de données](docs/architecture.md)
-- [API et variables d'environnement](docs/api.md)
+- [Variables d'environnement](docs/configuration.md)
 - [Développement : installation, outils, conventions](docs/developpement.md)
 - [Exploitation : déploiement et secrets de production](docs/exploitation.md)
 - [Accessibilité : revue WCAG 2.2 AA](docs/accessibilite.md)
@@ -100,7 +59,7 @@ make up && make migrate && make import
 
 ## État du projet
 
-Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, endpoint `/api/next-passages`. Comptes utilisateurs, connexion, gestion de ses dispositifs et de leurs configurations d'affichage (choix des quais, ordre de rotation) dans l'espace web en place ; emails et gestion des comptes par un administrateur sont en cours. Prochaine étape : finalisation du client d'affichage.
+Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, page d'affichage appairée par code. Comptes utilisateurs, connexion, gestion de ses dispositifs et de leurs configurations d'affichage (choix des quais, ordre de rotation) dans l'espace web en place ; emails et gestion des comptes par un administrateur sont en cours. Prochaine étape : script d'installation du Raspberry Pi en kiosque.
 
 ## Licence
 

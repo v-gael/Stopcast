@@ -16,7 +16,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Clock\MockClock;
+use Symfony\Component\BrowserKit\Cookie;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Zenstruck\Foundry\Test\Factories;
@@ -72,7 +73,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         $this->client->submit($crawler->filter('main li')->eq(0)->selectButton('Descendre')->form());
 
-        self::assertSame(['Troisième', 'Premier', 'Deuxième'], $this->displayedLabels($device));
+        self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
     }
 
     public function testDeletingRemovesTheConfigurationFromTheRotation(): void
@@ -89,7 +90,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le quai « Premier » a été supprimé.');
-        self::assertSame(['Deuxième'], $this->displayedLabels($device));
+        self::assertSame(['DEUXIÈME'], $this->displayedQuays($device));
     }
 
     public function testDevicePageIsRefreshedInPlaceAfterARotationAction(): void
@@ -265,7 +266,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le quai a été ajouté.');
-        self::assertSame(['Premier', 'Vers la gare'], $this->displayedLabels($device));
+        self::assertSame(['PREMIER', 'GARE'], $this->displayedQuays($device));
     }
 
     public function testAddingAQuayHiddenKeepsItOutOfTheRotation(): void
@@ -338,7 +339,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSelectorTextContains('[role="status"]', 'Le quai a été modifié.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
         self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
-        self::assertSame(['Premier'], $this->displayedLabels($device));
+        self::assertSame(['PREMIER'], $this->displayedQuays($device));
     }
 
     public function testSwitchHidesThenShowsTheConfiguration(): void
@@ -360,7 +361,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSame('true', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
 
-        self::assertSame(['Premier', 'Deuxième'], $this->displayedLabels($device));
+        self::assertSame(['PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
     }
 
     public function testHidingTwiceKeepsTheConfigurationHidden(): void
@@ -374,7 +375,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
         $this->client->submit($form);
 
-        self::assertSame(['Premier'], $this->displayedLabels($device));
+        self::assertSame(['PREMIER'], $this->displayedQuays($device));
     }
 
     public function testEditPageDeletesTheConfigurationAndReturnsToTheDevice(): void
@@ -390,7 +391,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        self::assertSame(['Premier'], $this->displayedLabels($device));
+        self::assertSame(['PREMIER'], $this->displayedQuays($device));
     }
 
     public function testEditingChangesTheQuay(): void
@@ -459,7 +460,8 @@ final class DisplayConfigurationsTest extends WebTestCase
         $device = $entityManager->find(Device::class, $device->getId());
         self::assertInstanceOf(Device::class, $device);
 
-        $configuration = new DisplayConfiguration($device, $quay ?? $this->quay('S'.random_int(100, 999_999), 'QUAI'))->setLabel($label);
+        // Le quai porte le nom de la configuration : l'écran n'affiche que le nom du quai.
+        $configuration = new DisplayConfiguration($device, $quay ?? $this->quay('S'.random_int(100, 999_999), mb_strtoupper($label)))->setLabel($label);
         $device->appendDisplayConfiguration($configuration);
         $entityManager->persist($configuration);
         $entityManager->flush();
@@ -468,33 +470,31 @@ final class DisplayConfigurationsTest extends WebTestCase
     }
 
     /**
-     * Libellés servis au dispositif par l'API, dans l'ordre de rotation.
+     * Quais que la page d'affichage montre à l'écran appairé du dispositif,
+     * dans l'ordre de rotation.
      *
-     * @return list<string|null>
+     * @return list<string>
      */
-    private function displayedLabels(Device $device): array
+    private function displayedQuays(Device $device): array
     {
-        // Noyau neuf pour remplacer les services, puis sans reboot pour qu'ils restent en place.
+        $entityManager = $this->entityManager();
+        $entityManager->find(Device::class, $device->getId())?->pairScreen('secret-de-l-ecran');
+        $entityManager->flush();
+
+        // Noyau neuf pour remplacer le flux, puis sans reboot pour qu'il reste en place.
         $kernel = $this->client->getKernel();
         $kernel->shutdown();
         $kernel->boot();
 
         $this->client->disableReboot();
-        $container = self::getContainer();
-        $container->set('http_client', new MockHttpClient(self::feedResponse([])));
-        $container->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
+        self::getContainer()->set('http_client', new MockHttpClient(self::feedResponse([])));
 
-        $this->client->request('GET', '/api/next-passages', server: ['HTTP_X_DEVICE_TOKEN' => $device->getToken()]);
+        $this->client->getCookieJar()->set(new Cookie('STOPCAST_DISPLAY', 'secret-de-l-ecran'));
+        $crawler = $this->client->request('GET', '/display?fragment=1');
 
         self::assertResponseIsSuccessful();
-        $response = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($response);
-        self::assertIsArray($response['displays']);
 
-        /** @var list<string|null> $labels */
-        $labels = array_column($response['displays'], 'label');
-
-        return $labels;
+        return $crawler->filter('.screen__stop')->each(static fn (Crawler $stop): string => $stop->text());
     }
 
     /**

@@ -27,7 +27,7 @@ Dernière mise à jour : 6 novembre 2026.
 | | |
 |---|---|
 | Finalité | Afficher les prochains passages sur les écrans de l'utilisateur. |
-| Données | Nom et jeton d'accès de chaque dispositif, état actif, dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
+| Données | Nom de chaque dispositif et haché du secret de son écran appairé (gardé par l'écran dans un cookie), état actif, dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Jusqu'à la suppression du dispositif ou du compte. |
@@ -49,7 +49,7 @@ Dernière mise à jour : 6 novembre 2026.
 | | |
 |---|---|
 | Finalité | Permettre à l'utilisateur d'exercer ses droits d'accès et de portabilité. |
-| Données | Compte, dispositifs (sans leur jeton) et configurations d'affichage, générés à la demande. |
+| Données | Compte, dispositifs (sans le haché du secret de leur écran) et configurations d'affichage, générés à la demande. |
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Aucune : le fichier est produit à la demande et n'est pas conservé. |

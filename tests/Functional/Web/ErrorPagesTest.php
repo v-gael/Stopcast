@@ -70,19 +70,6 @@ final class ErrorPagesTest extends WebTestCase
         self::assertStringNotContainsString('RuntimeException', $content);
     }
 
-    public function testApiNotFoundStaysJson(): void
-    {
-        $client = $this->createProductionClient();
-
-        $client->request('GET', '/api/inconnu', server: ['HTTP_ACCEPT' => 'application/ld+json']);
-
-        self::assertResponseStatusCodeSame(404);
-        self::assertResponseHeaderSame('Content-Type', 'application/ld+json');
-        $error = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($error);
-        self::assertSame(404, $error['status']);
-    }
-
     private function createProductionClient(): KernelBrowser
     {
         return self::createClient(['debug' => false]);
