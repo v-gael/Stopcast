@@ -43,22 +43,22 @@ final class AppFixturesTest extends KernelTestCase
         $entityManager->flush();
     }
 
-    public function testFixedDeviceShowsTheBusiestQuays(): void
+    public function testDevDeviceShowsTheBusiestQuays(): void
     {
         $this->load();
 
-        $device = $this->fixedDevice();
+        $device = $this->devDevice();
         $configurations = $device->getDisplayConfigurations()->toArray();
         usort($configurations, static fn (DisplayConfiguration $a, DisplayConfiguration $b): int => $a->getPosition() <=> $b->getPosition());
 
-        self::assertSame(AppFixtures::FIXED_DEVICE_LABEL, $device->getLabel());
+        self::assertSame(AppFixtures::DEV_DEVICE_LABEL, $device->getLabel());
         self::assertTrue($device->isActive());
         self::assertSame([0, 1, 2], array_map(static fn (DisplayConfiguration $configuration): int => $configuration->getPosition(), $configurations));
         self::assertSame(['S2', 'S3', 'S1'], array_map(static fn (DisplayConfiguration $configuration): string => $configuration->getQuay()->getGtfsStopId(), $configurations));
         self::assertCount(3, array_filter(array_map(static fn (DisplayConfiguration $configuration): bool => $configuration->isActive(), $configurations)));
     }
 
-    public function testRandomDevicesAreCreatedAlongsideTheFixedOne(): void
+    public function testRandomDevicesAreCreatedAlongsideTheDevOne(): void
     {
         $this->load();
 
@@ -72,7 +72,7 @@ final class AppFixturesTest extends KernelTestCase
 
         $entityManager = $this->entityManager();
         self::assertSame(6, $entityManager->getRepository(Device::class)->count());
-        self::assertSame(3, $entityManager->getRepository(DisplayConfiguration::class)->count(['device' => $this->fixedDevice()]));
+        self::assertSame(3, $entityManager->getRepository(DisplayConfiguration::class)->count(['device' => $this->devDevice()]));
         self::assertSame(4, $entityManager->getRepository(Quay::class)->count());
         self::assertSame(1, $entityManager->getRepository(Route::class)->count());
         self::assertSame(1, $entityManager->getRepository(Trip::class)->count());
@@ -117,7 +117,7 @@ final class AppFixturesTest extends KernelTestCase
     {
         $this->load(available: false);
 
-        self::assertCount(3, $this->fixedDevice()->getDisplayConfigurations());
+        self::assertCount(3, $this->devDevice()->getDisplayConfigurations());
         self::assertStringContainsString('indisponible', implode("\n", $this->logs));
     }
 
@@ -142,9 +142,9 @@ final class AppFixturesTest extends KernelTestCase
         $this->logs = [...$this->logs, ...$logger->messages];
     }
 
-    private function fixedDevice(): Device
+    private function devDevice(): Device
     {
-        $device = $this->entityManager()->getRepository(Device::class)->findOneBy(['label' => AppFixtures::FIXED_DEVICE_LABEL]);
+        $device = $this->entityManager()->getRepository(Device::class)->findOneBy(['label' => AppFixtures::DEV_DEVICE_LABEL]);
         self::assertInstanceOf(Device::class, $device);
 
         return $device;

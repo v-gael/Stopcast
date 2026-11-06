@@ -23,14 +23,14 @@ use Psr\Log\LoggerInterface;
  */
 final class AppFixtures extends Fixture
 {
-    public const string FIXED_DEVICE_LABEL = 'Écran de développement';
+    public const string DEV_DEVICE_LABEL = 'Écran de développement';
 
     /** Identifiants documentés dans docs/developpement.md. */
     public const string DEV_USER_EMAIL = 'admin@stopcast.local';
 
     public const string DEV_USER_PASSWORD = 'stopcast-admin';
 
-    private const int FIXED_DEVICE_QUAY_COUNT = 3;
+    private const int DEV_DEVICE_QUAY_COUNT = 3;
 
     public function __construct(
         private readonly DevelopmentQuaySelector $quaySelector,
@@ -48,7 +48,7 @@ final class AppFixtures extends Fixture
 
         $this->removeDevices($manager);
         $this->replaceDevUser($manager, $devUser);
-        $this->loadFixedDevice($manager, new Device($devUser, self::FIXED_DEVICE_LABEL));
+        $this->loadDevDevice($manager, new Device($devUser, self::DEV_DEVICE_LABEL));
 
         foreach (DeviceFactory::createMany(5, ['owner' => $devUser]) as $device) {
             $configCount = random_int(2, 4);
@@ -92,9 +92,9 @@ final class AppFixtures extends Fixture
         $manager->flush();
     }
 
-    private function loadFixedDevice(ObjectManager $manager, Device $device): void
+    private function loadDevDevice(ObjectManager $manager, Device $device): void
     {
-        $selection = $this->quaySelector->select(self::FIXED_DEVICE_QUAY_COUNT);
+        $selection = $this->quaySelector->select(self::DEV_DEVICE_QUAY_COUNT);
 
         if (null !== $selection->fallbackReason) {
             $this->logger->warning(\sprintf('Quais de l\'appareil de développement : %s, complété par les quais desservis par le plus de lignes.', $selection->fallbackReason));
@@ -112,7 +112,7 @@ final class AppFixtures extends Fixture
 
         $this->logger->notice(\sprintf(
             'Appareil de développement « %s » créé sur %s.',
-            self::FIXED_DEVICE_LABEL,
+            self::DEV_DEVICE_LABEL,
             implode(', ', array_map(static fn (DisplayConfiguration $configuration): string => \sprintf('%s (%s)', $configuration->getQuay()->getName(), $configuration->getQuay()->getGtfsStopId()), $device->getDisplayConfigurations()->toArray())),
         ));
     }
