@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\After;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\DomCrawler\Crawler;
 use Symfony\Component\Panther\PantherTestCase;
+use Symfony\Component\Panther\ServerExtensionLegacy;
 
 /**
  * Gestes des tests navigateur (Panther) : visite d'une page et contrôle de la
@@ -56,7 +58,7 @@ trait BrowserTestTrait
             }
         }
 
-        self::assertSame([], $errors, \sprintf('Erreurs dans la console de Chrome sur « %s ».', $step));
+        self::assertSame([], $errors, \sprintf('Erreurs dans la console de Chrome sur « %s » (%s).', $step, $client->getCurrentURL()));
     }
 
     /**
@@ -79,13 +81,22 @@ trait BrowserTestTrait
     /**
      * Dernière lecture de la console, après chaque test : une erreur arrivée
      * après le dernier contrôle (requête, contrôleur Stimulus, iframe) n'est
-     * pas perdue, ni reportée sur le test suivant.
+     * pas perdue, ni reportée sur le test suivant. Panther a déjà pris sa
+     * capture d'échec (tearDown passe avant) : elle est prise ici.
      */
     #[After]
     protected function assertNoBrowserErrorsAtTheEnd(): void
     {
-        if (self::$pantherClient instanceof Client) {
+        if (!self::$pantherClient instanceof Client) {
+            return;
+        }
+
+        try {
             $this->assertNoBrowserErrors(self::$pantherClient, 'fin du test');
+        } catch (AssertionFailedError $assertionFailedError) {
+            ServerExtensionLegacy::takeScreenshots('failure', $this->toString());
+
+            throw $assertionFailedError;
         }
     }
 
