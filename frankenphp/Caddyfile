@@ -13,8 +13,9 @@
 
 	# Journal d'accès sans données personnelles (docs/exploitation.md, « Logs
 	# et erreurs ») : IP tronquées en /24 et /48, aucun en-tête (l'IP du
-	# visiteur, derrière cloudflared, n'est que dans Cf-Connecting-Ip), jeton
-	# de réinitialisation du mot de passe remplacé.
+	# visiteur, derrière cloudflared, n'est que dans Cf-Connecting-Ip), jetons
+	# de réinitialisation du mot de passe et d'invitation remplacés (une règle
+	# par route à jeton, vérifiée par PersonalDataMaskingTest).
 	log {
 		output stdout
 		format filter {
@@ -24,6 +25,7 @@
 				request>client_ip ip_mask 24 48
 				request>headers delete
 				request>uri regexp "^/reset-password/reset/[^/?]+" "/reset-password/reset/***"
+				request>uri regexp "^/invitation/[^/?]+" "/invitation/***"
 				resp_headers delete
 			}
 		}

@@ -7,9 +7,11 @@ namespace App\Tests\Integration\Logging;
 use App\Logging\PersonalDataMasker;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RouterInterface;
 
 final class PersonalDataMaskingTest extends KernelTestCase
 {
@@ -26,13 +28,33 @@ final class PersonalDataMaskingTest extends KernelTestCase
         self::assertFalse($handler->hasErrorThatContains('jeanne@example.com'));
     }
 
-    // Les règles du masqueur et du journal d'accès de Caddy recopient le chemin
-    // de la route : un renommage doit faire échouer ce test, pas le masquage.
-    public function testResetTokenRulesFollowTheResetRoute(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function tokenRouteProvider(): iterable
+    {
+        self::bootKernel();
+        $router = self::getContainer()->get(RouterInterface::class);
+        self::assertInstanceOf(RouterInterface::class, $router);
+
+        foreach ($router->getRouteCollection() as $name => $route) {
+            if (\in_array('token', $route->compile()->getPathVariables(), true)) {
+                yield $name => [$name];
+            }
+        }
+
+        self::ensureKernelShutdown();
+    }
+
+    // Toute route à jeton est masquée par le masqueur et par le journal
+    // d'accès de Caddy, qui recopient son chemin : une nouvelle route ou un
+    // renommage fait échouer ce test.
+    #[DataProvider('tokenRouteProvider')]
+    public function testTokenRouteIsMaskedByTheMaskerAndTheAccessLog(string $routeName): void
     {
         $router = self::getContainer()->get(UrlGeneratorInterface::class);
         self::assertInstanceOf(UrlGeneratorInterface::class, $router);
-        $path = $router->generate('app_reset_password', ['token' => 'Xk3vQ9pLmN2rT7wY']);
+        $path = $router->generate($routeName, ['token' => 'Xk3vQ9pLmN2rT7wY']);
         $prefix = substr($path, 0, -\strlen('Xk3vQ9pLmN2rT7wY'));
 
         self::assertSame($prefix.'***', new PersonalDataMasker()->mask($path));
