@@ -180,7 +180,7 @@ body {
     line-clamp: 2;
 }
 
-/* Écrans d'état : aucun passage, aucune configuration active, écran désactivé. */
+/* Écrans d'état : aucun passage, horaires indisponibles, aucune configuration active, écran désactivé. */
 .screen__message {
     display: flex;
     flex-direction: column;
@@ -194,13 +194,14 @@ body {
 }
 
 /* Icône et texte un peu plus hauts que le centre, comme sur la maquette. */
-.screen__message--no-bus {
+.screen__message--icon {
     justify-content: flex-start;
     padding-top: calc(25 * var(--u));
     gap: calc(2 * var(--u));
 }
 
-.screen__no-bus {
+.screen__no-bus,
+.screen__unavailable {
     width: calc(141 * var(--u));
     height: calc(141 * var(--u));
 }

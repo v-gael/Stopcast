@@ -3,6 +3,9 @@ import { Controller } from '@hotwired/stimulus';
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
+// Panne plus longue : les passages gardés ne sont plus crédibles.
+const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
+
 /*
  * Page d'affichage d'un dispositif : montre un écran à la fois et passe au
  * suivant après la durée d'écran ; relit les écrans à la cadence de
@@ -12,14 +15,22 @@ const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
  * « data-display-offline » montre le pictogramme no_signal jusqu'au suivant
  * qui réussit. Un 401 (écran dissocié ou remplacé) recharge la page, qui
  * montre alors l'écran d'appairage.
+ *
+ * Chaque seconde, les délais sont recomptés depuis l'heure prévue des passages
+ * et les passages passés retirés, que le flux réponde ou non. Un écran vidé
+ * montre « aucun passage » ; en panne, il montre « Horaires temps réel
+ * indisponibles », comme tous les écrans 15 minutes après le dernier
+ * rafraîchissement réussi. Le suivant qui réussit rétablit les passages.
  */
 export default class extends Controller {
-    static targets = ['content', 'screen', 'clock', 'minutes', 'route'];
+    static targets = ['content', 'screen', 'clock', 'minutes', 'route', 'passage', 'passages', 'noPassage', 'unavailable'];
 
     static values = { url: String, timeZone: String };
 
     connect() {
         this.index = 0;
+        // Premier chargement en échec : aucun passage reçu, l'écran est déjà « indisponible ».
+        this.lastSuccess = this.#offline() ? null : Date.now();
         this.clockFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: this.timeZoneValue || undefined });
         this.#prepare();
         this.clockTimer = setInterval(() => this.#tick(), 1000);
@@ -66,6 +77,7 @@ export default class extends Controller {
 
             this.contentTarget.replaceWith(document.adoptNode(content));
             delete this.element.dataset.displayOffline;
+            this.lastSuccess = Date.now();
             this.#prepare();
         } catch (error) {
             if (error.name === 'AbortError') {
@@ -73,6 +85,7 @@ export default class extends Controller {
             }
 
             this.element.dataset.displayOffline = '';
+            this.#tick();
         }
 
         this.#scheduleRefresh();
@@ -123,14 +136,63 @@ export default class extends Controller {
             }
         });
 
-        // Délais recomptés entre deux rafraîchissements, arrondis à la minute inférieure comme côté serveur.
-        this.minutesTargets.forEach((minutes) => {
-            const text = String(Math.max(0, Math.floor((Number(minutes.dataset.expectedAt) * 1000 - now) / 60000)));
+        this.passageTargets.forEach((passage) => {
+            const expectedAt = Number(passage.dataset.expectedAt) * 1000;
 
-            if (minutes.textContent !== text) {
+            // Passage passé retiré, comme le serveur l'écarte.
+            if (expectedAt < now) {
+                passage.remove();
+
+                return;
+            }
+
+            // Délai recompté entre deux rafraîchissements, arrondi à la minute inférieure comme côté serveur.
+            const minutes = passage.querySelector('[data-display-target="minutes"]');
+            const text = String(Math.floor((expectedAt - now) / 60000));
+
+            if (minutes && minutes.textContent !== text) {
                 minutes.textContent = text;
             }
         });
+
+        this.#showStates(now);
+    }
+
+    /*
+     * État montré par chaque écran de quai : ses passages, « aucun passage »,
+     * ou « indisponible » en panne quand il n'a plus de passage ou que la
+     * panne dure. Les écrans d'état (désactivé, aucun quai) n'en ont pas.
+     */
+    #showStates(now) {
+        const offline = this.#offline();
+        const expired = offline && (this.lastSuccess === null || now - this.lastSuccess >= UNAVAILABLE_AFTER_MS);
+
+        this.screenTargets.forEach((screen) => {
+            const noPassage = screen.querySelector('[data-display-target="noPassage"]');
+            const unavailable = screen.querySelector('[data-display-target="unavailable"]');
+
+            if (!noPassage || !unavailable) {
+                return;
+            }
+
+            const passages = screen.querySelector('[data-display-target="passages"]');
+            const hasPassages = Boolean(passages?.querySelector('[data-display-target="passage"]'));
+            let shown = hasPassages ? passages : noPassage;
+
+            if (offline && (expired || !hasPassages)) {
+                shown = unavailable;
+            }
+
+            for (const element of [passages, noPassage, unavailable]) {
+                if (element && element.hidden !== (element !== shown)) {
+                    element.hidden = element !== shown;
+                }
+            }
+        });
+    }
+
+    #offline() {
+        return 'displayOffline' in this.element.dataset;
     }
 
     #scheduleRotation() {
