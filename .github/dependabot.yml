@@ -1,0 +1,44 @@
+# Traitement des PR et dépendances restées à la main : docs/developpement.md,
+# « Mettre à jour les dépendances ».
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      composer:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Montées mineures et majeures à la main (recipes Flex).
+      - dependency-name: symfony/*
+        update-types: [version-update:semver-minor, version-update:semver-major]
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      docker:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns: ['*']
+        update-types: [minor, patch]

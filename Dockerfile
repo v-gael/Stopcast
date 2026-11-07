@@ -3,7 +3,9 @@
 # =============================================================================
 # base : dépendances système communes à toutes les stages
 # =============================================================================
-FROM dunglas/frankenphp:1-php8.5-alpine AS base
+# Étiquette et digest : dev, CI et prod partent de la même base, et une
+# nouvelle base arrive par une PR de Dependabot.
+FROM dunglas/frankenphp:1-php8.5-alpine@sha256:bf8051e99d28fd546b0d1c1b74329f3eba0496b56bb8cd979a10ab1265e28f5c AS base
 
 WORKDIR /app
 

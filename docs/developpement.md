@@ -214,6 +214,8 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 3. `make composer c="recipes"` liste les recipes à mettre à jour. Chacune se met à jour avec `make composer c="recipes:update <paquet>"`. Flex refuse de tourner tant que l'index git contient des changements : committer entre deux.
 4. Finir par `make audit` puis `make check`.
 
+Dependabot (`.github/dependabot.yml`) ouvre chaque semaine vers `develop` des PR groupées par écosystème : paquets Composer, image de base du `Dockerfile` (étiquette et digest) et Actions des workflows (épinglées par SHA, version en commentaire). Les mises à jour mineures et correctives sont groupées, une version majeure arrive seule. Une PR de Dependabot se traite comme une branche `chore/` : la récupérer, lancer `make check`, mettre à jour à la main les recipes Flex si besoin (étape 3), puis merger. Restent à la main : les montées mineures et majeures des paquets `symfony/*`, Symfony UX et maker-bundle compris (ignorées par Dependabot, procédure ci-dessus ; leurs correctifs arrivent par Dependabot), PostgreSQL (`POSTGRES_VERSION`) et Mailpit, les images d'outils de `bin/check-scripts`, et l'importmap (`make console c="importmap:outdated"`).
+
 Un `require` ou un `update` fait resynchroniser par Flex les paquets Symfony UX : `importmap.php` gagne les CSS Bootstrap de tom-select et perd son `declare(strict_types=1)`. Quand le paquet n'apporte pas de JavaScript, annuler ce changement avec `git checkout importmap.php`.
 
 ## Migrations
