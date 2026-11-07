@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Account\EmailNormalizer;
 use App\Enum\Role;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Types\Types;
@@ -30,7 +31,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     /**
-     * Identifiant de connexion.
+     * Identifiant de connexion, normalisé (EmailNormalizer) : les recherches
+     * normalisent l'adresse saisie de la même façon.
      */
     #[ORM\Column(type: Types::STRING, length: 180)]
     #[Assert\NotBlank]
@@ -71,7 +73,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function __construct(string $email, Role $role = Role::User)
     {
-        $this->email = $email;
+        $this->email = EmailNormalizer::normalize($email);
         $this->changeRole($role);
     }
 

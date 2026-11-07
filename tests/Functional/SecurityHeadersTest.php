@@ -27,9 +27,12 @@ final class SecurityHeadersTest extends WebTestCase
             "base-uri 'none'",
             "form-action 'self'",
             "frame-ancestors 'none'",
+            // Aperçus de l'écran d'affichage, et widget Turnstile de la
+            // connexion et de « mot de passe oublié ».
+            "frame-src 'self' https://challenges.cloudflare.com",
             "img-src 'self' data:",
             "object-src 'none'",
-            "script-src 'self' 'nonce-{$nonce}'",
+            "script-src 'self' https://challenges.cloudflare.com 'nonce-{$nonce}'",
             "style-src 'self' 'nonce-{$nonce}'",
         ]));
         self::assertResponseNotHasHeader('Content-Security-Policy-Report-Only');

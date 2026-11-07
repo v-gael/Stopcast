@@ -1,6 +1,7 @@
 #!/bin/sh
 # Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
-# sert le formulaire de connexion, la page d'affichage refuse un
+# sert le formulaire de connexion, avec la vraie clé de site Turnstile hors
+# localhost (la prod locale garde la clé de test), la page d'affichage refuse un
 # rafraîchissement sans cookie d'écran, et /health dit que la base répond.
 # Lancé par le job `deploy` de `ci.yml` sur l'URL publique, après bin/deploy ;
 # se lance aussi à la main.
@@ -52,12 +53,13 @@ trap 'rm -f "$body" "$body.err"' EXIT
 
 failed=0
 
-# check <nom> <chemin> <code attendu> [<texte attendu dans la réponse>]
+# check <nom> <chemin> <code attendu> [<texte attendu dans la réponse>] [<texte interdit>]
 check() {
     name=$1
     url=$base_url$2
     expected_code=$3
     expected_text=${4:-}
+    unexpected_text=${5:-}
 
     attempt=1
     while :; do
@@ -71,6 +73,8 @@ check() {
             reason="code $code reçu, $expected_code attendu${error:+ ($error)}"
         elif [ -n "$expected_text" ] && ! grep -qF -- "$expected_text" "$body"; then
             reason="code $code, mais la réponse ne contient pas « $expected_text »"
+        elif [ -n "$unexpected_text" ] && grep -qF -- "$unexpected_text" "$body"; then
+            reason="code $code, mais la réponse contient « $unexpected_text »"
         else
             echo "OK : $name (GET $url → $code)"
             return 0
@@ -87,7 +91,16 @@ check() {
     done
 }
 
-check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
+# Clé de site de test de Turnstile (.env) : le captcha laisserait tout passer.
+turnstile_test_key=1x00000000000000000000AA
+case $base_url in
+    http://localhost | http://localhost:* | http://127.0.0.1 | http://127.0.0.1:*)
+        check "Page d'accueil et formulaire de connexion" / 200 'name="_password"'
+        ;;
+    *)
+        check "Page d'accueil, formulaire de connexion et clé Turnstile de prod" / 200 'name="_password"' "$turnstile_test_key"
+        ;;
+esac
 check "Page d'affichage fermée sans cookie d'écran" '/display?fragment=1' 401
 check 'Base de données joignable' /health 200 '"status":"ok"'
 

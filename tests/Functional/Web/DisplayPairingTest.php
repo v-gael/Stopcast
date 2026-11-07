@@ -13,6 +13,7 @@ use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
+use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
 use Google\Transit\Realtime\TripDescriptor;
@@ -38,6 +39,7 @@ final class DisplayPairingTest extends WebTestCase
     use RealtimeFeedTrait;
     use ResetDatabase;
     use ScreenPairingTrait;
+    use WebTestTrait;
 
     private const string CODE_PATTERN = '/^[2-9A-HJKMNP-Z]{3}-[2-9A-HJKMNP-Z]{3}$/';
 
@@ -375,11 +377,7 @@ final class DisplayPairingTest extends WebTestCase
     {
         $this->serveRealtimeFeed();
         // Vraie connexion par le formulaire : loginUser() injecterait le jeton quel que soit le firewall.
-        $crawler = $this->client->request('GET', '/');
-        $this->client->submit($crawler->selectButton('Se connecter')->form([
-            '_username' => $this->owner->getEmail(),
-            '_password' => UserFactory::DEFAULT_PASSWORD,
-        ]));
+        $this->logIn($this->owner->getEmail(), UserFactory::DEFAULT_PASSWORD);
         self::assertResponseRedirects('/devices');
 
         $this->client->request('GET', '/display');

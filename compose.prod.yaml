@@ -35,6 +35,8 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS}
       DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:?TURNSTILE_SITE_KEY est requis}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?TURNSTILE_SECRET_KEY est requis}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_RELEASE: ${IMAGE_TAG}
     # Journal des suppressions de compte, hors base pour survivre à une

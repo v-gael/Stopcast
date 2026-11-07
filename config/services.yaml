@@ -33,6 +33,13 @@ when@test:
     parameters:
         app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
 
+    services:
+        # tests/ n'est pas chargé comme services : mock_response_factory de
+        # turnstile.client (framework.yaml) attend un id de service.
+        App\Tests\Support\TurnstileSiteverifyMock: ~
+        App\Tests\Support\RealtimeFeedMock:
+            autowire: true
+
 when@prod:
     parameters:
         app.display_cookie_prefix: '__Host-'

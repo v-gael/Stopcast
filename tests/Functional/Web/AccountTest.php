@@ -102,11 +102,7 @@ final class AccountTest extends WebTestCase
     {
         $this->logOut();
 
-        $crawler = $this->client->request('GET', '/');
-        $this->client->submit($crawler->selectButton('Se connecter')->form([
-            '_username' => self::EMAIL,
-            '_password' => $password,
-        ]));
+        $this->logIn(self::EMAIL, $password);
 
         self::assertResponseRedirects('/devices');
     }

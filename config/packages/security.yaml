@@ -9,9 +9,10 @@ security:
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
         app_user_provider:
+            # Sans « property » : UserRepository::loadUserByIdentifier()
+            # normalise l'email saisi avant de chercher le compte.
             entity:
                 class: App\Entity\User
-                property: email
 
     firewalls:
         dev:

@@ -37,7 +37,12 @@ nelmio_security:
             # Pas de 'unsafe-inline' de repli pour les navigateurs sans CSP 2.
             level1_fallback: false
             default-src: ['self']
-            script-src: ['self']
+            # challenges.cloudflare.com : script et iframe du widget Turnstile
+            # (connexion, « mot de passe oublié »), chargés sur ces seules pages.
+            # frame-src remplace default-src pour les iframes : 'self' garde les
+            # aperçus de l'écran d'affichage (pages des dispositifs).
+            script-src: ['self', 'https://challenges.cloudflare.com']
+            frame-src: ['self', 'https://challenges.cloudflare.com']
             style-src: ['self']
             img-src: ['self', 'data:']
             connect-src: ['self']

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Web;
 
+use App\Tests\Support\TurnstileSiteverifyMock;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -47,5 +48,17 @@ final class HomeTest extends WebTestCase
         $crawler = $client->request('GET', '/');
 
         self::assertSame('/reset-password', $crawler->filter('#connexion')->selectLink('Mot de passe oublié ?')->attr('href'));
+    }
+
+    /**
+     * Clé de site de test de .env : le widget s'affiche sans compte Cloudflare.
+     */
+    public function testLoginFormCarriesTheTurnstileWidget(): void
+    {
+        $client = self::createClient();
+
+        $crawler = $client->request('GET', '/');
+
+        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"]'));
     }
 }

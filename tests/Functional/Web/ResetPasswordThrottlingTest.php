@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Web;
 
 use App\Factory\UserFactory;
+use App\Tests\Support\TurnstileSiteverifyMock;
+use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Zenstruck\Foundry\Test\Factories;
@@ -18,6 +20,7 @@ final class ResetPasswordThrottlingTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
 
@@ -41,28 +44,45 @@ final class ResetPasswordThrottlingTest extends WebTestCase
     public function testSixthRequestFromTheSameIpIsRefused(): void
     {
         for ($i = 1; $i <= 4; ++$i) {
-            $this->requestReset(\sprintf('inconnu%d@example.com', $i));
+            $this->requestPasswordReset(\sprintf('inconnu%d@example.com', $i));
             $this->assertConfirmationPage();
         }
 
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
         self::assertQueuedEmailCount(1);
         $this->assertConfirmationPage();
 
-        $this->requestReset(self::OTHER_EMAIL);
+        $this->requestPasswordReset(self::OTHER_EMAIL);
 
         $this->assertRefused();
+    }
+
+    /**
+     * Le captcha est validé avec le formulaire, avant la limite : un robot
+     * sans jeton valide ne bloque pas « mot de passe oublié » pour son IP.
+     */
+    public function testFailedTurnstileChecksDoNotCountTowardsTheLimit(): void
+    {
+        for ($i = 1; $i <= 5; ++$i) {
+            $this->requestPasswordReset(self::OTHER_EMAIL, TurnstileSiteverifyMock::INVALID_TOKEN);
+            self::assertResponseStatusCodeSame(422);
+        }
+
+        $this->requestPasswordReset(self::EMAIL);
+
+        self::assertQueuedEmailCount(1);
+        $this->assertConfirmationPage();
     }
 
     public function testRefusalIsTheSameForAnUnknownAndAnExistingAccount(): void
     {
         $this->exhaustTheLimit();
 
-        $this->requestReset('inconnu@example.com');
+        $this->requestPasswordReset('inconnu@example.com');
         $this->assertRefused();
         $unknownAccountPage = $this->mainContent();
 
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
         $this->assertRefused();
         self::assertSame($unknownAccountPage, $this->mainContent());
     }
@@ -72,7 +92,7 @@ final class ResetPasswordThrottlingTest extends WebTestCase
         $this->exhaustTheLimit();
 
         $this->client->setServerParameter('REMOTE_ADDR', '203.0.113.7');
-        $this->requestReset(self::EMAIL);
+        $this->requestPasswordReset(self::EMAIL);
 
         self::assertQueuedEmailCount(1);
         $this->assertConfirmationPage();
@@ -84,7 +104,7 @@ final class ResetPasswordThrottlingTest extends WebTestCase
     private function exhaustTheLimit(): void
     {
         for ($i = 1; $i <= 5; ++$i) {
-            $this->requestReset(\sprintf('inconnu%d@example.com', $i));
+            $this->requestPasswordReset(\sprintf('inconnu%d@example.com', $i));
             $this->assertConfirmationPage();
         }
     }
@@ -104,15 +124,5 @@ final class ResetPasswordThrottlingTest extends WebTestCase
     private function mainContent(): string
     {
         return $this->client->getCrawler()->filter('main')->text();
-    }
-
-    private function requestReset(string $email): void
-    {
-        $crawler = $this->client->request('GET', '/reset-password');
-        self::assertResponseIsSuccessful();
-
-        $this->client->submit($crawler->selectButton('Envoyer le lien')->form([
-            'reset_password_request[email]' => $email,
-        ]));
     }
 }

@@ -63,9 +63,26 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      # Même liste de contrôles que `make check` en local.
+      # Les tests navigateur chargent la CSS : en local, le service tailwind la
+      # construit en continu.
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
+      # Même liste de contrôles que `make check` en local. Les tests navigateur
+      # (Panther) utilisent le Chrome et le chromedriver du runner.
       - name: Contrôles
-        run: bin/check
+        run: |
+          export PANTHER_CHROME_DRIVER_BINARY="$CHROMEWEBDRIVER/chromedriver"
+          bin/check
+
+      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR).
+      - name: Captures des tests navigateur
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: panther-screenshots
+          path: var/panther/
+          if-no-files-found: ignore
 
   # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
   # lance les mêmes scripts sur l'hôte.

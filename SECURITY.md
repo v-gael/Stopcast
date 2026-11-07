@@ -16,6 +16,10 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 - à la connexion, par couple identifiant + adresse IP (`login_throttling`) ;
 - au changement de mot de passe et à la suppression du compte, avec un seul compteur par compte, partagé entre ces deux formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
 
+## Captcha
+
+La connexion et « mot de passe oublié » demandent un captcha Cloudflare Turnstile, vérifié côté serveur avant le mot de passe ou l'envoi du mail. Un jeton refusé par Cloudflare bloque l'envoi ; si Cloudflare est injoignable, l'envoi passe et seules les limites ci-dessous protègent ces formulaires (voir [ADR 0004](docs/adr/0004-captcha-turnstile.md)).
+
 ## Limite des demandes de réinitialisation du mot de passe
 
 « Mot de passe oublié » n'accepte que **5 demandes par 15 minutes** (fenêtre glissante) par adresse IP, que le compte existe ou non. Au-delà, le formulaire affiche une erreur, et ni le compte n'est recherché ni aucun mail n'est envoyé : le message ne révèle rien du compte. Cette limite s'ajoute à celle du bundle de réinitialisation, une demande par heure et par compte.

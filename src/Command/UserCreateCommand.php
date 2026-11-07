@@ -91,7 +91,7 @@ class UserCreateCommand extends Command
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        $io->success(\sprintf('Compte %s créé (%s).', $email, $role->value));
+        $io->success(\sprintf('Compte %s créé (%s).', $user->getEmail(), $role->value));
 
         return Command::SUCCESS;
     }

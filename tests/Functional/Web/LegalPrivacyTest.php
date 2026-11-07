@@ -56,6 +56,21 @@ final class LegalPrivacyTest extends WebTestCase
         }
     }
 
+    /**
+     * Cloudflare utilise aussi les signaux du captcha pour son propre compte :
+     * la page le dit, avec un lien vers sa politique Turnstile.
+     */
+    public function testPrivacyPolicyStatesCloudflaresOwnUseOfTheCaptchaSignals(): void
+    {
+        $client = self::createClient();
+
+        $crawler = $client->request('GET', '/confidentialite');
+
+        self::assertSelectorTextContains('main', 'captcha Cloudflare Turnstile (adresse IP, navigateur et empreinte TLS de sa connexion)');
+        self::assertSelectorTextContains('main', 'en tant que responsable de traitement');
+        self::assertCount(1, $crawler->filter('main a[href="https://www.cloudflare.com/turnstile-privacy-policy/"]'));
+    }
+
     public function testTermsLinkToThePrivacyPolicy(): void
     {
         $client = self::createClient();
