@@ -222,7 +222,7 @@ Un `require` ou un `update` fait resynchroniser par Flex les paquets Symfony UX 
 
 `make migration` génère une migration à partir des entités, `make migrate` l'applique (voir aussi `CODING_STANDARDS.md`).
 
-En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc quelques secondes sur le nouveau schéma. Ce n'est pas une obligation, mais préférer les migrations additives, que l'ancien code supporte :
+En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc quelques secondes sur le nouveau schéma, et un retour arrière le fait tourner sur le schéma migré jusqu'au déploiement suivant. Les migrations suivent donc la règle expand/contract ([ADR 0009](adr/0009-migrations-expand-contract.md)) : une migration ne fait qu'ajouter, et ce qui casserait l'ancien code attend une release suivante :
 
 - ajouter une colonne nullable (ou avec une valeur par défaut), puis la rendre obligatoire dans une release suivante ;
 - renommer en deux temps : ajouter la nouvelle colonne et y recopier les données, puis supprimer l'ancienne dans une release suivante, une fois le code passé à la nouvelle ;
@@ -230,7 +230,7 @@ En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l
 
 Toutes les migrations en attente passent dans une seule transaction (`all_or_nothing`) : si l'une échoue, le lot entier est annulé.
 
-Pas de méthode `down()` à maintenir : le schéma ne fait qu'avancer. Un retour arrière qui ne supporte pas le nouveau schéma passe par la restauration du dump pris avant migration ([exploitation.md](exploitation.md#retour-arrière)).
+Les migrations gardent le `down()` que génère le maker, mais ni le déploiement ni le retour arrière ne l'exécutent : il n'est ni maintenu ni testé. Le schéma ne fait qu'avancer : revenir au-delà de la release précédente, ou sur une migration qui n'a pas suivi la règle, passe par la restauration du dump pris avant migration ([exploitation.md](exploitation.md#retour-arrière)).
 
 ## Environnement de prod (local)
 
