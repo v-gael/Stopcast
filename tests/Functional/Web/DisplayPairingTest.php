@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
+use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
 use App\Tests\Support\WebTestTrait;
@@ -38,6 +39,7 @@ final class DisplayPairingTest extends WebTestCase
 {
     use AppLogsTrait;
     use Factories;
+    use QueryCountTrait;
     use RealtimeFeedTrait;
     use ResetDatabase;
     use ScreenPairingTrait;
@@ -373,6 +375,47 @@ final class DisplayPairingTest extends WebTestCase
         self::assertCount(1, $crawler->filter('.screen__message .screen__unavailable'));
     }
 
+    public function testPairingScreenRecordsNoContact(): void
+    {
+        $this->pairedScreen();
+
+        self::assertNull($this->storedDevice($this->device)->getLastSeenAt());
+    }
+
+    public function testScreenRequestsRecordTheLastContactAtMostEveryFiveMinutes(): void
+    {
+        $this->serveRealtimeFeed();
+        $this->pairedScreen();
+        $updatedAt = $this->storedDevice($this->device)->getUpdatedAt();
+
+        self::assertSame(1, $this->deviceWrites('/display'));
+        self::assertResponseIsSuccessful();
+        $stored = $this->storedDevice($this->device);
+        self::assertEquals(new \DateTimeImmutable(self::NOW), $stored->getLastSeenAt());
+        self::assertEquals($updatedAt, $stored->getUpdatedAt());
+
+        $this->clock->sleep(4 * 60);
+        self::assertSame(0, $this->deviceWrites('/display?fragment=1'));
+        self::assertResponseIsSuccessful();
+        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->storedDevice($this->device)->getLastSeenAt());
+
+        $this->clock->sleep(2 * 60);
+        self::assertSame(1, $this->deviceWrites('/display?fragment=1'));
+        self::assertResponseIsSuccessful();
+        self::assertEquals(new \DateTimeImmutable(self::NOW)->modify('+6 minutes'), $this->storedDevice($this->device)->getLastSeenAt());
+    }
+
+    public function testRefreshFailingForTheFeedStillRecordsTheContact(): void
+    {
+        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->pairedScreen();
+
+        $this->client->request('GET', '/display?fragment=1');
+
+        self::assertResponseStatusCodeSame(503);
+        self::assertEquals(new \DateTimeImmutable(self::NOW), $this->storedDevice($this->device)->getLastSeenAt());
+    }
+
     public function testFragmentWithoutScreenCookieIsUnauthorized(): void
     {
         $this->client->request('GET', '/display?fragment=1');
@@ -458,6 +501,14 @@ final class DisplayPairingTest extends WebTestCase
 
         $this->client->followRedirect();
         self::assertSelectorExists('.pairing__code');
+    }
+
+    /**
+     * Écritures de la table device pendant une requête de l'écran.
+     */
+    private function deviceWrites(string $uri): int
+    {
+        return $this->countQueries(fn () => $this->client->request('GET', $uri), 'UPDATE device ');
     }
 
     private function assertCodeRefused(): void

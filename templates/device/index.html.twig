@@ -1,5 +1,7 @@
 {% extends 'layout/space.html.twig' %}
 
+{% import 'device/_contact.html.twig' as contact %}
+
 {% block title %}Mes dispositifs · Stopcast{% endblock %}
 
 {% block content %}
@@ -41,6 +43,8 @@
                             {{ device.active ? 'Actif' : 'Inactif' }}
                         </span>
                     </div>
+                    <p class="mt-1 text-sm text-slate-500" data-last-seen>Dernier contact : {{ contact.last_seen(device) }}</p>
+                    {{ contact.badge(device, class: 'mt-2') }}
                     {% if device.displayConfigurations is empty %}
                         <twig:Badge variant="warning" class="mt-2">Aucun quai</twig:Badge>
                     {% elseif device.activeDisplayConfigurations is empty %}

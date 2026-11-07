@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
 use Zenstruck\Foundry\Test\Factories;
@@ -22,8 +23,11 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class DevicesTest extends WebTestCase
 {
+    use ClockSensitiveTrait;
     use Factories;
     use ResetDatabase;
+
+    private const string NOW = '2026-10-30 14:52:00';
 
     private KernelBrowser $client;
 
@@ -58,6 +62,81 @@ final class DevicesTest extends WebTestCase
         self::assertStringNotContainsString('Tout est masqué', $cards->eq(2)->text());
         self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
         self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
+    }
+
+    public function testListShowsTheLastContactAndFlagsSilentOrUnpairedDevices(): void
+    {
+        self::mockTime(self::NOW);
+        $this->deviceSeen('Vu à l’instant', '-2 minutes');
+        $this->deviceSeen('Silencieux', '-20 minutes');
+        $this->deviceSeen('Jamais vu', null);
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Sans écran']);
+        $this->deviceSeen('Éteint et silencieux', '-20 minutes', active: false);
+
+        $crawler = $this->client->request('GET', '/devices');
+
+        self::assertResponseIsSuccessful();
+        $statuses = [];
+        $lastSeen = [];
+        foreach ($crawler->filter('main [data-device-card]') as $node) {
+            $card = new Crawler($node);
+            $label = $card->filter('a')->text();
+            $status = $card->filter('[data-device-status]');
+            $statuses[$label] = $status->count() > 0 ? $status->text() : null;
+            $lastSeen[$label] = $card->filter('[data-last-seen]')->text();
+        }
+
+        // Le plus récent d'abord.
+        self::assertSame([
+            'Éteint et silencieux' => null,
+            'Sans écran' => 'Non appairé',
+            'Jamais vu' => 'Hors ligne',
+            'Silencieux' => 'Hors ligne',
+            'Vu à l’instant' => null,
+        ], $statuses);
+        self::assertSame('Dernier contact : 30/10/2026 à 14:32', $lastSeen['Silencieux']);
+        self::assertSame('Dernier contact : Jamais', $lastSeen['Jamais vu']);
+    }
+
+    /**
+     * @return iterable<string, array{?string, bool, ?string, string}>
+     */
+    public static function detailStatusCases(): iterable
+    {
+        yield 'vu il y a 2 min' => ['-2 minutes', true, null, '30/10/2026 à 14:50'];
+        yield 'vu il y a 20 min' => ['-20 minutes', true, 'Hors ligne', '30/10/2026 à 14:32'];
+        yield 'jamais vu' => [null, true, 'Hors ligne', 'Jamais'];
+        // La fiche dit déjà « Aucun écran appairé ».
+        yield 'sans écran' => ['-20 minutes', false, null, '30/10/2026 à 14:32'];
+    }
+
+    #[DataProvider('detailStatusCases')]
+    public function testDetailShowsTheLastContactAndFlagsASilentScreen(?string $lastSeen, bool $paired, ?string $status, string $shownLastSeen): void
+    {
+        self::mockTime(self::NOW);
+        $device = $this->deviceSeen('Salon', $lastSeen, $paired);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($shownLastSeen, $crawler->filter('[data-last-seen]')->text());
+        $badge = $crawler->filter('main [data-device-status]');
+        self::assertSame($status, $badge->count() > 0 ? $badge->text() : null);
+        // Hors de l'état : ni son infobulle ni son texte pour les lecteurs d'écran.
+        self::assertCount(0, $crawler->filter('[data-device-state] [data-device-status]'));
+    }
+
+    public function testDisabledDetailHasNoStatusBadge(): void
+    {
+        self::mockTime(self::NOW);
+        $device = $this->deviceSeen('Salon', '-20 minutes');
+        $entityManager = $this->entityManager();
+        $entityManager->find(Device::class, $device->getId())?->setActive(false);
+        $entityManager->flush();
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        self::assertCount(0, $crawler->filter('main [data-device-status]'));
     }
 
     public function testListAlwaysEndsWithTheAddBlock(): void
@@ -423,6 +502,27 @@ final class DevicesTest extends WebTestCase
     {
         $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
         $this->client->submit($crawler->selectButton('Enregistrer')->form($values));
+    }
+
+    /**
+     * Dispositif de l'utilisateur, écran appairé ou non, dont le dernier
+     * contact date de ce décalage par rapport à l'horloge (null : jamais).
+     */
+    private function deviceSeen(string $label, ?string $lastSeen, bool $paired = true, bool $active = true): Device
+    {
+        $now = new \DateTimeImmutable(self::NOW);
+
+        return DeviceFactory::new()
+            ->afterInstantiate(static function (Device $device) use ($paired, $lastSeen, $now): void {
+                if ($paired) {
+                    $device->pairScreen(bin2hex(random_bytes(8)));
+                }
+
+                if (null !== $lastSeen) {
+                    $device->recordContact($now->modify($lastSeen));
+                }
+            })
+            ->create(['owner' => $this->user, 'label' => $label, 'active' => $active]);
     }
 
     private function createDevices(int $count): void

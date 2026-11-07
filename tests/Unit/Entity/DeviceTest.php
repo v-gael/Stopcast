@@ -8,6 +8,8 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\DeviceStatus;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class DeviceTest extends TestCase
@@ -31,6 +33,76 @@ final class DeviceTest extends TestCase
         $device = new Device($this->owner(), 'A')->pairScreen('premier')->pairScreen('second');
 
         self::assertSame(Device::hashScreenSecret('second'), $device->getScreenSecretHash());
+    }
+
+    public function testFirstContactIsRecorded(): void
+    {
+        $device = new Device($this->owner(), 'A');
+        $now = new \DateTimeImmutable('2026-10-30 14:32:00');
+
+        self::assertTrue($device->recordContact($now));
+        self::assertEquals($now, $device->getLastSeenAt());
+    }
+
+    public function testContactWithinFiveMinutesIsIgnored(): void
+    {
+        $device = new Device($this->owner(), 'A');
+        $first = new \DateTimeImmutable('2026-10-30 14:32:00');
+        $device->recordContact($first);
+
+        self::assertFalse($device->recordContact($first->modify('+4 minutes')));
+        self::assertEquals($first, $device->getLastSeenAt());
+    }
+
+    public function testContactAfterFiveMinutesIsRecorded(): void
+    {
+        $device = new Device($this->owner(), 'A');
+        $first = new \DateTimeImmutable('2026-10-30 14:32:00');
+        $device->recordContact($first);
+
+        self::assertTrue($device->recordContact($first->modify('+6 minutes')));
+        self::assertEquals($first->modify('+6 minutes'), $device->getLastSeenAt());
+    }
+
+    public function testUnpairingOrPairingAgainKeepsTheLastContact(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('premier');
+        $now = new \DateTimeImmutable('2026-10-30 14:32:00');
+        $device->recordContact($now);
+
+        $device->unpairScreen()->pairScreen('second');
+
+        self::assertEquals($now, $device->getLastSeenAt());
+    }
+
+    /**
+     * @return iterable<string, array{?string, bool, bool, ?DeviceStatus}>
+     */
+    public static function statusCases(): iterable
+    {
+        yield 'vu il y a 2 min' => ['-2 minutes', true, true, null];
+        yield 'vu il y a 15 min pile' => ['-15 minutes', true, true, null];
+        yield 'vu il y a 20 min' => ['-20 minutes', true, true, DeviceStatus::Offline];
+        yield 'jamais vu' => [null, true, true, DeviceStatus::Offline];
+        yield 'sans écran' => ['-20 minutes', false, true, DeviceStatus::Unpaired];
+        yield 'désactivé et silencieux' => ['-20 minutes', true, false, null];
+        yield 'désactivé sans écran' => [null, false, false, null];
+    }
+
+    #[DataProvider('statusCases')]
+    public function testStatusFlagsAMissingOrSilentScreenOfAnActiveDevice(?string $lastSeen, bool $paired, bool $active, ?DeviceStatus $status): void
+    {
+        $now = new \DateTimeImmutable('2026-10-30 14:32:00');
+        $device = new Device($this->owner(), 'A')->setActive($active);
+        if ($paired) {
+            $device->pairScreen('secret');
+        }
+
+        if (null !== $lastSeen) {
+            $device->recordContact($now->modify($lastSeen));
+        }
+
+        self::assertSame($status, $device->status($now));
     }
 
     public function testUnpairingForgetsTheScreen(): void

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\DeviceStatus;
 use App\Repository\DeviceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -28,6 +30,20 @@ class Device
     public const int MIN_REFRESH_INTERVAL = 30;
 
     public const int MAX_REFRESH_INTERVAL = 300;
+
+    /**
+     * Écart minimal entre deux écritures du dernier contact : l'écran se
+     * rafraîchit toutes les 30 à 300 s, la base n'en garde qu'un toutes les
+     * 5 minutes.
+     */
+    public const string CONTACT_RECORD_INTERVAL = '5 minutes';
+
+    /**
+     * Sans contact depuis ce délai, un écran appairé est hors ligne :
+     * rafraîchissement le plus long (5 min), plus l'écart entre deux écritures
+     * (5 min), plus une marge.
+     */
+    public const string OFFLINE_AFTER = '15 minutes';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -86,6 +102,13 @@ class Device
     #[ORM\OneToMany(targetEntity: DisplayConfiguration::class, mappedBy: 'device', orphanRemoval: true)]
     private Collection $displayConfigurations;
 
+    /**
+     * Dernière requête de l'écran appairé, à CONTACT_RECORD_INTERVAL près ; null tant que
+     * l'écran n'a jamais appelé. Dissocier ou réappairer la garde.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastSeenAt = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -107,9 +130,16 @@ class Device
         $this->updatedAt = $now;
     }
 
+    /**
+     * Un simple contact de l'écran n'est pas une modification du dispositif.
+     */
     #[ORM\PreUpdate]
-    public function onPreUpdate(): void
+    public function onPreUpdate(PreUpdateEventArgs $event): void
     {
+        if (['lastSeenAt'] === array_keys($event->getEntityChangeSet())) {
+            return;
+        }
+
         $this->updatedAt = new \DateTimeImmutable();
     }
 
@@ -169,6 +199,50 @@ class Device
     public function getScreenSecretHash(): ?string
     {
         return $this->screenSecretHash;
+    }
+
+    /**
+     * Note une requête de l'écran, seulement si la précédente notée date de
+     * plus de CONTACT_RECORD_INTERVAL : dit si la date a changé, donc s'il
+     * faut écrire.
+     */
+    public function recordContact(\DateTimeImmutable $now): bool
+    {
+        if ($this->lastSeenAt instanceof \DateTimeImmutable
+            && $this->lastSeenAt > $now->modify('-'.self::CONTACT_RECORD_INTERVAL)) {
+            return false;
+        }
+
+        $this->lastSeenAt = $now;
+
+        return true;
+    }
+
+    public function getLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastSeenAt;
+    }
+
+    /**
+     * Ce qui demande l'attention du propriétaire : pas d'écran appairé, ou un
+     * écran sans dernier contact depuis plus de OFFLINE_AFTER (ou jamais).
+     * Rien pour un dispositif désactivé.
+     */
+    public function status(\DateTimeImmutable $now): ?DeviceStatus
+    {
+        if (!$this->active) {
+            return null;
+        }
+
+        if (!$this->hasPairedScreen()) {
+            return DeviceStatus::Unpaired;
+        }
+
+        if (!$this->lastSeenAt instanceof \DateTimeImmutable || $this->lastSeenAt < $now->modify('-'.self::OFFLINE_AFTER)) {
+            return DeviceStatus::Offline;
+        }
+
+        return null;
     }
 
     public function isActive(): bool

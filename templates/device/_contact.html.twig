@@ -1,0 +1,15 @@
+{# Dernier contact de l'écran d'un dispositif et badge d'état, communs à la liste et à la fiche. #}
+
+{% macro last_seen(device) %}
+    {{- device.lastSeenAt ? device.lastSeenAt|date('d/m/Y à H:i') : 'Jamais' -}}
+{% endmacro %}
+
+{# « Non appairé » seulement si demandé : la fiche dit déjà « Aucun écran appairé ». #}
+{% macro badge(device, with_unpaired = true, class = '') %}
+    {% set status = device_status(device) %}
+    {% if status is same as enum('App\\Enum\\DeviceStatus').Offline %}
+        <twig:Badge variant="warning" class="{{ class }}" data-device-status>{{ status.label }}</twig:Badge>
+    {% elseif status is same as enum('App\\Enum\\DeviceStatus').Unpaired and with_unpaired %}
+        <twig:Badge variant="neutral" class="{{ class }}" data-device-status>{{ status.label }}</twig:Badge>
+    {% endif %}
+{% endmacro %}

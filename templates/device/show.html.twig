@@ -19,6 +19,8 @@
         </twig:Card>
 
         <twig:Card title="Dispositif" class="lg:col-span-2">
+            {# Le contenu d'un composant ne voit pas les imports du gabarit. #}
+            {% import 'device/_contact.html.twig' as contact %}
             <div class="flex flex-col gap-6 xl:flex-row">
                 <div class="min-w-0 flex-1">
                     {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
@@ -34,14 +36,22 @@
                         {% set created = 'Créé le ' ~ device.createdAt|date('d/m/Y à H:i') %}
                         <div>
                             <dt class="font-medium text-slate-500">État</dt>
-                            <dd class="mt-0.5 flex cursor-help items-center gap-1.5 font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" title="{{ created }}" data-device-state>
-                                <span class="size-2 shrink-0 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
-                                {{ device.active ? 'Actif' : 'Inactif' }}<span class="sr-only">, {{ created|lower }}</span>
+                            {# Le badge reste hors de l'état : ni l'infobulle ni le texte des lecteurs d'écran ne le prennent. #}
+                            <dd class="mt-0.5 flex flex-wrap items-center gap-2">
+                                <span class="flex cursor-help items-center gap-1.5 font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" title="{{ created }}" data-device-state>
+                                    <span class="size-2 shrink-0 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
+                                    {{ device.active ? 'Actif' : 'Inactif' }}<span class="sr-only">, {{ created|lower }}</span>
+                                </span>
+                                {{ contact.badge(device, with_unpaired: false) }}
                             </dd>
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Écran</dt>
                             <dd class="mt-0.5 text-slate-900" data-screen-state>{{ device.hasPairedScreen ? 'Écran appairé' : 'Aucun écran appairé' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Dernier contact</dt>
+                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ contact.last_seen(device) }}</dd>
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>
