@@ -10,12 +10,17 @@ namespace App\Logging;
  * - IPv4 tronquées en /24, IPv6 en /48 ;
  * - emails réduits à leurs premières lettres et à leur domaine de premier
  *   niveau (voir EMAIL) ;
- * - jeton d'un lien de réinitialisation du mot de passe remplacé : il est
- *   secret tant qu'il est valable.
+ * - jeton d'un lien de réinitialisation du mot de passe ou d'invitation
+ *   remplacé : il est secret tant qu'il est valable ;
+ * - dans un tableau (maskValues), valeur d'une clé « token » remplacée.
  */
 final class PersonalDataMasker
 {
-    private const string RESET_TOKEN = '#(/reset-password/reset/)[^/?\s"\'&]+#';
+    private const string TOKEN_KEY = 'token';
+
+    // Une alternative par route à jeton ({token}) : PersonalDataMaskingTest
+    // vérifie qu'aucune n'est oubliée.
+    private const string TOKEN_IN_URL = '#(/reset-password/reset/|/invitation/)[^/?\s"\'&]+#';
 
     // jeanne@example.com devient j***@e***.com. Le domaine de premier niveau
     // est facultatif : PostgreSQL tronque les valeurs de ses messages d'erreur
@@ -32,7 +37,7 @@ final class PersonalDataMasker
 
     public function mask(string $text): string
     {
-        $text = preg_replace(self::RESET_TOKEN, '${1}***', $text) ?? $text;
+        $text = preg_replace(self::TOKEN_IN_URL, '${1}***', $text) ?? $text;
         $text = preg_replace_callback(
             self::EMAIL,
             static fn (array $match): string => \sprintf('%s***@%s***%s', $match[1], $match[2], isset($match[3]) ? '.'.$match[3] : ''),
@@ -45,7 +50,9 @@ final class PersonalDataMasker
 
     /**
      * Masque les chaînes d'un tableau, à toute profondeur ; les autres valeurs
-     * (objets compris) restent telles quelles.
+     * (objets compris) restent telles quelles. La valeur d'une clé « token »
+     * devient *** : un jeton seul, comme dans les route_parameters du log
+     * « Matched route », n'est reconnu par aucun motif.
      *
      * @template TKey of array-key
      *
@@ -56,7 +63,9 @@ final class PersonalDataMasker
     public function maskValues(array $values): array
     {
         foreach ($values as $key => $value) {
-            if (\is_string($value)) {
+            if (self::TOKEN_KEY === $key) {
+                $values[$key] = '***';
+            } elseif (\is_string($value)) {
                 $values[$key] = $this->mask($value);
             } elseif (\is_array($value)) {
                 $values[$key] = $this->maskValues($value);

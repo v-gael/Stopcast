@@ -73,6 +73,33 @@ final class PersonalDataMaskerTest extends TestCase
         );
     }
 
+    public function testInvitationTokenIsReplaced(): void
+    {
+        self::assertSame(
+            'GET https://stopcast.gaelv.com/invitation/*** then /invitation',
+            new PersonalDataMasker()->mask('GET https://stopcast.gaelv.com/invitation/Xk3vQ9pLmN2rT7wYb5cH8jF4dS6aG1eZ then /invitation'),
+        );
+    }
+
+    public function testTokenKeyIsReplacedAtAnyDepth(): void
+    {
+        // Contexte du log « Matched route » du RouterListener de Symfony.
+        $context = [
+            'route' => 'app_accept_invitation',
+            'route_parameters' => ['_route' => 'app_accept_invitation', 'token' => 'Xk3vQ9pLmN2rT7wYb5cH8jF4dS6aG1eZ'],
+            'method' => 'GET',
+        ];
+
+        self::assertSame(
+            [
+                'route' => 'app_accept_invitation',
+                'route_parameters' => ['_route' => 'app_accept_invitation', 'token' => '***'],
+                'method' => 'GET',
+            ],
+            new PersonalDataMasker()->maskValues($context),
+        );
+    }
+
     /**
      * @return iterable<string, array{string}>
      */
