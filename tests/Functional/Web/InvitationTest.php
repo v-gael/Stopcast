@@ -50,6 +50,7 @@ final class InvitationTest extends WebTestCase
         self::assertNotNull($email);
         self::assertEmailAddressContains($email, 'To', self::EMAIL);
         self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Stopcast');
+        self::assertEmailAddressContains($email, 'Reply-To', 'contact@stopcast.local');
         self::assertEmailHtmlBodyContains($email, 'http://localhost/invitation/');
         self::assertEmailTextBodyContains($email, 'http://localhost/invitation/');
         self::assertEmailTextBodyContains($email, 'valable 24 heures');
