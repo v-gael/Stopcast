@@ -222,11 +222,11 @@ Un `require` ou un `update` fait resynchroniser par Flex les paquets Symfony UX 
 
 `make migration` génère une migration à partir des entités, `make migrate` l'applique (voir aussi `CODING_STANDARDS.md`).
 
-En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc quelques secondes sur le nouveau schéma, et un retour arrière le fait tourner sur le schéma migré jusqu'au déploiement suivant. Les migrations suivent donc la règle expand/contract ([ADR 0009](adr/0009-migrations-expand-contract.md)) : une migration ne fait qu'ajouter, et ce qui casserait l'ancien code attend une release suivante :
+En prod, `bin/deploy` passe les migrations avec la nouvelle image, pendant que l'ancien code sert encore, puis remplace les conteneurs ([exploitation.md](exploitation.md#bindeploy)). L'ancien code tourne donc sur le nouveau schéma le temps du remplacement (jusqu'à 5 minutes pour le worker, remplacé une fois `app` en bonne santé), et un retour arrière le fait tourner sur le schéma migré jusqu'au déploiement suivant. Les migrations suivent donc la règle expand/contract ([ADR 0009](adr/0009-migrations-expand-contract.md)) : une migration ne fait qu'ajouter, et ce qui casserait l'ancien code attend une release suivante :
 
 - ajouter une colonne nullable (ou avec une valeur par défaut), puis la rendre obligatoire dans une release suivante ;
 - renommer en deux temps : ajouter la nouvelle colonne et y recopier les données, puis supprimer l'ancienne dans une release suivante, une fois le code passé à la nouvelle ;
-- supprimer une colonne ou une table seulement quand le code en place ne s'en sert plus.
+- supprimer une colonne ou une table dans une release suivante, une fois en prod le code qui ne s'en sert plus.
 
 Toutes les migrations en attente passent dans une seule transaction (`all_or_nothing`) : si l'une échoue, le lot entier est annulé.
 
