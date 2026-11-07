@@ -2,10 +2,19 @@
  # Écrans d'un dispositif, un seul visible à la fois, et ses cadences (en
  # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
  # que la page relit. « state_message » remplace les écrans par un écran
- # d'état (dispositif désactivé, passages illisibles).
+ # d'état (dispositif désactivé, passages illisibles) ; « offline » lui donne
+ # le pictogramme no_signal.
+ #
+ # Chaque écran porte ses trois états : passages, « aucun passage » et
+ # « indisponible ». Le contrôleur Stimulus retire les passages passés et
+ # choisit l'état montré (voir display_controller.js).
  #}
 {% set no_signal %}
     <img class="screen__no-signal" src="{{ asset('images/display/no_signal.png') }}" alt="Données non rafraîchies">
+{% endset %}
+{% set unavailable %}
+    <img class="screen__unavailable" src="{{ asset('images/display/no_signal.png') }}" alt="">
+    <p>Horaires temps réel indisponibles</p>
 {% endset %}
 {% set clock %}
     <span class="screen__clock" data-display-target="clock">{{ 'now'|date('H:i') }}</span>
@@ -29,19 +38,21 @@
                 {{ clock }}
             </div>
             {{ columns }}
-            {% if screen.passages is empty %}
-                <div class="screen__message screen__message--no-bus">
-                    <img class="screen__no-bus" src="{{ asset('images/display/no_bus.png') }}" alt="">
-                    <p>Pas de passage prévu actuellement</p>
-                </div>
-            {% else %}
-                <ol class="screen__passages">
+            <div class="screen__message screen__message--icon" data-display-target="noPassage"{% if screen.passages is not empty %} hidden{% endif %}>
+                <img class="screen__no-bus" src="{{ asset('images/display/no_bus.png') }}" alt="">
+                <p>Pas de passage prévu actuellement</p>
+            </div>
+            <div class="screen__message screen__message--icon" data-display-target="unavailable" hidden>
+                {{ unavailable }}
+            </div>
+            {% if screen.passages is not empty %}
+                <ol class="screen__passages" data-display-target="passages">
                     {% for passage in screen.passages %}
-                        <li class="passage">
+                        <li class="passage" data-display-target="passage" data-expected-at="{{ passage.expectedAt.timestamp }}">
                             <span class="passage__route" data-display-target="route"
                                   {%- if passage.routeColor %} data-route-color="#{{ passage.routeColor }}"{% endif %}
                                   {%- if passage.routeTextColor %} data-route-text-color="#{{ passage.routeTextColor }}"{% endif %}>{{ passage.routeShortName }}</span>
-                            <span class="passage__minutes"><span data-display-target="minutes" data-expected-at="{{ passage.expectedAt.timestamp }}">{{ passage.minutes }}</span> min</span>
+                            <span class="passage__minutes"><span data-display-target="minutes">{{ passage.minutes }}</span> min</span>
                             <span class="passage__headsign">{{ passage.headsign }}</span>
                         </li>
                     {% endfor %}
@@ -55,9 +66,15 @@
                 {{ clock }}
             </div>
             {{ columns }}
-            <div class="screen__message">
-                <p>{{ state_message ?? 'Aucun quai affiché' }}</p>
-            </div>
+            {% if offline|default(false) %}
+                <div class="screen__message screen__message--icon">
+                    {{ unavailable }}
+                </div>
+            {% else %}
+                <div class="screen__message">
+                    <p>{{ state_message ?? 'Aucun quai affiché' }}</p>
+                </div>
+            {% endif %}
         </section>
     {% endfor %}
 </div>

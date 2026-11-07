@@ -11,6 +11,7 @@ use App\Entity\Route;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\AppLogsTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
 use App\Tests\Support\WebTestTrait;
@@ -35,6 +36,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  */
 final class DisplayPairingTest extends WebTestCase
 {
+    use AppLogsTrait;
     use Factories;
     use RealtimeFeedTrait;
     use ResetDatabase;
@@ -352,11 +354,14 @@ final class DisplayPairingTest extends WebTestCase
     {
         self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
         $this->pairedScreen();
+        $logs = $this->appLogs();
 
         $this->client->request('GET', '/display?fragment=1');
 
         self::assertResponseStatusCodeSame(503);
         self::assertSame('', (string) $this->client->getResponse()->getContent());
+        self::assertTrue($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
+        self::assertTrue($logs->hasErrorThatContains('GTFS-RT feed unavailable.'));
 
         $crawler = $this->client->request('GET', '/display');
 
@@ -364,6 +369,8 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame('', $crawler->filter('body')->attr('data-display-offline'));
         self::assertSame('/display?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
         self::assertCount(0, $crawler->filter('.passage'));
+        self::assertSelectorTextSame('.screen__message', 'Horaires temps réel indisponibles');
+        self::assertCount(1, $crawler->filter('.screen__message .screen__unavailable'));
     }
 
     public function testFragmentWithoutScreenCookieIsUnauthorized(): void
@@ -469,10 +476,12 @@ final class DisplayPairingTest extends WebTestCase
      */
     private function serveRealtimeFeed(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => self::feedResponse([
+        // Daté de l'horloge du test à chaque requête : un flux à l'heure fixée
+        // serait périmé une fois l'horloge avancée.
+        self::getContainer()->set('http_client', new MockHttpClient(fn (): MockResponse => self::feedResponse([
             new FeedEntity()->setTripUpdate(new TripUpdate()
                 ->setTrip(new TripDescriptor()->setTripId('T1')->setRouteId('R1'))
                 ->setStopTimeUpdate([new StopTimeUpdate()->setStopId('S1')->setDeparture(new StopTimeEvent()->setTime(self::at(5)))])),
-        ])));
+        ], $this->clock->now()->getTimestamp())));
     }
 }

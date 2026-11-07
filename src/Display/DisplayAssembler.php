@@ -33,7 +33,7 @@ final readonly class DisplayAssembler
      *
      * @return list<DisplayItem>
      *
-     * @throws InvalidGtfsRealtimeFeedException flux illisible
+     * @throws InvalidGtfsRealtimeFeedException flux illisible ou périmé
      * @throws HttpClientExceptionInterface     téléchargement impossible
      */
     public function forDevice(Device $device): array

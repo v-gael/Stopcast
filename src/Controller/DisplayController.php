@@ -15,6 +15,7 @@ use App\Display\Pairing\ScreenPairing;
 use App\Display\ScreenPaginator;
 use App\EventListener\FramedPageToolbarListener;
 use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
+use App\Monitoring\RealtimeFeedFailureLogger;
 use App\Security\DeviceUser;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -50,6 +51,7 @@ final class DisplayController extends AbstractController
         Request $request,
         DisplayAssembler $displayAssembler,
         ScreenPaginator $screenPaginator,
+        RealtimeFeedFailureLogger $feedFailureLogger,
         #[CurrentUser] ?UserInterface $user,
         #[MapQueryParameter] bool $fragment = false,
     ): Response {
@@ -73,13 +75,15 @@ final class DisplayController extends AbstractController
         } else {
             try {
                 $parameters['screens'] = $screenPaginator->paginate($displayAssembler->forDevice($device));
-            } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException) {
+            } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $failure) {
+                $feedFailureLogger->log($failure);
+
                 // Le rafraîchissement échoue : l'écran garde ce qu'il affichait.
                 if ($fragment) {
                     return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
                 }
 
-                // Premier chargement : page vide qui réessaie à la cadence du dispositif.
+                // Premier chargement : écran « indisponible » qui réessaie à la cadence du dispositif.
                 $parameters['state_message'] = '';
                 $parameters['offline'] = true;
             }
