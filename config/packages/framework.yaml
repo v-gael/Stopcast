@@ -3,13 +3,53 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        # Cookie limité à la durée du navigateur ; la session expire après
+        # 2 h d'inactivité. « Se souvenir de moi » prend le relais au-delà.
+        cookie_lifetime: 0
+        gc_maxlifetime: 7200
+        cookie_httponly: true
+        cookie_samesite: lax
+
+    # Proxys dont Symfony croit les en-têtes X-Forwarded-* (IP du client,
+    # HTTPS, hôte, port), et hôtes acceptés dans l'en-tête Host : voir
+    # TRUSTED_PROXIES et TRUSTED_HOSTS dans .env.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'x-forwarded-port']
+    trusted_hosts: '%env(TRUSTED_HOSTS)%'
+
+    http_client:
+        scoped_clients:
+            # siteverify de Cloudflare Turnstile (TurnstileVerifier). Au-delà
+            # de 5 s, le jeton passe avec un warning : pas de nouvel essai.
+            turnstile.client:
+                base_uri: 'https://challenges.cloudflare.com'
+                timeout: 5
+                max_duration: 5
 
     #esi: true
     #fragments: true
+
+when@prod:
+    framework:
+        session:
+            # Le préfixe __Host- exige Secure, Path=/ et aucun Domain : un
+            # autre site du domaine parent ne peut pas masquer le cookie.
+            name: __Host-SESSID
+            cookie_secure: true
+            cookie_path: /
 
 when@test:
     framework:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        http_client:
+            # Aucun appel réseau : flux GTFS-RT simulé à partir de la base, 404
+            # pour toute autre URL. Les tests qui remplacent http_client dans le
+            # conteneur gardent la main.
+            mock_response_factory: App\Tests\Support\RealtimeFeedMock
+            scoped_clients:
+                # Aucun appel à Cloudflare : la réponse dépend du jeton envoyé.
+                turnstile.client:
+                    mock_response_factory: App\Tests\Support\TurnstileSiteverifyMock

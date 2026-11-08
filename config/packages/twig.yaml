@@ -1,6 +1,9 @@
 twig:
     file_name_pattern: '*.twig'
+    form_themes: ['form/tailwind_layout.html.twig']
 
 when@test:
     twig:
         strict_variables: true
+        # Le noyau sans debug des tests des pages d'erreur relit aussi les templates modifiés.
+        auto_reload: true

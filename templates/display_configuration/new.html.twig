@@ -1,0 +1,21 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Ajouter un quai · Stopcast{% endblock %}
+
+{% block content %}
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-900">Ajouter un quai</h1>
+        <p class="mt-1 text-slate-600">Sur le dispositif « {{ device.label }} ».</p>
+    </div>
+
+    <twig:Card class="max-w-xl">
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+
+            <div class="flex flex-wrap gap-3">
+                <twig:Button type="submit">Ajouter</twig:Button>
+                <twig:Button href="{{ path('app_device_show', {id: device.id}) }}" variant="secondary">Annuler</twig:Button>
+            </div>
+        {{ form_end(form) }}
+    </twig:Card>
+{% endblock %}

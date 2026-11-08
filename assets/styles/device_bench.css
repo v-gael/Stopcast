@@ -1,0 +1,144 @@
+/*
+ * Écran de test du formulaire d'un dispositif (templates/device/_bench.html.twig).
+ * Séparé de la page d'affichage (display.css) : il reprend son allure mais
+ * évolue seul, pour essayer en direct les réglages du formulaire (durée d'un
+ * écran, plus tard les thèmes) sans contraindre l'affichage réel.
+ *
+ * Tout se mesure en --u, 1/480 de la largeur du bloc, qui garde le format
+ * 480×320 de l'écran de référence.
+ */
+
+@font-face {
+    font-family: "Roboto Condensed";
+    src: url("../fonts/RobotoCondensed-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+}
+
+.bench {
+    container-type: inline-size;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: 0.375rem;
+}
+
+/* Les variables vivent sous le conteneur : une unité cqw y vise la largeur du bloc. */
+.bench__screens {
+    --bench-background: #05203c;
+    --bench-header-background: #1b4872;
+    --bench-header-text: #7baee2;
+    --bench-text: #ffffff;
+
+    --u: calc(100cqw / 480);
+    --padding-inline: calc(14.4 * var(--u));
+    --columns: calc(94.5 * var(--u)) calc(78.2 * var(--u)) minmax(0, 1fr);
+
+    height: 100%;
+    background: var(--bench-background);
+    color: var(--bench-text);
+    font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    -webkit-font-smoothing: antialiased;
+}
+
+.bench__screen {
+    display: grid;
+    grid-template-rows: calc(46 * var(--u)) calc(33 * var(--u)) minmax(0, 1fr);
+    height: 100%;
+}
+
+.bench__screen[hidden] {
+    display: none;
+}
+
+.bench__top {
+    display: flex;
+    align-items: center;
+    gap: calc(14 * var(--u));
+    padding-inline: var(--padding-inline);
+    font-size: calc(25 * var(--u));
+}
+
+.bench__stop {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bench__clock {
+    font-variant-numeric: tabular-nums;
+}
+
+.bench__columns,
+.bench__passage {
+    display: grid;
+    grid-template-columns: var(--columns);
+    align-items: center;
+    padding-inline: var(--padding-inline);
+}
+
+.bench__columns {
+    background: var(--bench-header-background);
+    color: var(--bench-header-text);
+    font-size: calc(20 * var(--u));
+    white-space: nowrap;
+}
+
+.bench__passages {
+    display: grid;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bench__passage {
+    min-height: 0;
+}
+
+.bench__passage + .bench__passage {
+    border-top: calc(2 * var(--u)) solid var(--bench-header-background);
+}
+
+.bench__route {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    min-width: calc(55 * var(--u));
+    max-width: 100%;
+    height: calc(34 * var(--u));
+    padding-inline: calc(7 * var(--u));
+    border-radius: calc(11.6 * var(--u));
+    font-size: calc(16 * var(--u));
+    white-space: nowrap;
+}
+
+/* Couleurs des lignes fictives : des classes plutôt qu'un attribut style, que la CSP refuse. */
+.bench__route--red { background: #e2001a; color: #ffffff; }
+.bench__route--blue { background: #0076bf; color: #ffffff; }
+.bench__route--orange { background: #f29400; color: #000000; }
+.bench__route--green { background: #009036; color: #ffffff; }
+.bench__route--purple { background: #7a3e9d; color: #ffffff; }
+
+.bench__minutes {
+    font-size: calc(19 * var(--u));
+    white-space: nowrap;
+}
+
+.bench__headsign {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: calc(16 * var(--u));
+    line-height: calc(19 * var(--u));
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}

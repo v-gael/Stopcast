@@ -7,6 +7,13 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Préfixe des cookies de l'écran d'affichage (voir DisplayCookies) :
+    # « __Host- » en prod, qui impose Secure, Path=/ et aucun Domain.
+    app.display_cookie_prefix: ''
+    # Journal des suppressions de compte (voir DeletionJournal) : hors base,
+    # pour qu'une restauration ne l'écrase pas. En prod, ce dossier est le
+    # volume account_deletions de compose.prod.yaml.
+    app.account_deletions_log: '%kernel.project_dir%/var/account-deletions/deletions.jsonl'
 
 services:
     # default configuration for services in *this* file
@@ -21,3 +28,18 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    parameters:
+        app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
+
+    services:
+        # tests/ n'est pas chargé comme services : mock_response_factory de
+        # turnstile.client (framework.yaml) attend un id de service.
+        App\Tests\Support\TurnstileSiteverifyMock: ~
+        App\Tests\Support\RealtimeFeedMock:
+            autowire: true
+
+when@prod:
+    parameters:
+        app.display_cookie_prefix: '__Host-'

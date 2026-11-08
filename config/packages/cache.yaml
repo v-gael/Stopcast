@@ -15,5 +15,28 @@ framework:
         #app: cache.adapter.apcu
 
         # Namespaced pools use the above "app" backend by default
-        #pools:
-            #my.dedicated.cache: null
+        pools:
+            # Flux temps réel, partagé entre tous les dispositifs (voir NextPassageFinder).
+            gtfs_realtime.cache: null
+            # Demandes d'appairage des écrans, quelques minutes chacune (voir ScreenPairing).
+            # Sur disque en test aussi : un pool en mémoire est vidé à chaque
+            # requête, et un appairage en enchaîne plusieurs. Les clés sont
+            # aléatoires, rien ne déborde d'un test à l'autre.
+            display_pairing.cache: null
+            # ETag et Last-Modified du dernier import GTFS statique réussi (voir
+            # StaticReferenceImporter). Perdu au redéploiement : au pire un import de plus.
+            gtfs_static.cache: null
+
+when@test:
+    framework:
+        cache:
+            pools:
+                # En mémoire : rien ne survit d'un test à l'autre.
+                gtfs_realtime.cache:
+                    adapter: cache.adapter.array
+                gtfs_static.cache:
+                    adapter: cache.adapter.array
+                # Tentatives de connexion (login_throttling) : sans quoi les
+                # échecs s'additionnent d'un test et d'un lancement à l'autre.
+                cache.rate_limiter:
+                    adapter: cache.adapter.array

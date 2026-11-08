@@ -1,0 +1,102 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Politique de confidentialité · Stopcast{% endblock %}
+
+{# Version publique du registre des traitements (docs/rgpd.md) : toute modification se reporte des deux côtés. #}
+{% block content %}
+    <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Politique de confidentialité</h1>
+        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 8 novembre 2026.</p>
+
+        <div class="mt-8 space-y-8 text-slate-700">
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Responsable du traitement</h2>
+                <p>
+                    Stopcast est édité par <strong>v-gael</strong>, particulier, responsable du traitement de vos données.
+                    Pour toute question : <a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a>.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Données traitées et pourquoi</h2>
+                <ul class="list-disc space-y-2 pl-6">
+                    <li><strong>Votre compte</strong> : email, rôle, mot de passe haché (jamais en clair), date de création. Il sert à vous connecter et à gérer vos écrans. Base légale : l'exécution des <a href="{{ path('app_legal_terms') }}" class="font-medium text-amber-700 underline hover:text-amber-600">conditions d'utilisation</a>.</li>
+                    <li><strong>Vos dispositifs et configurations d'affichage</strong> : nom de chaque écran et haché du secret de son appairage, arrêts choisis, ordre de rotation. Ils servent à afficher les prochains passages. Base légale : l'exécution des conditions d'utilisation.</li>
+                    <li><strong>Les mails du service</strong> : invitation, réinitialisation du mot de passe, avis liés au compte. Ils utilisent votre email. Base légale : l'exécution des conditions d'utilisation.</li>
+                    <li><strong>La sécurité</strong> : journaux du serveur (adresse IP tronquée, email masqué), limites du nombre d'essais (identifiant saisi, adresse IP), captcha Cloudflare Turnstile (adresse IP, navigateur et empreinte TLS de sa connexion), refus des mots de passe ayant fuité. Base légale : l'intérêt légitime de protéger le service et vos comptes.</li>
+                    <li><strong>Le suivi des erreurs</strong> : les erreurs de l'application sont envoyées à Sentry, sans adresse IP ni email. Base légale : l'intérêt légitime de corriger le service.</li>
+                    <li><strong>Les sauvegardes</strong> : une copie chiffrée de la base, et la liste des comptes supprimés (identifiant et date de création, sans email) pour qu'une restauration ne les fasse pas revenir. Base légale : l'intérêt légitime d'assurer la continuité du service.</li>
+                    <li><strong>La purge des comptes inactifs</strong> : la date de votre dernière connexion, et votre email pour vous prévenir. Base légale : l'intérêt légitime de ne pas garder les comptes abandonnés.</li>
+                </ul>
+                <p class="mt-2">Aucun traitement ne repose sur votre consentement. Vos données ne sont ni vendues, ni utilisées à des fins publicitaires.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Durées de conservation</h2>
+                <ul class="list-disc space-y-2 pl-6">
+                    <li>Compte, dispositifs et configurations : jusqu'à la suppression du compte, par vous ou par un administrateur.</li>
+                    <li>Compte sans connexion pendant 2 ans : supprimé, après un avertissement par email 30 jours avant. L'activité d'un écran ne compte pas comme une connexion.</li>
+                    <li>Liens d'invitation (valables 24 heures) et de réinitialisation du mot de passe (1 heure) : supprimés à leur expiration.</li>
+                    <li>Invitation jamais acceptée : le compte en attente est supprimé 30 jours après l'expiration de son dernier lien.</li>
+                    <li>Journaux du serveur : environ 14 jours.</li>
+                    <li>Mail qui n'a pas pu être envoyé : gardé, avec votre email et le lien qu'il contient, 7 jours au plus après le dernier échec d'envoi.</li>
+                    <li>Sauvegardes et liste des comptes supprimés : 30 jours.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Destinataires et sous-traitants</h2>
+                <p>Vos données ne sont accessibles qu'à l'éditeur et aux administrateurs du service, et aux sous-traitants suivants, pour le seul service qu'ils rendent (sauf pour le captcha, voir ci-dessous) :</p>
+                <ul class="mt-2 list-disc space-y-2 pl-6">
+                    <li><strong>OVH</strong> (France) : hébergement du serveur et de la base de données.</li>
+                    <li><strong>Cloudflare</strong> (États-Unis et Union européenne) : nom de domaine, proxy et tunnel vers le serveur, captcha Turnstile, stockage des sauvegardes chiffrées, redirection de l'adresse de contact.</li>
+                    <li><strong>Brevo</strong> (Union européenne) : envoi des mails du service.</li>
+                    <li><strong>Sentry</strong> (Allemagne) : suivi des erreurs, sans adresse IP ni email.</li>
+                    <li><strong>UptimeRobot</strong> et <strong>Healthchecks.io</strong> : surveillance de la disponibilité du service, sans aucune donnée personnelle.</li>
+                </ul>
+                <p class="mt-2">
+                    Cloudflare utilise aussi les signaux du captcha (adresse IP, navigateur, empreinte TLS) en tant que responsable de traitement, au titre de son intérêt légitime, pour améliorer sa détection des robots :
+                    voir sa <a href="https://www.cloudflare.com/turnstile-privacy-policy/" class="font-medium text-amber-700 underline hover:text-amber-600">politique de confidentialité de Turnstile</a> (en anglais).
+                </p>
+                <p class="mt-2">
+                    Pour refuser les mots de passe ayant fuité, Stopcast interroge <strong>Have I Been Pwned</strong> sans lui transmettre ni votre mot de passe ni aucune donnée personnelle :
+                    seuls les 5 premiers caractères d'une empreinte du mot de passe sont envoyés, et la comparaison se fait sur le serveur de Stopcast.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Transferts hors de l'Union européenne</h2>
+                <p>
+                    Cloudflare et Sentry sont des sociétés américaines. Leurs transferts vers les États-Unis sont encadrés par le Data Privacy Framework UE–États-Unis et, à défaut, par les clauses contractuelles types de la Commission européenne.
+                    UptimeRobot peut traiter des données aux États-Unis sous clauses contractuelles types ; il ne reçoit aucune donnée personnelle de Stopcast.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Cookies</h2>
+                <p>
+                    Stopcast ne pose que des cookies strictement nécessaires : le cookie de session, qui vous garde connecté, et le cookie « se souvenir de moi » (30 jours), si vous cochez la case.
+                    Le captcha Turnstile ne pose pas de cookie de suivi. Aucun cookie de mesure d'audience ni de publicité : il n'y a donc pas de bandeau de consentement.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Vos droits</h2>
+                <ul class="list-disc space-y-2 pl-6">
+                    <li><strong>Accès et portabilité</strong> : téléchargez vos données au format JSON depuis « Mon compte ».</li>
+                    <li><strong>Effacement</strong> : supprimez votre compte depuis « Mon compte ».</li>
+                    <li><strong>Rectification, opposition, limitation, accès aux journaux du serveur</strong> : écrivez à <a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a>.</li>
+                </ul>
+                <p class="mt-2">
+                    Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
+                    <a href="https://www.cnil.fr/fr/plaintes" class="font-medium text-amber-700 underline hover:text-amber-600">www.cnil.fr/fr/plaintes</a>.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Modification de cette politique</h2>
+                <p>Cette politique évolue avec le service ; la version applicable est celle publiée sur cette page, à la date de mise à jour indiquée en haut.</p>
+            </section>
+        </div>
+    </article>
+{% endblock %}

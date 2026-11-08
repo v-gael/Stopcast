@@ -1,0 +1,21 @@
+{#
+ # Écran d'appairage d'un écran sans cookie de dispositif, autonome comme la
+ # page d'affichage. Le contrôleur Stimulus « pairing » fait tourner le compte
+ # à rebours et interroge le serveur jusqu'à l'appairage.
+ #}
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noindex">
+        <title>Appairage · Stopcast</title>
+        <link rel="stylesheet" href="{{ asset('styles/display.css') }}">
+        {{ importmap('display', {nonce: csp_nonce('script')}) }}
+    </head>
+    <body class="display"
+          data-controller="pairing"
+          data-pairing-url-value="{{ path('app_display_pairing') }}">
+        {{ include('display/_pairing.html.twig') }}
+    </body>
+</html>

@@ -1,0 +1,55 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Mentions légales · Stopcast{% endblock %}
+
+{% block content %}
+    <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">Mentions légales</h1>
+
+        <div class="mt-8 space-y-8 text-slate-700">
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Éditeur</h2>
+                <p>
+                    Stopcast est édité par <strong>v-gael</strong>, particulier non professionnel.
+                    Conformément à l'article 6, III, 2 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN), son identité a été communiquée à l'hébergeur.
+                </p>
+                <p class="mt-2">Directeur de la publication : v-gael.</p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Contact</h2>
+                <p><a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a></p>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Hébergeur</h2>
+                <address class="not-italic">
+                    OVH SAS<br>
+                    2 rue Kellermann<br>
+                    59100 Roubaix<br>
+                    France<br>
+                    Téléphone : 1007
+                </address>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Intermédiaire technique</h2>
+                <p>La résolution DNS, le proxy et le tunnel qui relient le site à son serveur sont assurés par :</p>
+                <address class="mt-2 not-italic">
+                    Cloudflare, Inc.<br>
+                    101 Townsend St<br>
+                    San Francisco, CA 94107<br>
+                    États-Unis
+                </address>
+            </section>
+
+            <section>
+                <h2 class="mb-2 text-xl font-semibold text-slate-900">Code source</h2>
+                <p>
+                    Le code source de Stopcast est publié sur <a href="https://github.com/v-gael/Stopcast" class="font-medium text-amber-700 underline hover:text-amber-600">GitHub</a>,
+                    sous <a href="https://github.com/v-gael/Stopcast/blob/HEAD/LICENSE" class="font-medium text-amber-700 underline hover:text-amber-600">licence MIT</a>.
+                </p>
+            </section>
+        </div>
+    </article>
+{% endblock %}

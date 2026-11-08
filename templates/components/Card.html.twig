@@ -1,0 +1,9 @@
+{# « titleLevel » : niveau du titre dans le plan de la page, 1 quand la carte porte le titre de la page. #}
+{% props title = null, titleLevel = 2 %}
+
+<section {{ attributes.defaults({class: 'rounded-xl border border-slate-200 bg-white p-6 shadow-sm'}) }}>
+    {% if title %}
+        <h{{ titleLevel }} class="mb-4 text-lg font-semibold text-slate-900">{{ title }}</h{{ titleLevel }}>
+    {% endif %}
+    {% block content %}{% endblock %}
+</section>

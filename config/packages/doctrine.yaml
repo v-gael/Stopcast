@@ -29,6 +29,13 @@ when@test:
 
 when@prod:
     doctrine:
+        dbal:
+            options:
+                # connect_timeout de libpq (3 s) : une base qui ne répond plus
+                # donne une erreur vite, et /health son 503, sous les 5 s du
+                # healthcheck Docker. connect_timeout dans DATABASE_URL serait
+                # ignoré : le pilote pdo_pgsql de DBAL ne le transmet pas.
+                !php/const PDO::ATTR_TIMEOUT: 3
         orm:
             query_cache_driver:
                 type: pool

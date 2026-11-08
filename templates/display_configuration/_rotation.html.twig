@@ -1,0 +1,68 @@
+{# Configurations d'un dispositif (« device ») dans l'ordre de rotation, masquées comprises. #}
+{% set configurations = device.displayConfigurationsInRotationOrder %}
+{% set icon_button = 'flex size-7 items-center justify-center rounded-md ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700' %}
+{% set icon = 'viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="size-4" aria-hidden="true"' %}
+{% if configurations is empty %}
+    <p class="text-slate-600">Aucun quai : le dispositif n'a rien à afficher.</p>
+{% else %}
+    <ol class="divide-y divide-slate-200">
+        {% for configuration in configurations %}
+            {% set name = configuration.label ?: configuration.quay.name %}
+            <li class="flex items-start gap-2 py-2">
+                {# Flèches de rotation ; aux extrémités, un emplacement vide garde l'alignement. #}
+                <div class="flex shrink-0 flex-col gap-1">
+                    {% for move in [
+                        {show: not loop.first, route: 'app_display_configuration_move_up', label: 'Monter', title: 'Afficher plus tôt dans la rotation', icon: 'M5 12.5l5-5 5 5'},
+                        {show: not loop.last, route: 'app_display_configuration_move_down', label: 'Descendre', title: 'Afficher plus tard dans la rotation', icon: 'M5 7.5l5 5 5-5'},
+                    ] %}
+                        {% if move.show %}
+                            <form method="post" action="{{ path(move.route, {id: configuration.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('move-display-configuration-' ~ configuration.id) }}">
+                                <button type="submit" title="{{ move.title }}" class="{{ icon_button }} text-slate-500 hover:text-slate-900">
+                                    <svg {{ icon|raw }}><path d="{{ move.icon }}"/></svg>
+                                    <span class="sr-only">{{ move.label }} {{ name }}</span>
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="size-7" aria-hidden="true"></span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="min-w-0 flex-1">
+                    {# Masquée : nom en gris moyen, qui garde un contraste AA. #}
+                    <p class="truncate font-medium {{ configuration.active ? 'text-slate-900' : 'text-slate-500' }}" data-label>{{ name }}</p>
+                    <p class="truncate text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
+                    {{ include('display_configuration/_deprecated_quay.html.twig') }}
+                </div>
+                <div class="flex shrink-0 gap-1">
+                    {# Interrupteur : vert, affichée ; gris, masquée. Son nom ne change pas, aria-checked porte l'état. #}
+                    <form method="post" action="{{ path('app_display_configuration_visibility', {id: configuration.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('display-configuration-visibility-' ~ configuration.id) }}">
+                        <input type="hidden" name="active" value="{{ configuration.active ? 0 : 1 }}">
+                        <button type="submit" role="switch" aria-checked="{{ configuration.active ? 'true' : 'false' }}"
+                                title="{{ configuration.active ? 'Affichée : la masquer de la rotation' : 'Masquée : l\'afficher dans la rotation' }}"
+                                class="relative mt-1 inline-flex h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 {{ configuration.active ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-100 ring-1 ring-inset ring-slate-500 hover:bg-slate-200' }}">
+                            <span class="absolute top-0.5 size-4 rounded-full shadow transition-all {{ configuration.active ? 'left-[18px] bg-white' : 'left-0.5 bg-slate-500' }}" aria-hidden="true"></span>
+                            <span class="sr-only">Afficher {{ name }}</span>
+                        </button>
+                    </form>
+                    <a href="{{ path('app_display_configuration_edit', {id: configuration.id}) }}" title="Modifier" class="{{ icon_button }} text-slate-500 hover:text-slate-900">
+                        <svg {{ icon|raw }}><path d="M13.5 3.5l3 3L7 16H4v-3z"/></svg>
+                        <span class="sr-only">Modifier {{ name }}</span>
+                    </a>
+                    <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}"
+                          data-turbo-confirm="Supprimer le quai « {{ name }} » ? Cette action est définitive.">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
+                        <button type="submit" title="Supprimer" class="{{ icon_button }} text-slate-500 hover:text-red-700">
+                            <svg {{ icon|raw }}><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>
+                            <span class="sr-only">Supprimer {{ name }}</span>
+                        </button>
+                    </form>
+                </div>
+            </li>
+        {% endfor %}
+    </ol>
+{% endif %}
+<div class="mt-4">
+    <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary" class="w-full">Ajouter un quai<span class="sr-only"> à {{ device.label }}</span></twig:Button>
+</div>

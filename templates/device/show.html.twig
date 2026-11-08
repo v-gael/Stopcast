@@ -1,0 +1,89 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}{{ device.label }} · Stopcast{% endblock %}
+
+{% block meta %}
+    {# Une action qui ramène ici met la page à jour sans la faire remonter. #}
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+{% endblock %}
+
+{% block content %}
+    {# L'état du dispositif est dans la colonne « Dispositif », pas en badge à côté du titre. #}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ device.label }}</h1>
+
+    {# Un tiers pour la rotation, deux pour le dispositif : son écran, et à côté ses réglages, à la hauteur de l'écran. #}
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <twig:Card title="Quais">
+            {{ include('display_configuration/_rotation.html.twig') }}
+        </twig:Card>
+
+        <twig:Card title="Dispositif" class="lg:col-span-2">
+            {# Le contenu d'un composant ne voit pas les imports du gabarit. #}
+            {% import 'device/_contact.html.twig' as contact %}
+            <div class="flex flex-col gap-6 xl:flex-row">
+                <div class="min-w-0 flex-1">
+                    {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
+                    {{ include('display/_preview.html.twig', {
+                        preview_url: path('app_device_preview', {id: device.id}),
+                        preview_title: 'Aperçu de « ' ~ device.label ~ ' »',
+                    }, with_context = false) }}
+                </div>
+
+                <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
+                    <dl class="space-y-2 text-sm">
+                        {# L'état, et la date de création au survol (et pour les lecteurs d'écran). #}
+                        {% set created = 'Créé le ' ~ device.createdAt|date('d/m/Y à H:i') %}
+                        <div>
+                            <dt class="font-medium text-slate-500">État</dt>
+                            {# Le badge reste hors de l'état : ni l'infobulle ni le texte des lecteurs d'écran ne le prennent. #}
+                            <dd class="mt-0.5 flex flex-wrap items-center gap-2">
+                                <span class="flex cursor-help items-center gap-1.5 font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" title="{{ created }}" data-device-state>
+                                    <span class="size-2 shrink-0 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
+                                    {{ device.active ? 'Actif' : 'Inactif' }}<span class="sr-only">, {{ created|lower }}</span>
+                                </span>
+                                {{ contact.badge(device, with_unpaired: false) }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Écran</dt>
+                            <dd class="mt-0.5 text-slate-900" data-screen-state>{{ device.hasPairedScreen ? 'Écran appairé' : 'Aucun écran appairé' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Dernier contact</dt>
+                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ contact.last_seen(device) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>
+                            <dd class="mt-0.5 text-slate-900" data-screen-duration>{{ device.screenDuration }} s</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-500">Rafraîchissement des données</dt>
+                            <dd class="mt-0.5 text-slate-900" data-refresh-interval>{{ device.refreshInterval }} s</dd>
+                        </div>
+                    </dl>
+
+                    <div class="flex flex-col gap-2">
+                        <twig:Button href="{{ path('app_device_pair', {id: device.id}) }}" variant="secondary">{{ device.hasPairedScreen ? "Remplacer l'écran" : 'Appairer un écran' }}</twig:Button>
+
+                        {% if device.hasPairedScreen %}
+                            <form method="post" action="{{ path('app_device_unpair', {id: device.id}) }}"
+                                  data-turbo-confirm="Dissocier l'écran de « {{ device.label }} » ? Il affichera de nouveau un code d'appairage.">
+                                <input type="hidden" name="_token" value="{{ csrf_token('unpair-device-' ~ device.id) }}">
+                                <twig:Button type="submit" variant="secondary" class="w-full">Dissocier</twig:Button>
+                            </form>
+                        {% endif %}
+
+                        <twig:Button href="{{ path('app_device_edit', {id: device.id}) }}" variant="secondary">Modifier</twig:Button>
+
+                        <form method="post" action="{{ path('app_device_delete', {id: device.id}) }}"
+                              data-turbo-confirm="Supprimer « {{ device.label }} » et ses quais ? Cette action est définitive.">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete-device-' ~ device.id) }}">
+                            <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </twig:Card>
+    </div>
+{% endblock %}

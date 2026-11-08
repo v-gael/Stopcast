@@ -1,0 +1,68 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Utilisateurs · Stopcast{% endblock %}
+
+{% block content %}
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-bold text-slate-900">Utilisateurs</h1>
+        <twig:Button href="{{ path('app_admin_user_invite') }}">Inviter un compte</twig:Button>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-left font-semibold text-slate-700">
+                <tr>
+                    <th scope="col" class="px-4 py-3">Email</th>
+                    <th scope="col" class="px-4 py-3">Rôle</th>
+                    <th scope="col" class="px-4 py-3">Statut</th>
+                    <th scope="col" class="px-4 py-3">Dispositifs</th>
+                    <th scope="col" class="px-4 py-3">Créé le</th>
+                    <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                {% for row in rows %}
+                    {% set user = row.user %}
+                    <tr>
+                        <td class="px-4 py-3 text-slate-900">
+                            {%- if user.id == app.user.id -%}
+                                <strong>{{ user.email }}</strong> <span class="text-slate-500">(vous)</span>
+                            {%- else -%}
+                                {{ user.email }}
+                            {%- endif -%}
+                        </td>
+                        <td class="px-4 py-3"><twig:Badge>{{ user.role.label }}</twig:Badge></td>
+                        <td class="px-4 py-3">
+                            {%- if user.pending -%}
+                                <twig:Badge variant="warning">Invitation en attente</twig:Badge>
+                            {%- else -%}
+                                <twig:Badge variant="success">Actif</twig:Badge>
+                            {%- endif -%}
+                        </td>
+                        <td class="px-4 py-3 text-slate-600">{{ row.deviceCount }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ user.createdAt|date('d/m/Y') }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                                {% if user.pending %}
+                                    <form method="post" action="{{ path('app_admin_user_resend_invitation', {id: user.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('resend-invitation-' ~ user.id) }}">
+                                        <button type="submit" class="inline-flex min-h-6 items-center font-medium text-amber-700 hover:text-amber-800">Renvoyer l'invitation<span class="sr-only"> à {{ user.email }}</span></button>
+                                    </form>
+                                {% endif %}
+                                <a href="{{ path('app_admin_user_edit', {id: user.id}) }}" class="inline-flex min-h-6 items-center font-medium text-amber-700 hover:text-amber-800">Modifier<span class="sr-only"> {{ user.email }}</span></a>
+                                {# Son propre compte se supprime depuis « Mon compte », avec le mot de passe. #}
+                                {% if user.id != app.user.id %}
+                                    <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}"
+                                          data-turbo-confirm="Supprimer le compte {{ user.email }}{{ row.deviceCount == 1 ? ' et son dispositif' : (row.deviceCount > 1 ? ' et ses ' ~ row.deviceCount ~ ' dispositifs') }} ? Cette action est définitive.">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete-user-' ~ user.id) }}">
+                                        <button type="submit" class="inline-flex min-h-6 items-center font-medium text-red-600 hover:text-red-800">Supprimer<span class="sr-only"> {{ user.email }}</span></button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

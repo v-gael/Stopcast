@@ -1,0 +1,50 @@
+#!/bin/sh
+# Valide les fichiers Compose : compose.yaml avec chacune de ses surcharges.
+# Une combinaison échoue si `docker compose config -q` renvoie une erreur ou
+# écrit quoi que ce soit (une variable non définie n'est qu'un avertissement,
+# code 0). Valide toutes les combinaisons avant de conclure, sans démarrer de
+# conteneur ni demander de démon Docker. Le job `compose` de `ci.yml` l'appelle
+# directement, `make check` l'exécute sur l'hôte avant `bin/check`.
+
+cd "$(dirname "$0")/.." || exit 1
+
+# compose.prod.yaml exige l'étiquette de l'image (bin/deploy la fournit) : une
+# valeur factice suffit pour valider.
+IMAGE_TAG=check
+export IMAGE_TAG
+
+status=0
+
+check() {
+    name=$1
+    shift
+    output=$(docker compose -f compose.yaml "$@" config -q 2>&1)
+    code=$?
+    if [ "$code" -ne 0 ] || [ -n "$output" ]; then
+        printf 'Échec : %s (code %s)\n%s\n\n' "$name" "$code" "$output"
+        status=1
+    else
+        echo "OK : $name"
+    fi
+}
+
+check 'compose.yaml + compose.override.yaml' -f compose.override.yaml
+check 'compose.yaml + compose.ci.yaml' -f compose.ci.yaml
+check 'compose.yaml + compose.prod.yaml' -f compose.prod.yaml --env-file .env.prod.local.example
+check 'compose.yaml + compose.prod.yaml + compose.prod-local.yaml' -f compose.prod.yaml -f compose.prod-local.yaml --env-file .env.prod.local.example
+
+# Le serveur n'a pas les sources : en prod, aucun service ne doit se construire
+# (le build de compose.yaml est retiré par compose.prod.yaml). Dans la sortie
+# de `config`, les propriétés d'un service sont indentées de 4 espaces.
+if docker compose -f compose.yaml -f compose.prod.yaml --env-file .env.prod.local.example config 2>/dev/null | grep -q '^    build:'; then
+    printf 'Échec : compose.yaml + compose.prod.yaml construit une image, la prod doit la tirer de GHCR\n\n'
+    status=1
+else
+    echo 'OK : la prod ne construit aucune image'
+fi
+
+if [ "$status" -eq 0 ]; then
+    echo 'Fichiers Compose valides.'
+fi
+
+exit "$status"

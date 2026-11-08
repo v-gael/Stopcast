@@ -467,7 +467,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     scheduler?: bool|array{ // Scheduler configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     disallow_search_engine_index?: bool|Param, // Enabled by default when debug is enabled. // Default: true
  *     http_client?: bool|array{ // HTTP Client configuration
@@ -629,7 +629,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     rate_limiter?: bool|array{ // Rate limiter configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         limiters?: array<string, array{ // Default: []
  *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by this limiter (or null to disable locking). // Default: "auto"
  *             cache_pool?: scalar|Param|null, // The cache pool to use for storing the current limiter state. // Default: "cache.rate_limiter"
@@ -646,7 +646,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         }>,
  *     },
  *     uid?: bool|array{ // Uid configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         default_uuid_version?: 7|6|4|1|Param, // Default: 7
  *         name_based_uuid_version?: 5|3|Param, // Default: 5
  *         name_based_uuid_namespace?: scalar|Param|null,
@@ -687,10 +687,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         signing_algorithm?: scalar|Param|null, // Default: "sha256"
  *         routing?: array<string, array{ // Default: []
  *             service?: scalar|Param|null,
- *             secret?: scalar|Param|null, // Default: ""
+ *             secret?: scalar|Param|null, // The secret used to verify incoming request signatures. It must be set in production: with an empty value, depending on the parser, requests from any sender are accepted or every request is rejected. // Default: ""
  *         }>,
  *     },
- *     remote-event?: bool|array{ // RemoteEvent configuration
+ *     remote_event?: bool|array{ // RemoteEvent configuration
  *         enabled?: bool|Param, // Default: false
  *     },
  *     json_streamer?: bool|array{ // JSON streamer configuration
@@ -982,7 +982,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         enabled?: bool|Param, // Default: false
  *     },
  *     html?: bool|array{
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     markdown?: bool|array{
  *         enabled?: bool|Param, // Default: false
@@ -1121,7 +1121,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             limiter?: scalar|Param|null, // A service id implementing "Symfony\Component\HttpFoundation\RateLimiter\RequestRateLimiterInterface".
  *             max_attempts?: int|Param, // Default: 5
  *             interval?: scalar|Param|null, // Default: "1 minute"
- *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by the login rate limiter (or null to disable locking). // Default: null
+ *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by the login rate limiter ("auto" to use the default one when the Lock component is configured, or null to disable locking). // Default: "auto"
  *             cache_pool?: string|Param, // The cache pool to use for storing the limiter state // Default: "cache.rate_limiter"
  *             storage_service?: string|Param, // The service ID of a custom storage implementation, this precedes any configured "cache_pool" // Default: null
  *         },
@@ -1243,7 +1243,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             token_handler?: Param|string|array{
  *                 id?: scalar|Param|null,
  *                 oidc_user_info?: Param|string|array{
- *                     base_uri?: scalar|Param|null, // Base URI of the userinfo endpoint on the OIDC server, or the OIDC server URI to use the discovery (require "discovery" to be configured).
+ *                     base_uri?: scalar|Param|null, // Base URI of the userinfo endpoint on the OIDC server, or the OIDC server URI to use the discovery (require "discovery" to be configured). The latter must end with a slash when it has a path, as the discovery path is resolved against it as a relative URL.
  *                     discovery?: array{ // Enable the OIDC discovery.
  *                         cache?: array{
  *                             id?: scalar|Param|null, // Cache service id to use to cache the OIDC discovery configuration.
@@ -1311,9 +1311,9 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             lifetime?: int|Param, // Default: 31536000
  *             path?: scalar|Param|null, // Default: "/"
  *             domain?: scalar|Param|null, // Default: null
- *             secure?: true|false|"auto"|Param, // Default: false
+ *             secure?: true|false|"auto"|Param, // Defaults to the value of "framework.session.cookie_secure", or to "auto".
  *             httponly?: bool|Param, // Default: true
- *             samesite?: null|"lax"|"strict"|"none"|Param, // Default: null
+ *             samesite?: null|"lax"|"strict"|"none"|Param, // Defaults to the value of "framework.session.cookie_samesite", or to "lax".
  *             always_remember_me?: bool|Param, // Default: false
  *             remember_me_parameter?: scalar|Param|null, // Default: "_remember_me"
  *         },
@@ -1483,6 +1483,383 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     generate_final_classes?: bool|Param, // Default: true
  *     generate_final_entities?: bool|Param, // Default: false
  * }
+ * @psalm-type ZenstruckFoundryConfig = array{
+ *     auto_refresh_proxies?: bool|Param|null, // Deprecated: Since 2.0 auto_refresh_proxies defaults to true and this configuration has no effect. // Whether to auto-refresh proxies by default (https://symfony.com/bundles/ZenstruckFoundryBundle/current/index.html#auto-refresh) // Default: null
+ *     enable_auto_refresh_with_lazy_objects?: bool|Param|null, // Enable auto-refresh using PHP 8.4 lazy objects (cannot be enabled if PHP < 8.4). // Default: null
+ *     faker?: array{ // Configure the faker used by your factories.
+ *         locale?: scalar|Param|null, // The default locale to use for faker. // Default: null
+ *         seed?: scalar|Param|null, // Deprecated: The "faker.seed" configuration is deprecated and will be removed in 3.0. Use environment variable "FOUNDRY_FAKER_SEED" instead. // Random number generator seed to produce the same fake values every run. // Default: null
+ *         manage_seed?: bool|Param, // Automatically manage faker seed to ensure consistent data between test runs. // Default: true
+ *         service?: scalar|Param|null, // Service id for custom faker instance. // Default: null
+ *     },
+ *     instantiator?: array{ // Configure the default instantiator used by your object factories.
+ *         use_constructor?: bool|Param, // Use the constructor to instantiate objects. // Default: true
+ *         allow_extra_attributes?: bool|Param, // Whether or not to skip attributes that do not correspond to properties. // Default: false
+ *         always_force_properties?: bool|Param, // Whether or not to skip setters and force set object properties (public/private/protected) directly. // Default: false
+ *         service?: scalar|Param|null, // Service id of your custom instantiator. // Default: null
+ *     },
+ *     global_state?: list<scalar|Param|null>,
+ *     persistence?: array{
+ *         flush_once?: bool|Param, // Flush only once per call of `PersistentObjectFactory::create()` in userland. // Default: false
+ *     },
+ *     orm?: array{
+ *         auto_persist?: bool|Param, // Deprecated: Since 2.4 auto_persist defaults to true and this configuration has no effect. // Automatically persist entities when created. // Default: true
+ *         reset?: array{
+ *             connections?: list<scalar|Param|null>,
+ *             entity_managers?: list<scalar|Param|null>,
+ *             mode?: \Zenstruck\Foundry\ORM\ResetDatabase\ResetDatabaseMode::SCHEMA|\Zenstruck\Foundry\ORM\ResetDatabase\ResetDatabaseMode::MIGRATE|Param, // Reset mode to use with ResetDatabase trait // Default: "schema"
+ *             migrations?: array{
+ *                 configurations?: list<scalar|Param|null>,
+ *             },
+ *         },
+ *     },
+ *     mongo?: array{
+ *         auto_persist?: bool|Param, // Deprecated: Since 2.4 auto_persist defaults to true and this configuration has no effect. // Automatically persist documents when created. // Default: true
+ *         reset?: array{
+ *             document_managers?: list<scalar|Param|null>,
+ *         },
+ *     },
+ *     make_factory?: array{
+ *         default_namespace?: scalar|Param|null, // Default namespace where factories will be created by maker. // Default: "Factory"
+ *         add_hints?: bool|Param, // Add "beginner" hints in the created factory. // Default: true
+ *     },
+ *     make_story?: array{
+ *         default_namespace?: scalar|Param|null, // Default namespace where stories will be created by maker. // Default: "Story"
+ *     },
+ * }
+ * @psalm-type TwigComponentConfig = array{
+ *     defaults?: array<string, Param|string|array{ // Default: []
+ *         template_directory?: scalar|Param|null, // Default: "components"
+ *         name_prefix?: scalar|Param|null, // Default: ""
+ *     }>,
+ *     anonymous_template_directory?: scalar|Param|null, // Defaults to `components`
+ *     profiler?: bool|array{ // Enables the profiler for Twig Component
+ *         enabled?: bool|Param, // Default: "%kernel.debug%"
+ *         collect_components?: bool|Param, // Collect components instances // Default: true
+ *     },
+ * }
+ * @psalm-type SymfonycastsTailwindConfig = array{
+ *     input_css?: list<scalar|Param|null>,
+ *     config_file?: scalar|Param|null, // Path to the tailwind.config.js file // Default: "%kernel.project_dir%/tailwind.config.js"
+ *     binary?: scalar|Param|null, // The tailwind binary to use instead of downloading a new one // Default: null
+ *     binary_version?: scalar|Param|null, // Tailwind CLI version to download - required unless "binary" is set (run "tailwind:init" to configure) // Default: null
+ *     binary_platform?: "auto"|"linux-arm64"|"linux-arm64-musl"|"linux-x64"|"linux-x64-musl"|"macos-arm64"|"macos-x64"|"windows-x64"|Param, // Tailwind CLI platform to download - "auto" will try to detect the platform automatically // Default: "auto"
+ *     postcss_config_file?: scalar|Param|null, // Path to PostCSS config file which is passed to the Tailwind CLI // Default: null
+ *     strict_mode?: bool|Param|null, // When enabled, an exception will be thrown if there are no built assets (default: false in `test` env, true otherwise) // Default: null
+ *     process_timeout?: int|Param, // Timeout in seconds for the Tailwind build process - use "0" to disable // Default: 60
+ * }
+ * @psalm-type SymfonycastsResetPasswordConfig = array{
+ *     request_password_repository?: scalar|Param|null, // A class that implements ResetPasswordRequestRepositoryInterface - usually your ResetPasswordRequestRepository.
+ *     lifetime?: int|Param, // The length of time in seconds that a password reset request is valid for after it is created. // Default: 3600
+ *     throttle_limit?: int|Param, // Another password reset cannot be made faster than this throttle time in seconds. // Default: 3600
+ *     enable_garbage_collection?: bool|Param, // Enable/Disable automatic garbage collection. // Default: true
+ * }
+ * @psalm-type NelmioSecurityConfig = array{
+ *     signed_cookie?: array{
+ *         names?: list<scalar|Param|null>,
+ *         secret?: scalar|Param|null, // Default: "%kernel.secret%"
+ *         hash_algo?: scalar|Param|null,
+ *         legacy_hash_algo?: scalar|Param|null, // Fallback algorithm to allow for frictionless hash algorithm upgrades. Use with caution and as a temporary measure as it allows for downgrade attacks. // Default: null
+ *         separator?: scalar|Param|null, // Default: "."
+ *     },
+ *     clickjacking?: array{
+ *         hosts?: list<scalar|Param|null>,
+ *         paths?: array<string, array{ // Default: {"^/.*":{"header":"DENY"}}
+ *             header?: scalar|Param|null, // Default: "DENY"
+ *             ...<string, mixed>
+ *         }>,
+ *         content_types?: list<scalar|Param|null>,
+ *     },
+ *     external_redirects?: array{
+ *         abort?: bool|Param, // Default: false
+ *         override?: scalar|Param|null, // Default: null
+ *         forward_as?: scalar|Param|null, // Default: null
+ *         log?: bool|Param, // Default: false
+ *         allow_list?: list<scalar|Param|null>,
+ *     },
+ *     flexible_ssl?: bool|array{
+ *         enabled?: bool|Param, // Default: false
+ *         cookie_name?: scalar|Param|null, // Default: "auth"
+ *         unsecured_logout?: bool|Param, // Default: false
+ *     },
+ *     forced_ssl?: bool|array{
+ *         enabled?: bool|Param, // Default: false
+ *         hsts_max_age?: scalar|Param|null, // Default: null
+ *         hsts_subdomains?: bool|Param, // Default: false
+ *         hsts_preload?: bool|Param, // Default: false
+ *         allow_list?: list<scalar|Param|null>,
+ *         hosts?: list<scalar|Param|null>,
+ *         redirect_status_code?: scalar|Param|null, // Default: 302
+ *     },
+ *     content_type?: array{
+ *         nosniff?: bool|Param, // Default: false
+ *     },
+ *     xss_protection?: array{ // Deprecated: The "xss_protection" option is deprecated, use Content Security Policy without allowing "unsafe-inline" scripts instead.
+ *         enabled?: bool|Param, // Default: false
+ *         mode_block?: bool|Param, // Default: false
+ *         report_uri?: scalar|Param|null, // Default: null
+ *     },
+ *     csp?: bool|array{
+ *         enabled?: bool|Param, // Default: true
+ *         request_matcher?: scalar|Param|null, // Default: null
+ *         hosts?: list<scalar|Param|null>,
+ *         content_types?: list<scalar|Param|null>,
+ *         report_endpoint?: array{
+ *             log_channel?: scalar|Param|null, // Default: null
+ *             log_formatter?: scalar|Param|null, // Default: "nelmio_security.csp_report.log_formatter"
+ *             log_level?: "alert"|"critical"|"debug"|"emergency"|"error"|"info"|"notice"|"warning"|Param, // Default: "notice"
+ *             filters?: array{
+ *                 domains?: bool|Param, // Default: true
+ *                 schemes?: bool|Param, // Default: true
+ *                 browser_bugs?: bool|Param, // Default: true
+ *                 injected_scripts?: bool|Param, // Default: true
+ *             },
+ *             dismiss?: list<list<"default-src"|"base-uri"|"block-all-mixed-content"|"child-src"|"connect-src"|"font-src"|"form-action"|"frame-ancestors"|"frame-src"|"img-src"|"manifest-src"|"media-src"|"object-src"|"plugin-types"|"script-src"|"style-src"|"upgrade-insecure-requests"|"report-uri"|"worker-src"|"prefetch-src"|"report-to"|"*"|Param>>,
+ *         },
+ *         compat_headers?: bool|Param, // Default: true
+ *         report_logger_service?: scalar|Param|null, // Default: "logger"
+ *         hash?: array{
+ *             algorithm?: "sha256"|"sha384"|"sha512"|Param, // The algorithm to use for hashes // Default: "sha256"
+ *         },
+ *         report?: array{
+ *             level1_fallback?: bool|Param, // Provides CSP Level 1 fallback when using hash or nonce (CSP level 2) by adding 'unsafe-inline' source. See https://www.w3.org/TR/CSP2/#directive-script-src and https://www.w3.org/TR/CSP2/#directive-style-src // Default: true
+ *             browser_adaptive?: bool|array{ // Do not send directives that browser do not support
+ *                 enabled?: bool|Param, // Default: false
+ *                 parser?: scalar|Param|null, // Default: "nelmio_security.ua_parser.ua_php"
+ *             },
+ *             default-src?: list<scalar|Param|null>,
+ *             base-uri?: list<scalar|Param|null>,
+ *             block-all-mixed-content?: bool|Param, // Default: false
+ *             child-src?: list<scalar|Param|null>,
+ *             connect-src?: list<scalar|Param|null>,
+ *             font-src?: list<scalar|Param|null>,
+ *             form-action?: list<scalar|Param|null>,
+ *             frame-ancestors?: list<scalar|Param|null>,
+ *             frame-src?: list<scalar|Param|null>,
+ *             img-src?: list<scalar|Param|null>,
+ *             manifest-src?: list<scalar|Param|null>,
+ *             media-src?: list<scalar|Param|null>,
+ *             object-src?: list<scalar|Param|null>,
+ *             plugin-types?: list<scalar|Param|null>,
+ *             script-src?: list<scalar|Param|null>,
+ *             style-src?: list<scalar|Param|null>,
+ *             upgrade-insecure-requests?: bool|Param, // Default: false
+ *             report-uri?: Param|string|list<scalar|Param|null>,
+ *             worker-src?: list<scalar|Param|null>,
+ *             prefetch-src?: list<scalar|Param|null>,
+ *             report-to?: scalar|Param|null,
+ *         },
+ *         enforce?: array{
+ *             level1_fallback?: bool|Param, // Provides CSP Level 1 fallback when using hash or nonce (CSP level 2) by adding 'unsafe-inline' source. See https://www.w3.org/TR/CSP2/#directive-script-src and https://www.w3.org/TR/CSP2/#directive-style-src // Default: true
+ *             browser_adaptive?: bool|array{ // Do not send directives that browser do not support
+ *                 enabled?: bool|Param, // Default: false
+ *                 parser?: scalar|Param|null, // Default: "nelmio_security.ua_parser.ua_php"
+ *             },
+ *             default-src?: list<scalar|Param|null>,
+ *             base-uri?: list<scalar|Param|null>,
+ *             block-all-mixed-content?: bool|Param, // Default: false
+ *             child-src?: list<scalar|Param|null>,
+ *             connect-src?: list<scalar|Param|null>,
+ *             font-src?: list<scalar|Param|null>,
+ *             form-action?: list<scalar|Param|null>,
+ *             frame-ancestors?: list<scalar|Param|null>,
+ *             frame-src?: list<scalar|Param|null>,
+ *             img-src?: list<scalar|Param|null>,
+ *             manifest-src?: list<scalar|Param|null>,
+ *             media-src?: list<scalar|Param|null>,
+ *             object-src?: list<scalar|Param|null>,
+ *             plugin-types?: list<scalar|Param|null>,
+ *             script-src?: list<scalar|Param|null>,
+ *             style-src?: list<scalar|Param|null>,
+ *             upgrade-insecure-requests?: bool|Param, // Default: false
+ *             report-uri?: Param|string|list<scalar|Param|null>,
+ *             worker-src?: list<scalar|Param|null>,
+ *             prefetch-src?: list<scalar|Param|null>,
+ *             report-to?: scalar|Param|null,
+ *         },
+ *     },
+ *     referrer_policy?: bool|array{
+ *         enabled?: bool|Param, // Default: false
+ *         policies?: Param|string|list<scalar|Param|null>,
+ *     },
+ *     permissions_policy?: bool|array{
+ *         enabled?: bool|Param, // Default: false
+ *         policies?: array{
+ *             accelerometer?: mixed, // Default: null
+ *             ambient_light_sensor?: mixed, // Default: null
+ *             attribution_reporting?: mixed, // Default: null
+ *             autoplay?: mixed, // Default: null
+ *             bluetooth?: mixed, // Default: null
+ *             browsing_topics?: mixed, // Default: null
+ *             camera?: mixed, // Default: null
+ *             captured_surface_control?: mixed, // Default: null
+ *             compute_pressure?: mixed, // Default: null
+ *             cross_origin_isolated?: mixed, // Default: null
+ *             deferred_fetch?: mixed, // Default: null
+ *             deferred_fetch_minimal?: mixed, // Default: null
+ *             display_capture?: mixed, // Default: null
+ *             encrypted_media?: mixed, // Default: null
+ *             fullscreen?: mixed, // Default: null
+ *             gamepad?: mixed, // Default: null
+ *             geolocation?: mixed, // Default: null
+ *             gyroscope?: mixed, // Default: null
+ *             hid?: mixed, // Default: null
+ *             identity_credentials_get?: mixed, // Default: null
+ *             idle_detection?: mixed, // Default: null
+ *             interest_cohort?: mixed, // Default: null
+ *             language_detector?: mixed, // Default: null
+ *             local_fonts?: mixed, // Default: null
+ *             magnetometer?: mixed, // Default: null
+ *             microphone?: mixed, // Default: null
+ *             midi?: mixed, // Default: null
+ *             otp_credentials?: mixed, // Default: null
+ *             payment?: mixed, // Default: null
+ *             picture_in_picture?: mixed, // Default: null
+ *             publickey_credentials_create?: mixed, // Default: null
+ *             publickey_credentials_get?: mixed, // Default: null
+ *             screen_wake_lock?: mixed, // Default: null
+ *             serial?: mixed, // Default: null
+ *             speaker_selection?: mixed, // Default: null
+ *             storage_access?: mixed, // Default: null
+ *             summarizer?: mixed, // Default: null
+ *             translator?: mixed, // Default: null
+ *             usb?: mixed, // Default: null
+ *             web_share?: mixed, // Default: null
+ *             window_management?: mixed, // Default: null
+ *             xr_spatial_tracking?: mixed, // Default: null
+ *         },
+ *     },
+ *     cross_origin_isolation?: bool|array{
+ *         enabled?: bool|Param, // Default: false
+ *         paths?: array<string, array{ // Default: []
+ *             coep?: "unsafe-none"|"require-corp"|"credentialless"|Param, // Cross-Origin-Embedder-Policy (COEP) header value
+ *             coop?: "unsafe-none"|"same-origin-allow-popups"|"same-origin"|"noopener-allow-popups"|Param, // Cross-Origin-Opener-Policy (COOP) header value
+ *             corp?: "same-site"|"same-origin"|"cross-origin"|Param, // Cross-Origin-Resource-Policy (CORP) header value
+ *             report_only?: bool|Param, // Use Report-Only headers instead of enforcing (applies to COEP and COOP only) // Default: false
+ *             report_to?: scalar|Param|null, // Reporting endpoint name for violations (requires Reporting API configuration, applies to COEP and COOP only) // Default: null
+ *         }>,
+ *     },
+ * }
+ * @psalm-type SentryConfig = array{
+ *     dsn?: scalar|Param|null, // If this value is not provided, the SDK will try to read it from the SENTRY_DSN environment variable. If that variable also does not exist, the SDK will not send any events.
+ *     register_error_listener?: bool|Param, // Default: true
+ *     register_error_handler?: bool|Param, // Default: true
+ *     register_monolog_handler?: bool|Param, // EXPERIMENT: automatically push a Sentry handler onto every Monolog channel (requires MonologBundle). // Default: false
+ *     logger?: scalar|Param|null, // The service ID of the PSR-3 logger used to log messages coming from the SDK client. Be aware that setting the same logger of the application may create a circular loop when an event fails to be sent. // Default: null
+ *     options?: array{
+ *         integrations?: mixed, // Default: []
+ *         default_integrations?: bool|Param,
+ *         prefixes?: list<scalar|Param|null>,
+ *         sample_rate?: float|Param, // The sampling factor to apply to events. A value of 0 will deny sending any event, and a value of 1 will send all events.
+ *         enable_tracing?: bool|Param,
+ *         traces_sample_rate?: float|Param, // The sampling factor to apply to transactions. A value of 0 will deny sending any transaction, and a value of 1 will send all transactions.
+ *         traces_sampler?: scalar|Param|null,
+ *         profiles_sample_rate?: float|Param, // The sampling factor to apply to profiles. A value of 0 will deny sending any profiles, and a value of 1 will send all profiles. Profiles are sampled in relation to traces_sample_rate
+ *         enable_logs?: bool|Param,
+ *         log_flush_threshold?: mixed, // Default: null
+ *         enable_metrics?: bool|Param, // Default: true
+ *         attach_stacktrace?: bool|Param,
+ *         attach_metric_code_locations?: bool|Param,
+ *         context_lines?: int|Param,
+ *         environment?: scalar|Param|null, // Default: "%kernel.environment%"
+ *         logger?: scalar|Param|null,
+ *         spotlight?: bool|Param,
+ *         spotlight_url?: scalar|Param|null,
+ *         release?: scalar|Param|null, // Default: "%env(default::SENTRY_RELEASE)%"
+ *         org_id?: int|Param,
+ *         server_name?: scalar|Param|null,
+ *         ignore_exceptions?: list<scalar|Param|null>,
+ *         ignore_transactions?: list<scalar|Param|null>,
+ *         before_send?: scalar|Param|null,
+ *         before_send_transaction?: scalar|Param|null,
+ *         before_send_check_in?: scalar|Param|null,
+ *         before_send_metrics?: scalar|Param|null,
+ *         before_send_log?: scalar|Param|null,
+ *         before_send_metric?: scalar|Param|null,
+ *         trace_propagation_targets?: mixed,
+ *         strict_trace_continuation?: bool|Param,
+ *         tags?: array<string, scalar|Param|null>,
+ *         error_types?: scalar|Param|null,
+ *         max_breadcrumbs?: int|Param,
+ *         before_breadcrumb?: mixed,
+ *         in_app_exclude?: list<scalar|Param|null>,
+ *         in_app_include?: list<scalar|Param|null>,
+ *         send_default_pii?: bool|Param,
+ *         data_collection?: array{ // Opts into the data collection options, which replace legacy options such as "send_default_pii". An empty array applies the default of every option, null keeps the legacy options even if an earlier config file opted in.
+ *             user_info?: bool|Param,
+ *             cookies?: array{
+ *                 mode?: "off"|"denyList"|"allowList"|Param,
+ *                 terms?: list<scalar|Param|null>,
+ *             },
+ *             http_headers?: array{
+ *                 request?: array{
+ *                     mode?: "off"|"denyList"|"allowList"|Param,
+ *                     terms?: list<scalar|Param|null>,
+ *                 },
+ *                 response?: array{
+ *                     mode?: "off"|"denyList"|"allowList"|Param,
+ *                     terms?: list<scalar|Param|null>,
+ *                 },
+ *                 ...<string, mixed>
+ *             },
+ *             http_bodies?: list<"incomingRequest"|"outgoingRequest"|"incomingResponse"|"outgoingResponse"|Param>,
+ *             url_query_params?: array{
+ *                 mode?: "off"|"denyList"|"allowList"|Param,
+ *                 terms?: list<scalar|Param|null>,
+ *             },
+ *             gen_ai?: array{
+ *                 inputs?: bool|Param,
+ *                 outputs?: bool|Param,
+ *             },
+ *             database_query_data?: bool|Param,
+ *             queues?: bool|Param,
+ *             stack_frame_variables?: bool|array{
+ *                 mode?: "off"|"denyList"|"allowList"|Param,
+ *                 terms?: list<scalar|Param|null>,
+ *             },
+ *             frame_context_lines?: int|Param,
+ *             ...<string, mixed>
+ *         },
+ *         max_value_length?: int|Param,
+ *         transport?: scalar|Param|null,
+ *         http_client?: scalar|Param|null,
+ *         http_proxy?: scalar|Param|null,
+ *         http_proxy_authentication?: scalar|Param|null,
+ *         http_connect_timeout?: float|Param, // The maximum number of seconds to wait while trying to connect to a server. It works only when using the default transport.
+ *         http_timeout?: float|Param, // The maximum execution time for the request+response as a whole. It works only when using the default transport.
+ *         http_ssl_verify_peer?: bool|Param,
+ *         http_compression?: bool|Param,
+ *         capture_silenced_errors?: bool|Param,
+ *         max_request_body_size?: "none"|"never"|"small"|"medium"|"always"|Param,
+ *         class_serializers?: array<string, scalar|Param|null>,
+ *     },
+ *     messenger?: bool|array{
+ *         enabled?: bool|Param, // Default: true
+ *         capture_soft_fails?: bool|Param, // Default: true
+ *         isolate_breadcrumbs_by_message?: bool|Param, // Default: false
+ *         isolate_context_by_message?: bool|Param, // Default: false
+ *     },
+ *     tracing?: bool|array{
+ *         enabled?: bool|Param, // Default: true
+ *         dbal?: bool|array{
+ *             enabled?: bool|Param, // Default: true
+ *             ignore_prepare_spans?: bool|Param, // Default: false
+ *             connections?: list<scalar|Param|null>,
+ *         },
+ *         twig?: bool|array{
+ *             enabled?: bool|Param, // Default: true
+ *         },
+ *         cache?: bool|array{
+ *             enabled?: bool|Param, // Default: true
+ *         },
+ *         http_client?: bool|array{
+ *             enabled?: bool|Param, // Default: true
+ *         },
+ *         console?: array{
+ *             excluded_commands?: list<scalar|Param|null>,
+ *         },
+ *     },
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -1496,6 +1873,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     twig_extra?: TwigExtraConfig,
  *     security?: SecurityConfig,
  *     monolog?: MonologConfig,
+ *     twig_component?: TwigComponentConfig,
+ *     symfonycasts_tailwind?: SymfonycastsTailwindConfig,
+ *     symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
+ *     nelmio_security?: NelmioSecurityConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -1512,6 +1893,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         monolog?: MonologConfig,
  *         maker?: MakerConfig,
+ *         zenstruck_foundry?: ZenstruckFoundryConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         symfonycasts_tailwind?: SymfonycastsTailwindConfig,
+ *         symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
+ *         nelmio_security?: NelmioSecurityConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -1526,6 +1912,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         twig_extra?: TwigExtraConfig,
  *         security?: SecurityConfig,
  *         monolog?: MonologConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         symfonycasts_tailwind?: SymfonycastsTailwindConfig,
+ *         symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
+ *         nelmio_security?: NelmioSecurityConfig,
+ *         sentry?: SentryConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -1541,6 +1932,11 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         twig_extra?: TwigExtraConfig,
  *         security?: SecurityConfig,
  *         monolog?: MonologConfig,
+ *         zenstruck_foundry?: ZenstruckFoundryConfig,
+ *         twig_component?: TwigComponentConfig,
+ *         symfonycasts_tailwind?: SymfonycastsTailwindConfig,
+ *         symfonycasts_reset_password?: SymfonycastsResetPasswordConfig,
+ *         nelmio_security?: NelmioSecurityConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

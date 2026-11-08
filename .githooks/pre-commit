@@ -1,0 +1,31 @@
+#!/bin/sh
+# Applique Rector puis PHP CS Fixer aux fichiers PHP du commit et les
+# ré-indexe : le style est corrigé avant le commit plutôt que refusé au push.
+# Activé par `make up` ou `make hooks`. Contournement : git commit --no-verify.
+
+# Un chemin par mot dans $files, découpé exprès plus bas : les chemins PHP du
+# dépôt n'ont pas d'espace.
+# shellcheck disable=SC2086
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.php')
+if [ -z "$files" ]; then
+    exit 0
+fi
+
+# Ré-indexer un fichier indexé en partie embarquerait aussi le reste.
+partial=$(git diff --name-only -- $files)
+if [ -n "$partial" ]; then
+    echo 'pre-commit : fichiers indexés en partie, style non corrigé (make check le contrôlera au push) :' >&2
+    echo "$partial" >&2
+    exit 0
+fi
+
+if ! docker compose ps --status running --services 2>/dev/null | grep -qx app; then
+    echo 'pre-commit : conteneurs arrêtés, style non corrigé (make check le contrôlera au push).' >&2
+    exit 0
+fi
+
+docker compose exec -T app php vendor/bin/rector process --no-progress-bar $files > /dev/null \
+    && docker compose exec -T app php vendor/bin/php-cs-fixer fix --quiet --config=.php-cs-fixer.dist.php --path-mode=intersection $files \
+    || exit 1
+
+git add -- $files

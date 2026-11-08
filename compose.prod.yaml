@@ -1,0 +1,155 @@
+# Aucun port publié : le TLS est terminé par Cloudflare, et le trafic arrive
+# par cloudflared sur le réseau Docker externe edge, qui joint app par son alias
+# (voir docs/adr/0006-hebergement.md). Test en local : compose.prod-local.yaml.
+#
+# app et worker tournent sur l'image construite par la CI et publiée sur GHCR,
+# étiquetée par le SHA du commit (IMAGE_TAG, fourni par bin/deploy) : le serveur
+# n'a pas les sources et ne construit rien. La prod locale remet le build.
+
+# Sortie des conteneurs (docker compose logs) bornée à 5 fichiers de 10 Mo par
+# service ; elle disparaît avec le conteneur, recréé à chaque déploiement.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  app:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    # Retire le build hérité de compose.yaml.
+    build: !reset null
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      APP_ENV: prod
+      # ":80" : Caddy sert en HTTP seul, sans certificat ni redirection.
+      SERVER_NAME: ":80"
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
+      GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
+      HEALTHCHECKS_GTFS_URL: ${HEALTHCHECKS_GTFS_URL:-}
+      MAILER_DSN: ${MAILER_DSN:?MAILER_DSN est requis}
+      MAILER_FROM: ${MAILER_FROM:?MAILER_FROM est requis}
+      MAILER_REPLY_TO: ${MAILER_REPLY_TO:?MAILER_REPLY_TO est requis}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:?TURNSTILE_SITE_KEY est requis}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?TURNSTILE_SECRET_KEY est requis}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
+    # Journal des suppressions de compte, hors base pour survivre à une
+    # restauration ; partagé avec worker (la purge supprime aussi des comptes).
+    volumes:
+      - account_deletions:/app/var/account-deletions:rw
+    # L'image tourne sous www-data ; le conteneur ne garde que la capacité
+    # d'écouter sur le port 80. no-new-privileges empêche la capacité de
+    # fichier de frankenphp (setcap, voir Dockerfile) de s'appliquer : le port
+    # 80 reste ouvert parce que Docker déclare tous les ports non privilégiés
+    # dans le réseau du conteneur (sysctl ci-dessous, sa valeur par défaut,
+    # rendue explicite). NET_BIND_SERVICE doit rester dans l'ensemble limite :
+    # sans elle, le noyau refuse d'exécuter un binaire qui porte cette capacité.
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    networks:
+      default:
+      edge:
+        aliases:
+          - stopcast-app
+    healthcheck:
+      # /health interroge la base : app n'est healthy que si elle répond.
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Consomme la file async (envoi des emails) et les tâches planifiées
+  # (scheduler_default). Même image que app.
+  worker:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
+      GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
+      HEALTHCHECKS_GTFS_URL: ${HEALTHCHECKS_GTFS_URL:-}
+      MAILER_DSN: ${MAILER_DSN:?MAILER_DSN est requis}
+      MAILER_FROM: ${MAILER_FROM:?MAILER_FROM est requis}
+      MAILER_REPLY_TO: ${MAILER_REPLY_TO:?MAILER_REPLY_TO est requis}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
+    volumes:
+      - account_deletions:/app/var/account-deletions:rw
+    # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
+    healthcheck:
+      disable: true
+    # Sous www-data, comme app ; le worker n'écoute sur aucun port.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command: ["php", "bin/console", "messenger:consume", "async", "scheduler_default", "--time-limit=3600", "--memory-limit=128M"]
+    depends_on:
+      database:
+        condition: service_healthy
+
+  # Sauvegarde nocturne (3 h 30) de la base et du journal des suppressions
+  # vers restic (bin/backup, ops/backup.crontab). Même image que app ; seul
+  # ce service reçoit les clés du dépôt. Planifiée par supercronic et non par
+  # le Scheduler du worker : les clés n'entrent pas dans le conteneur qui
+  # exécute tout le code de l'application.
+  backup:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    restart: unless-stopped
+    command: ["supercronic", "/app/ops/backup.crontab"]
+    logging: *logging
+    # Fixe : restic range les snapshots par hôte, et l'identifiant d'un
+    # conteneur change à chaque recréation.
+    hostname: stopcast-backup
+    environment:
+      TZ: Europe/Paris
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      RESTIC_CACHE_DIR: /tmp/restic-cache
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      HEALTHCHECKS_BACKUP_URL: ${HEALTHCHECKS_BACKUP_URL:-}
+    volumes:
+      - account_deletions:/app/var/account-deletions:ro
+    # Pas de serveur web : c'est Healthchecks.io qui surveille les sauvegardes.
+    healthcheck:
+      disable: true
+    # Sous www-data, comme app ; n'écoute sur aucun port.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - database_data_prod:/var/lib/postgresql/data:rw
+
+volumes:
+  database_data_prod:
+  account_deletions:
+
+networks:
+  edge:
+    external: true
+    name: edge

@@ -1,0 +1,88 @@
+# Retour arrière : remet en production l'image déjà publiée d'un commit, sans
+# dump ni migration (le schéma ne fait qu'avancer). Lancé à la main, depuis
+# l'onglet Actions ou par `gh workflow run rollback.yml -f sha=<sha>`.
+# Procédure, et restauration d'un dump si l'ancien code ne supporte pas le
+# nouveau schéma : docs/exploitation.md, « Retour arrière ».
+name: Retour arrière
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: SHA complet (40 caractères) du commit dont l'image est à remettre en place
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Retour arrière
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    # Même groupe que le job deploy de ci.yml : un retour arrière et un
+    # déploiement ne tournent jamais en même temps, et aucun n'est annulé.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      IMAGE: ghcr.io/v-gael/stopcast
+      SHA: ${{ inputs.sha }}
+    steps:
+      # Le serveur refuse aussi un SHA mal formé : ce contrôle donne une
+      # erreur lisible avant tout appel au registre ou au serveur.
+      - name: Vérifier le SHA
+        run: |
+          case $SHA in
+            '' | *[!0-9a-f]*)
+              echo "::error::SHA invalide : SHA complet du commit attendu (40 caractères [0-9a-f])."
+              exit 1
+              ;;
+          esac
+          if [ "${#SHA}" -ne 40 ]; then
+            echo "::error::SHA de ${#SHA} caractères : SHA complet du commit attendu (40 caractères [0-9a-f])."
+            exit 1
+          fi
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Avant toute connexion au serveur : seules les images publiées par le
+      # job image de ci.yml se remettent en place.
+      - name: Vérifier l'image
+        run: |
+          if ! docker buildx imagetools inspect "$IMAGE:$SHA" > /dev/null; then
+            echo "::error::Image $IMAGE:$SHA introuvable sur GHCR : rien n'est déployé."
+            exit 1
+          fi
+          echo "Image trouvée : $IMAGE:$SHA"
+
+      # Code de cette branche, pour l'action locale seulement : le serveur prend
+      # bin/deploy et les fichiers Compose dans l'image du SHA, rien n'est copié.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Configurer SSH
+        uses: ./.github/actions/ssh-production
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+
+      # Comme le job deploy : le jeton passe par l'entrée standard, le serveur
+      # s'en sert pour docker login puis se déconnecte du registre.
+      - name: Revenir en arrière
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # $SHA est développé ici, à dessein (SC2029).
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh production rollback "$SHA"

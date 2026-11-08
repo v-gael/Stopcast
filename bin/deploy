@@ -1,0 +1,175 @@
+#!/bin/sh
+# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, passe
+# les migrations Doctrine avec la nouvelle image (après un dump de la base s'il
+# y en a en attente), puis remplace les conteneurs et attend qu'ils soient
+# prêts. Lancé sur le serveur, dans ~/stopcast/, par ops/ci-deploy (le script
+# imposé à la clé de la CI), qui l'extrait de l'image à déployer avec
+# compose.yaml et compose.prod.yaml.
+#
+#   IMAGE_TAG=<sha> bin/deploy [--skip-migrations]
+#
+# --skip-migrations sert au retour arrière (`rollback <sha>` d'ops/ci-deploy) :
+# ni lecture de l'état des migrations, ni dump, ni migration ; seulement le pull
+# et le remplacement des conteneurs. Le schéma ne fait qu'avancer : l'image
+# remise en place tourne sur le schéma en place.
+#
+# Le fichier d'état .deployed garde l'étiquette en place : le script l'affiche
+# avant de déployer, pour pouvoir y revenir. Test sur la prod locale (image
+# construite par `make prod-up`) : voir docs/exploitation.md, « Déploiement ».
+
+set -eu
+
+cd "$(dirname "$0")/.."
+
+usage() {
+    echo 'Usage : IMAGE_TAG=<sha> bin/deploy [--skip-migrations]'
+}
+
+skip_migrations=0
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        --skip-migrations)
+            skip_migrations=1
+            shift
+            ;;
+        *)
+            echo "Option inconnue : $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ -z "${IMAGE_TAG:-}" ]; then
+    echo "IMAGE_TAG est requis : l'étiquette de l'image à déployer (SHA complet du commit)." >&2
+    usage >&2
+    exit 2
+fi
+
+case $IMAGE_TAG in
+    *[!A-Za-z0-9_.-]*)
+        echo "IMAGE_TAG invalide : « $IMAGE_TAG » (lettres, chiffres, « _ », « . » et « - » seulement)." >&2
+        exit 2
+        ;;
+esac
+
+if [ ! -f .env.prod.local ]; then
+    echo "Fichier .env.prod.local introuvable dans $(pwd) : voir docs/exploitation.md, « Secrets »." >&2
+    exit 1
+fi
+
+# Projet et fichiers Compose de la prod, sauf s'ils sont déjà fixés (la prod
+# locale y ajoute compose.prod-local.yaml). Même nom de projet que la prod
+# locale : lancé par erreur sur un poste de dev, le script ne touche pas au
+# projet de dev (`stopcast`, le nom du dossier).
+: "${COMPOSE_PROJECT_NAME:=stopcast-prod}"
+: "${COMPOSE_FILE:=compose.yaml:compose.prod.yaml}"
+export IMAGE_TAG COMPOSE_PROJECT_NAME COMPOSE_FILE
+
+state_file=.deployed
+previous=$(cat "$state_file" 2>/dev/null || echo 'aucune')
+
+# Dumps pris avant migration : un filet local, pas une sauvegarde hors serveur.
+backup_dir=backups
+backup_keep=5
+backup_file=''
+# Passe à 1 au remplacement des conteneurs : avant, l'ancienne version sert.
+replacing=0
+
+compose() {
+    docker compose --env-file .env.prod.local "$@"
+}
+
+on_exit() {
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        printf '\nÉchec du déploiement de %s (code %s).\nVersion déployée avant : %s\n' "$IMAGE_TAG" "$status" "$previous" >&2
+        if [ "$replacing" -eq 0 ]; then
+            echo "Conteneurs non remplacés : l'ancienne version sert toujours." >&2
+        fi
+        if [ -n "$backup_file" ]; then
+            echo "Dump de la base pris avant migration : $(pwd)/$backup_file" >&2
+        fi
+    fi
+}
+trap on_exit EXIT
+
+echo "Version déployée : $previous"
+echo "Version à déployer : $IMAGE_TAG"
+
+# Les services qui ont un build (prod locale) gardent l'image construite sur
+# place ; en prod, aucun n'en a et tout vient de GHCR. Une étiquette est le SHA
+# d'un commit et ne change jamais : une image déjà là n'est pas retéléchargée
+# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée).
+echo "==> Téléchargement de l'image"
+compose pull --policy missing --ignore-buildable app worker
+
+# Les migrations tournent dans un conteneur jetable de la nouvelle image,
+# pendant que l'ancienne version sert encore. Pas au démarrage du conteneur :
+# app et worker partagent l'image et les lanceraient tous les deux. La base est
+# démarrée d'abord, pour le premier déploiement.
+if [ "$skip_migrations" -eq 1 ]; then
+    echo '==> Migrations ignorées (--skip-migrations) : la base reste telle quelle'
+    pending=0
+else
+    echo '==> Base de données'
+    compose up -d --wait database
+
+    echo '==> Migrations en attente'
+    # up-to-date : 0 à jour, 1 migrations en attente, autre code en cas d'erreur.
+    if compose run --rm --no-deps app php bin/console doctrine:migrations:up-to-date; then
+        pending=0
+    else
+        status=$?
+        if [ "$status" -ne 1 ]; then
+            echo "Impossible de lire l'état des migrations (code $status)." >&2
+            exit "$status"
+        fi
+        pending=1
+    fi
+fi
+
+if [ "$pending" -eq 1 ]; then
+    # Identifiants lus dans le conteneur database, pas sur la ligne de commande
+    # de l'hôte. pg_dump compresse lui-même (-Z) : son code de sortie n'est pas
+    # masqué par un tube, et le fichier n'est renommé qu'une fois complet.
+    echo '==> Dump de la base avant migration'
+    mkdir -p "$backup_dir"
+    target="$backup_dir/pre-deploy-$IMAGE_TAG.sql.gz"
+    # shellcheck disable=SC2016 # variables développées dans le conteneur database
+    if ! compose exec -T database sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Z 6' > "$target.tmp"; then
+        rm -f "$target.tmp"
+        echo 'Échec du dump : migrations non lancées.' >&2
+        exit 1
+    fi
+    mv "$target.tmp" "$target"
+    backup_file=$target
+    echo "Dump : $(pwd)/$backup_file"
+
+    # Garde les $backup_keep dumps les plus récents (noms sans espace : IMAGE_TAG
+    # est validé plus haut).
+    # shellcheck disable=SC2012
+    ls -1t "$backup_dir"/pre-deploy-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
+        rm -f "$old"
+    done
+
+    # all_or_nothing (config/packages/doctrine_migrations.yaml) : une migration
+    # qui échoue annule tout le lot, et le script s'arrête avant de toucher aux
+    # conteneurs.
+    echo '==> Migrations'
+    compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+fi
+
+# `--wait` refuse un service sans healthcheck : worker et backup n'en ont pas
+# (pas de serveur web). On attend qu'app soit healthy, puis on les remplace.
+echo '==> Mise à jour des conteneurs'
+replacing=1
+compose up -d --wait --wait-timeout 300 --remove-orphans app
+compose up -d worker backup
+
+printf '%s\n' "$IMAGE_TAG" > "$state_file"
+echo "Déployé : $IMAGE_TAG (version précédente : $previous)"

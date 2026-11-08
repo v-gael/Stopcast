@@ -3,7 +3,7 @@
 /.env.local
 /.env.local.php
 /.env.*.local
-/config/secrets/prod/prod.decrypt.private.php
+/config/secrets/*/*.decrypt.private.php
 /public/bundles/
 /var/
 /vendor/
@@ -12,9 +12,39 @@
 ###> phpunit/phpunit ###
 /phpunit.xml
 /.phpunit.cache/
+.phpunit.result.cache
 ###< phpunit/phpunit ###
 
 ###> symfony/asset-mapper ###
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+
+# Fichiers locaux (IDE, OS, outils)
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+/CLAUDE.md
+/AGENTS.md
+/.claude/
+/.scratch/
+/docs/agents/
+/GLOSSARY.md
+/core
+/.ua/
+/.githooks/commit-msg
+/.deployed
+/backups/
+/.worktreeinclude
+
+###> phpstan/phpstan ###
+phpstan.neon
+###< phpstan/phpstan ###
+
+###> php-cs-fixer/shim ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< php-cs-fixer/shim ###

@@ -1,0 +1,43 @@
+{#
+ # Messages flash de la session : success, error, warning.
+ # « floating » : toasts fixes en bas de l'écran, visibles quelle que soit la position
+ # dans la page ; success disparaît seul, error et warning restent jusqu'à « Fermer ».
+ #}
+{% props floating = false %}
+
+{% set styles = {
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    error: 'border-red-200 bg-red-50 text-red-800',
+    warning: 'border-amber-200 bg-amber-50 text-amber-800',
+} %}
+
+{# Sans session existante, rien à lire : ne pas en démarrer une (pages publiques sans cookie). #}
+{% set flashes = app.request.hasPreviousSession ? app.flashes(styles|keys)|filter(messages => messages is not empty) : [] %}
+{% if flashes is not empty %}
+    {% if floating %}
+        <div {{ attributes.defaults({class: 'pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col gap-2 sm:left-auto sm:w-96'}) }} data-flash-stack>
+            {% for type, messages in flashes %}
+                {% for message in messages %}
+                    <div class="pointer-events-auto flex items-start gap-3 rounded-md border px-4 py-3 text-sm shadow-lg transition-opacity duration-200 {{ styles[type] }}"
+                         data-controller="flash"
+                         {% if type == 'success' %}data-flash-dismiss-after-value="5000"{% endif %}
+                         data-action="mouseenter->flash#pause focusin->flash#pause mouseleave->flash#resume focusout->flash#resume">
+                        <p class="flex-1" role="{{ type == 'success' ? 'status' : 'alert' }}">{{ message }}</p>
+                        <button type="button" data-action="flash#close" class="-m-1 shrink-0 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="size-4" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                            <span class="sr-only">Fermer</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div {{ attributes.defaults({class: 'space-y-2'}) }}>
+            {% for type, messages in flashes %}
+                {% for message in messages %}
+                    <div class="rounded-md border px-4 py-3 text-sm {{ styles[type] }}" role="{{ type == 'success' ? 'status' : 'alert' }}">{{ message }}</div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}

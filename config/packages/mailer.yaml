@@ -1,3 +1,8 @@
 framework:
     mailer:
         dsn: '%env(MAILER_DSN)%'
+        # Expéditeur et adresse de réponse de tous les emails : aucun email ne
+        # fixe les siens (docs/exploitation.md, « Mails »).
+        headers:
+            From: '%env(MAILER_FROM)%'
+            Reply-To: '%env(MAILER_REPLY_TO)%'

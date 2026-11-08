@@ -1,0 +1,283 @@
+/*
+ * Page d'affichage des écrans (templates/display/), sans Tailwind : elle
+ * reproduit la mise en page du client Python de l'afficheur, mesurée en 480×320.
+ *
+ * Tout se mesure en --u, le « pixel » de cette référence : 1/320 de la hauteur
+ * de la fenêtre, ou 1/480 de sa largeur si elle est plus étroite que 3:2.
+ * Le positionnement horizontal (marges, colonnes) suit la largeur : sur un
+ * écran plus large, les lignes s'étirent ; sur un écran plus haut, les cinq
+ * passages se partagent la hauteur restante.
+ */
+
+@font-face {
+    font-family: "Roboto Condensed";
+    src: url("../fonts/RobotoCondensed-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+}
+
+/* Couleurs de l'écran, celles du client Python par défaut. */
+:root {
+    --display-background: #05203c;
+    --display-header-background: #1b4872;
+    --display-header-text: #7baee2;
+    --display-stop-text: #ffffff;
+    --display-hour-text: #ffffff;
+    --display-minutes-text: #ffffff;
+    --display-direction-text: #ffffff;
+    --display-message-text: #ffffff;
+
+    --u: min(100vh / 320, 100vw / 480);
+    --padding-inline: 3vw;
+    /* Colonnes « N° ligne », « Dans », « Direction » : à 3 %, 22,7 % et 39 % de la largeur. */
+    --columns: 19.7vw 16.3vw minmax(0, 1fr);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    background: var(--display-background);
+    font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    -webkit-font-smoothing: antialiased;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+.display-content {
+    height: 100%;
+}
+
+.screen {
+    display: grid;
+    grid-template-rows: calc(46 * var(--u)) calc(33 * var(--u)) minmax(0, 1fr);
+    height: 100%;
+}
+
+/* Barre du haut : nom du quai et heure. */
+.screen__top {
+    display: flex;
+    align-items: center;
+    gap: calc(14 * var(--u));
+    padding-inline: var(--padding-inline);
+    font-size: calc(25 * var(--u));
+}
+
+.screen__stop {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    /* Un <h1> : sans cela, la taille par défaut du navigateur (2em) l'emporte sur celle de la barre. */
+    font-size: inherit;
+    overflow: hidden;
+    color: var(--display-stop-text);
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.screen__clock {
+    color: var(--display-hour-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* En-têtes de colonnes ; le pictogramme d'échec du rafraîchissement à droite. */
+.screen__columns {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--columns);
+    align-items: center;
+    padding-inline: var(--padding-inline);
+    background: var(--display-header-background);
+    color: var(--display-header-text);
+    font-size: calc(20 * var(--u));
+    white-space: nowrap;
+}
+
+.screen__no-signal {
+    position: absolute;
+    top: 50%;
+    right: var(--padding-inline);
+    width: calc(22 * var(--u));
+    height: calc(22 * var(--u));
+    transform: translateY(-50%);
+}
+
+.display:not([data-display-offline]) .screen__no-signal {
+    display: none;
+}
+
+/* Cinq passages par écran, quel que soit leur nombre : la hauteur ne s'étire pas avec peu de passages. */
+.screen__passages {
+    display: grid;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.passage {
+    display: grid;
+    grid-template-columns: var(--columns);
+    align-items: center;
+    min-height: 0;
+    padding-inline: var(--padding-inline);
+}
+
+.passage + .passage {
+    border-top: calc(2 * var(--u)) solid var(--display-header-background);
+}
+
+.passage__route {
+    --route-color: var(--display-header-background);
+    --route-text-color: var(--display-direction-text);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    min-width: calc(55 * var(--u));
+    max-width: 100%;
+    height: calc(34 * var(--u));
+    padding-inline: calc(7 * var(--u));
+    border-radius: calc(11.6 * var(--u));
+    background: var(--route-color);
+    color: var(--route-text-color);
+    font-size: calc(16 * var(--u));
+    white-space: nowrap;
+}
+
+.passage__minutes {
+    color: var(--display-minutes-text);
+    font-size: calc(19 * var(--u));
+    white-space: nowrap;
+}
+
+/* Destination sur deux lignes au plus, comme le client Python. */
+.passage__headsign {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--display-direction-text);
+    font-size: calc(16 * var(--u));
+    line-height: calc(19 * var(--u));
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+/* Écrans d'état : aucun passage, horaires indisponibles, aucune configuration active, écran désactivé. */
+.screen__message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 7.5vw;
+    color: var(--display-message-text);
+    font-size: calc(17 * var(--u));
+    line-height: calc(22 * var(--u));
+    text-align: center;
+}
+
+/* Icône et texte un peu plus hauts que le centre, comme sur la maquette. */
+.screen__message--icon {
+    justify-content: flex-start;
+    padding-top: calc(25 * var(--u));
+    gap: calc(2 * var(--u));
+}
+
+.screen__no-bus,
+.screen__unavailable {
+    width: calc(141 * var(--u));
+    height: calc(141 * var(--u));
+}
+
+.screen__message p {
+    margin: 0;
+}
+
+/*
+ * Écran d'appairage (templates/display/_pairing.html.twig) : à gauche le QR
+ * code, puis le code en gras dessous ; à droite le compte à rebours ; en bas
+ * la ligne d'instruction.
+ */
+.pairing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    height: 100%;
+    padding: calc(16 * var(--u));
+    gap: calc(12 * var(--u));
+    color: var(--display-message-text);
+}
+
+.pairing__code-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(10 * var(--u));
+}
+
+/* Le SVG porte son carré blanc et sa marge : il remplit la place. */
+.pairing__qr {
+    width: calc(150 * var(--u));
+    height: calc(150 * var(--u));
+}
+
+.pairing__qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.pairing__code {
+    margin: 0;
+    font-size: calc(46 * var(--u));
+    letter-spacing: calc(2 * var(--u));
+    white-space: nowrap;
+}
+
+/*
+ * Disque blanc dont la part écoulée (--elapsed, posée par le contrôleur
+ * « pairing ») s'efface dans le sens des aiguilles d'une montre depuis midi.
+ */
+.pairing__countdown {
+    width: calc(150 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(transparent 0 var(--elapsed, 0deg), var(--display-message-text) var(--elapsed, 0deg) 360deg);
+}
+
+.pairing__instruction {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--display-header-text);
+    /* Sur une ligne en 480×320, avec le domaine de prod. */
+    font-size: calc(14 * var(--u));
+    text-align: center;
+    white-space: nowrap;
+}
+
+.pairing__message {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    margin: 0;
+    font-size: calc(24 * var(--u));
+    text-align: center;
+}

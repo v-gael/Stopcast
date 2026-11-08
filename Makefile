@@ -1,0 +1,144 @@
+.DEFAULT_GOAL := help
+.PHONY: help up down build sh console cc composer test test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs dev-log worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset prod-verify prod-backup ci-run ci-down
+
+# Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
+# a son propre projet compose : sans -p, ils partageraient le projet du dev
+# (nom du dossier), donc ses conteneurs et sa base (un `down -v` la supprimerait).
+# La prod locale construit son image sous l'étiquette `local` ; la vraie prod
+# tire de GHCR l'image du SHA déployé (bin/deploy).
+PROD := IMAGE_TAG=local docker compose -p stopcast-prod --env-file .env.prod.local -f compose.yaml -f compose.prod.yaml -f compose.prod-local.yaml
+CI := docker compose -p stopcast-ci -f compose.yaml -f compose.ci.yaml
+
+## —— Docker ———————————————————————————————————————————————————————————————
+up: hooks ## Démarre les conteneurs (dev) et active les hooks du dépôt
+	docker compose up -d
+
+down: ## Arrête les conteneurs
+	docker compose down
+
+build: ## Rebuild les images (retélécharge l'image de base)
+	docker compose build --pull
+	docker compose up -d
+
+sh: ## Ouvre un shell dans le conteneur app
+	docker compose exec app sh
+
+logs: ## Suit la sortie du conteneur app (journal d'accès de Caddy)
+	docker compose logs -f app
+
+dev-log: ## Suit le fichier de log Symfony du jour (var/log/dev-AAAA-MM-JJ.log)
+	docker compose exec app sh -c 'tail -F "var/log/dev-$$(date +%F).log"'
+
+worker-restart: ## Redémarre le worker (à faire après un changement de code)
+	docker compose restart worker
+
+worker-logs: ## Suit les logs du worker (envoi des emails)
+	docker compose logs -f worker
+
+## —— Prod (local, pour tester) ———————————————————————————————————————————
+prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : même port 80)
+	$(PROD) build --pull
+	$(PROD) up -d
+
+prod-down: ## Arrête l'environnement prod
+	$(PROD) down
+
+prod-logs: ## Suit les logs de l'environnement prod (app, worker et backup)
+	$(PROD) logs -f app worker backup
+
+prod-ps: ## État des conteneurs prod (vérifier healthy)
+	$(PROD) ps
+
+prod-backup: ## Lance une sauvegarde dans la prod locale (RESTIC_REPOSITORY=/srv/restic dans .env.prod.local pour un dépôt de test)
+	$(PROD) exec backup bin/backup
+
+prod-verify: ## Vérifie l'image de prod en prod locale (taille, bin/deploy, utilisateur, capacités, smoke tests), puis l'arrête (arrêter le dev avant)
+	bin/prod-verify
+
+prod-reset: ## ⚠️ Supprime volumes + rebuild + remigre à zéro (reset complet du test prod)
+	$(PROD) down -v
+	$(PROD) build --pull
+	$(PROD) up -d
+	$(PROD) exec app php bin/console doctrine:migrations:migrate --no-interaction
+
+## —— CI (local, pour tester) —————————————————————————————————————————————
+ci-run: ## Build + lance la suite de tests façon CI sur une base vierge, retourne le code de sortie
+	$(CI) down -v
+	$(CI) build --pull
+	$(CI) up --abort-on-container-exit --exit-code-from app
+
+ci-down: ## Nettoie les conteneurs/volumes de l'environnement CI
+	$(CI) down -v
+
+## —— Symfony ——————————————————————————————————————————————————————————————
+console: ## Lance bin/console avec les arguments passés (ex: make console c="make:entity")
+	docker compose exec app php bin/console $(c)
+
+cc: ## Vide le cache Symfony des trois environnements (dev reconstruit, test et prod supprimés)
+	docker compose exec app php bin/console cache:clear
+	docker compose exec app rm -rf var/cache/test var/cache/prod
+
+composer: ## Lance composer avec les arguments passés (ex: make composer c="require --dev foo/bar")
+	docker compose exec app composer $(c)
+
+## —— Qualité de code ——————————————————————————————————————————————————————
+check: ## Lance tous les contrôles de la CI (à faire avant une PR)
+	bin/check-compose
+	bin/check-scripts
+	docker compose exec app bin/check
+
+fix: ## Applique Rector puis PHP CS Fixer (le hook pre-commit le fait sur les fichiers du commit)
+	docker compose exec app php vendor/bin/rector process --no-progress-bar
+	docker compose exec app php vendor/bin/php-cs-fixer fix
+
+hooks: ## Active les hooks du dépôt (pre-commit : corrige le style ; pre-push : lance make check)
+	@git config core.hooksPath .githooks
+
+test: ## Lance PHPUnit (un fichier ou un dossier : make test f="tests/Functional/Web/LoginTest.php")
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox $(f)
+
+test-verbose: ## Lance PHPUnit avec plus de détails
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
+
+rector: ## Lance Rector en dry-run
+	docker compose exec app php vendor/bin/rector process --dry-run --debug
+
+rector-fix: ## Applique les corrections Rector
+	docker compose exec app php vendor/bin/rector process
+
+cs-fixer: ## Vérifie le style de code (dry-run)
+	docker compose exec app php vendor/bin/php-cs-fixer fix --dry-run --diff
+
+cs-fixer-fix: ## Corrige le style de code
+	docker compose exec app php vendor/bin/php-cs-fixer fix
+
+phpstan: ## Lance l'analyse statique PHPStan
+	docker compose exec app php vendor/bin/phpstan analyse
+
+audit: ## Cherche les failles connues dans les dépendances PHP et JS
+	docker compose exec app bin/audit
+
+## —— Métier ———————————————————————————————————————————————————————————————
+import: ## Lance l'import GTFS
+	docker compose exec app php bin/console app:gtfs:import
+
+fixtures: ## Remplace les dispositifs de démo (--append : conserve le référentiel importé via make import)
+	docker compose exec app php bin/console doctrine:fixtures:load --append --no-interaction
+
+## —— Base de données ——————————————————————————————————————————————————————
+migrate: ## Applique les migrations en attente
+	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+
+migration: ## Génère une migration à partir des entités
+	docker compose exec app php bin/console make:migration
+
+db-reset: ## Supprime et recrée la base (⚠️ perte de données)
+	docker compose stop worker
+	docker compose exec app php bin/console doctrine:database:drop --force --if-exists
+	docker compose exec app php bin/console doctrine:database:create
+	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+	docker compose start worker
+
+## —— Aide —————————————————————————————————————————————————————————————————
+help: ## Affiche cette aide
+	@grep -E '(^[a-zA-Z0-9_-]+:.*?## .*$$)|(^## )' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; /^## / {printf "\n\033[1m%s\033[0m\n", substr($$0, 4)} /^[a-zA-Z0-9_-]+:/ {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

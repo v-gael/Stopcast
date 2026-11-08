@@ -1,0 +1,13 @@
+{% extends 'email/base.txt.twig' %}
+
+{% block content %}
+Bonjour,
+
+Personne ne s'est connecté à votre compte Stopcast depuis bientôt 2 ans. Sans connexion d'ici 30 jours, il sera supprimé, avec ses écrans d'affichage.
+
+Pour le garder, il suffit de vous connecter à l'espace de gestion : l'activité de vos écrans ne compte pas.
+
+{{ url('app_home') }}
+
+Si vous n'utilisez plus Stopcast, vous n'avez rien à faire.
+{% endblock %}

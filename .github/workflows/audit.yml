@@ -1,0 +1,73 @@
+name: Audit
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Failles des dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          extensions: ctype, iconv, intl, zip, pdo_pgsql
+          coverage: none
+          tools: composer:v2
+          # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
+          ini-values: date.timezone=Europe/Paris
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Même audit que `make audit` en local.
+      - name: Audit
+        run: bin/audit
+
+  # Scan quotidien de la dernière image publiée : une faille découverte après
+  # le déploiement fait échouer le job, pour la signaler, sans rien bloquer.
+  # Mêmes seuils que le scan du job `image` de ci.yml.
+  image:
+    name: Failles de l'image publiée
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      # Pour .trivyignore, s'il existe.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # Le paquet est privé tant que le dépôt l'est : Trivy lit les identifiants
+      # du registre laissés par docker login.
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scanner l'image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/v-gael/stopcast:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'

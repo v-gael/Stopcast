@@ -1,6 +1,23 @@
-
 services:
-###> doctrine/doctrine-bundle ###
+  ###> app ###
+  app:
+    build:
+      context: .
+      target: prod
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+    depends_on:
+      database:
+        condition: service_healthy
+    # Pas de volume sur var/ : en prod et en CI, le cache compilé au build doit
+    # venir de l'image. Un volume nommé ne se remplit depuis l'image qu'à sa
+    # création et servirait un cache périmé après un rebuild. Aucune donnée
+    # persistante n'y est écrite (logs sur stderr, cache applicatif jetable).
+    # Le dev a son propre volume, voir compose.override.yaml.
+  ###< app ###
+
+  ###> doctrine/doctrine-bundle ###
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
@@ -19,7 +36,13 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+# ###> symfony/mailer ###
+# Mailpit et le worker qui envoie les emails ne sont déclarés qu'en dev
+# (compose.override.yaml) et en prod (compose.prod.yaml) : en CI, un worker
+# tournerait sans fin et bloquerait --abort-on-container-exit.
+# ###< symfony/mailer ###
+
 volumes:
-###> doctrine/doctrine-bundle ###
+  ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###

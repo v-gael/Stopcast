@@ -1,0 +1,240 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Un nouveau push annule l'exécution en cours sur la même branche, sauf sur
+# main, où elle peut être en train de déployer : la suivante attend son tour.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  quality:
+    name: Qualité et tests
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+    # Base des tests d'intégration et fonctionnels : mêmes identifiants que le
+    # DATABASE_URL par défaut de .env (l'environnement de test ajoute "_test").
+    services:
+      database:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: '!ChangeMe!'
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          extensions: ctype, iconv, intl, zip, pdo_pgsql
+          coverage: none
+          tools: composer:v2
+          # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
+          ini-values: date.timezone=Europe/Paris
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Les tests navigateur chargent la CSS : en local, le service tailwind la
+      # construit en continu.
+      - name: Build Tailwind CSS
+        run: php bin/console tailwind:build
+
+      # Même liste de contrôles que `make check` en local. Les tests navigateur
+      # (Panther) utilisent le Chrome et le chromedriver du runner.
+      - name: Contrôles
+        run: |
+          export PANTHER_CHROME_DRIVER_BINARY="$CHROMEWEBDRIVER/chromedriver"
+          bin/check
+
+      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR).
+      - name: Captures des tests navigateur
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: panther-screenshots
+          path: var/panther/
+          if-no-files-found: ignore
+
+  # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
+  # lance les mêmes scripts sur l'hôte.
+  compose:
+    name: Fichiers Compose, scripts et workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Valider les combinaisons
+        run: bin/check-compose
+
+      - name: Analyser les scripts et les workflows
+        run: bin/check-scripts
+
+  # Release mergée sur main : construit l'image de prod, déjà validée par les
+  # deux jobs précédents, la scanne avec Trivy et la publie sur GHCR, étiquetée
+  # par le SHA du commit. Une faille CRITICAL ou HIGH corrigeable arrête le job
+  # avant le push : rien n'est publié ni déployé.
+  image:
+    name: Image de production
+    needs: [quality, compose]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construire l'image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: prod
+          platforms: linux/amd64
+          load: true
+          tags: ghcr.io/v-gael/stopcast:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Mêmes seuils que le scan quotidien d'audit.yml. Exceptions éventuelles :
+      # .trivyignore, chaque entrée avec sa raison.
+      - name: Scanner l'image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/v-gael/stopcast:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      # Reprend les couches du cache de l'étape de construction.
+      - name: Publier l'image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: prod
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/v-gael/stopcast:${{ github.sha }}
+            ghcr.io/v-gael/stopcast:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Déploie l'image du commit sur le serveur. La clé de la CI n'y ouvre pas de
+  # shell : authorized_keys lui impose ops/ci-deploy, qui n'accepte que
+  # `deploy <sha>` et prend bin/deploy et les fichiers Compose dans l'image du
+  # SHA. Le serveur s'authentifie sur GHCR avec le jeton de ce job, qui expire
+  # avec lui : aucun secret du registre n'y reste.
+  # Procédure et secrets : docs/exploitation.md, « Déploiement ».
+  deploy:
+    name: Déploiement
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    # Jamais annulé : un déploiement interrompu laisserait la prod à moitié
+    # mise à jour. Les suivants attendent.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      # Sur le runner seulement, pour la configuration SSH et bin/smoke-test :
+      # rien n'est copié sur le serveur, qui prend ses fichiers dans l'image.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # Clé d'hôte vérifiée, partagée avec rollback.yml.
+      - name: Configurer SSH
+        uses: ./.github/actions/ssh-production
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+
+      # Le jeton passe par l'entrée standard, jamais sur une ligne de commande ;
+      # le serveur s'en sert pour docker login et se déconnecte du registre en
+      # fin de déploiement, quel qu'en soit le résultat.
+      # La version précédente, affichée par bin/deploy, est gardée pour les
+      # contrôles qui suivent.
+      - name: Déployer
+        id: deploy
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          # $IMAGE_TAG est développé ici, à dessein (SC2029).
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh production deploy "$IMAGE_TAG" | tee "$RUNNER_TEMP/deploy.log"
+          previous=$(sed -n 's/^Version déployée : //p' "$RUNNER_TEMP/deploy.log")
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+
+      # Contrôles depuis l'extérieur, à travers Cloudflare. Pas de retour
+      # arrière automatique : un échec rend le job rouge et donne la commande.
+      - name: Contrôles après déploiement
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+          PREVIOUS_TAG: ${{ steps.deploy.outputs.previous }}
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo '::error::La variable PRODUCTION_URL (niveau dépôt) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
+            exit 1
+          fi
+          bin/smoke-test "$PRODUCTION_URL" && exit 0
+          echo "::error::Contrôles après déploiement en échec sur $PRODUCTION_URL."
+          echo "Version déployée : $IMAGE_TAG"
+          echo "Version précédente : ${PREVIOUS_TAG:-inconnue}"
+          case $PREVIOUS_TAG in
+            '' | aucune)
+              echo 'Aucune version précédente connue : corriger et redéployer.'
+              ;;
+            *)
+              echo "Retour arrière : gh workflow run rollback.yml -f sha=$PREVIOUS_TAG"
+              ;;
+          esac
+          exit 1

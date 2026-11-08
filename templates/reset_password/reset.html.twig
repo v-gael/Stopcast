@@ -1,0 +1,15 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Nouveau mot de passe · Stopcast{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Choisir un nouveau mot de passe" :titleLevel="1" class="max-w-md">
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+
+                <twig:Button type="submit">Enregistrer</twig:Button>
+            {{ form_end(form) }}
+        </twig:Card>
+    </section>
+{% endblock %}

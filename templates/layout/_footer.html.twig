@@ -1,0 +1,14 @@
+{# Pied de page commun aux pages publiques et connectées. #}
+<footer class="border-t border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-6 text-sm text-slate-500 sm:px-6">
+        <p>Stopcast, projet open source sous licence MIT.</p>
+        <nav aria-label="Informations légales">
+            <ul class="flex flex-wrap gap-x-6 gap-y-2">
+                <li><a href="{{ path('app_legal_notice') }}" class="hover:text-slate-900"{% if app.current_route == 'app_legal_notice' %} aria-current="page"{% endif %}>Mentions légales</a></li>
+                <li><a href="{{ path('app_legal_terms') }}" class="hover:text-slate-900"{% if app.current_route == 'app_legal_terms' %} aria-current="page"{% endif %}>Conditions d'utilisation</a></li>
+                <li><a href="{{ path('app_legal_privacy') }}" class="hover:text-slate-900"{% if app.current_route == 'app_legal_privacy' %} aria-current="page"{% endif %}>Confidentialité</a></li>
+                <li><a href="{{ path('app_data_sources') }}" class="hover:text-slate-900"{% if app.current_route == 'app_data_sources' %} aria-current="page"{% endif %}>Sources des données</a></li>
+            </ul>
+        </nav>
+    </div>
+</footer>

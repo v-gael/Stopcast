@@ -1,0 +1,52 @@
+framework:
+    rate_limiter:
+        # Essais du mot de passe actuel (changement de mot de passe, suppression
+        # du compte), un compteur par compte : voir CurrentPasswordValidator.
+        current_password:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+            # Pas de verrou : des envois simultanés peuvent dépasser la limite
+            # de quelques essais (limite connue, voir SECURITY.md).
+            lock_factory: null
+        # Demandes de « mot de passe oublié », un compteur par adresse IP :
+        # protège les boîtes de mails et le quota d'envoi.
+        reset_password_request:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+            # Pas de verrou, comme current_password.
+            lock_factory: null
+        # Codes d'appairage générés par les écrans, un compteur par adresse IP :
+        # un écran non appairé en demande un par minute, la limite en laisse
+        # passer deux derrière la même box (voir ScreenPairing).
+        display_pairing_code:
+            policy: sliding_window
+            limit: 150
+            interval: '1 hour'
+            lock_factory: null
+        # Saisies fausses d'un code d'appairage, un compteur par compte.
+        display_pairing_entry:
+            policy: sliding_window
+            limit: 5
+            interval: '15 minutes'
+            lock_factory: null
+
+when@test:
+    framework:
+        rate_limiter:
+            current_password:
+                # En mémoire, sans remise à zéro entre deux requêtes (le pool
+                # cache.rate_limiter, lui, est vidé à chaque requête) : avec
+                # disableReboot(), le compteur tient le temps d'un test.
+                storage_service: app.rate_limiter.test_storage
+            reset_password_request:
+                storage_service: app.rate_limiter.test_storage
+            display_pairing_code:
+                storage_service: app.rate_limiter.test_storage
+            display_pairing_entry:
+                storage_service: app.rate_limiter.test_storage
+
+    services:
+        app.rate_limiter.test_storage:
+            class: Symfony\Component\RateLimiter\Storage\InMemoryStorage

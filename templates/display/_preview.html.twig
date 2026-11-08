@@ -1,0 +1,7 @@
+{#
+ # Aperçu de la page d'affichage dans une iframe 480×320, la taille de l'écran
+ # de référence, réduite en proportion sur un petit écran.
+ # Attend « preview_url » et « preview_title ».
+ #}
+<iframe src="{{ preview_url }}" title="{{ preview_title }}" width="480" height="320" loading="lazy"
+        class="block aspect-[3/2] h-auto w-full max-w-[480px] rounded-md border border-slate-300 bg-slate-900"></iframe>
