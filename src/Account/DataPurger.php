@@ -14,6 +14,7 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
+use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
 use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 
 /**
@@ -87,7 +88,7 @@ final readonly class DataPurger
             inactivityWarnings: $this->warnInactiveAccounts($now),
             inactiveAccounts: $this->deleteInactiveAccounts($now),
             resetPasswordRequests: $this->resetPasswordRequestRepository->removeExpiredRequestsOfActiveUsers($now),
-            // En dernier : les suppressions de cette purge sont au journal.
+            // Après les suppressions de comptes : celles de cette purge y sont inscrites.
             deletionJournalEntries: $this->deletionJournal->purgeBefore($now->modify('-'.self::DELETION_JOURNAL_RETENTION)),
             failedMessages: $this->removeFailedMessages($now),
         );
@@ -157,7 +158,8 @@ final readonly class DataPurger
     /**
      * Toute la file, quelle que soit la classe du message. La date est celle
      * du dernier échec, qu'affiche `messenger:failed:show` : un message relancé
-     * qui échoue de nouveau repart pour la durée entière.
+     * qui échoue de nouveau repart pour la durée entière. Un message sans date
+     * (illisible, il a perdu ses stamps) est gardé et signalé.
      */
     private function removeFailedMessages(\DateTimeImmutable $now): int
     {
@@ -166,7 +168,15 @@ final readonly class DataPurger
         $removed = 0;
         foreach ($this->failedTransport->all() as $envelope) {
             $failedAt = $envelope->last(RedeliveryStamp::class)?->getRedeliveredAt();
-            if (null !== $failedAt && $failedAt < $failedBefore) {
+            if (null === $failedAt) {
+                $this->logger->warning('Purge: failed message {id} has no failure date, it is kept.', [
+                    'id' => $envelope->last(TransportMessageIdStamp::class)?->getId(),
+                ]);
+
+                continue;
+            }
+
+            if ($failedAt < $failedBefore) {
                 $this->failedTransport->reject($envelope);
                 ++$removed;
             }

@@ -316,10 +316,27 @@ final class DataPurgerTest extends KernelTestCase
         self::assertSame(['recent@example.com'], $this->failedQueueRecipients());
     }
 
-    private function sendToFailedQueue(string $recipient, \DateTimeImmutable $failedAt): void
+    public function testFailedMessageWithoutFailureDateIsKeptAndAWarningIsLogged(): void
+    {
+        $this->sendToFailedQueue('undated@example.com', failedAt: null);
+        $logs = $this->appLogs();
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(0, $summary->failedMessages);
+        self::assertSame(['undated@example.com'], $this->failedQueueRecipients());
+        self::assertTrue($logs->hasWarningThatContains('Purge: failed message {id} has no failure date, it is kept.'));
+    }
+
+    /**
+     * Sans date d'échec, le message n'a pas de `RedeliveryStamp`, comme un
+     * message que Messenger n'a pas pu relire.
+     */
+    private function sendToFailedQueue(string $recipient, ?\DateTimeImmutable $failedAt): void
     {
         $email = new Email()->from('no-reply@stopcast.local')->to($recipient)->subject('Invitation')->text('Lien');
-        $this->failedTransport()->send(new Envelope(new SendEmailMessage($email), [new RedeliveryStamp(0, $failedAt)]));
+        $stamps = $failedAt instanceof \DateTimeImmutable ? [new RedeliveryStamp(0, $failedAt)] : [];
+        $this->failedTransport()->send(new Envelope(new SendEmailMessage($email), $stamps));
     }
 
     /**
