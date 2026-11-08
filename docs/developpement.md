@@ -250,7 +250,7 @@ Comme en prod, `app` et `worker` tournent sous `www-data`, sans capacités Linux
 
 La prod locale sert l'appli en mode worker de FrankenPHP, comme la prod, alors que le dev reste en mode classique : tester en prod locale tout changement qui garde un état dans un service ([architecture.md](architecture.md#mode-worker-en-prod)). Les logs de `app` (`make prod-logs`) montrent au démarrage les workers lancés sur `public/index.php`.
 
-La prod locale lance aussi un `worker`. Sans `MAILER_DSN` dans `.env.prod.local`, aucun email ne part (`null://null`) ; `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
+La prod locale lance aussi un `worker`. Comme en prod, `.env.prod.local` doit définir `MAILER_DSN`, `MAILER_FROM` et `MAILER_REPLY_TO`, sinon `compose.prod.yaml` refuse de démarrer ; `MAILER_DSN=null://null`, la valeur de `.env.prod.local.example`, n'envoie aucun mail. `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
 `make prod-verify` (`bin/prod-verify`) contrôle l'image de prod, ce que ni `make check` ni la CI ne font avant `main` : à lancer quand une modification touche le `Dockerfile`, un fichier Compose, `frankenphp/`, `bin/deploy` ou `ops/`. Il construit l'image `local`, vérifie sa taille (somme des couches, plafond `MAX_IMAGE_MB` en tête du script), la déploie par `bin/deploy` (migrations comprises), contrôle `app` et `worker` (`www-data`, capacités, `no-new-privileges`, fuseau, mode worker, écriture dans `var/`, aucun redémarrage du `worker`), puis lance `bin/smoke-test http://localhost`. Il passe tous les contrôles avant de conclure et arrête la prod locale à la fin, volumes gardés ; `bin/prod-verify --keep` la laisse tourner pour inspecter. Comme `make prod-up`, il demande le dev arrêté.
 
