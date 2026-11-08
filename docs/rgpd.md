@@ -41,7 +41,7 @@ Dernière mise à jour : 6 novembre 2026.
 | Données | Email du destinataire, contenu du mail (lien à usage unique). |
 | Personnes concernées | Utilisateurs et personnes invitées. |
 | Base légale | Exécution du contrat. |
-| Durée | Côté Stopcast, rien n'est conservé hors de la demande elle-même (voir « Gestion des comptes »), sauf un mail en échec : après ses tentatives, il reste dans la file `failed`, en base, avec l'adresse du destinataire et son contenu, jusqu'à ce qu'on le relance ou le supprime ([exploitation.md](exploitation.md#mails-en-échec)), puis 30 jours dans les sauvegardes. Côté Brevo : non précisé. |
+| Durée | Côté Stopcast, rien n'est conservé hors de la demande elle-même (voir « Gestion des comptes »), sauf un mail en échec : après ses tentatives, il reste dans la file `failed`, en base, avec l'adresse du destinataire et son contenu, jusqu'à ce qu'on le relance ou le supprime, et au plus 7 jours après son dernier échec, où la purge nocturne le supprime ([exploitation.md](exploitation.md#mails-en-échec)) ; puis 30 jours dans les sauvegardes. Côté Brevo : non précisé. |
 | Destinataires et sous-traitants | Brevo (envoi). |
 
 ### Export des données du compte

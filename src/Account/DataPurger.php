@@ -11,14 +11,18 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
+use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 
 /**
  * Applique les durées de conservation : supprime les comptes en attente dont
  * la dernière invitation a expiré depuis plus de 30 jours, avertit puis
  * supprime les comptes activés sans connexion depuis 2 ans, et supprime enfin
  * les demandes de réinitialisation et d'invitation expirées des comptes actifs,
- * puis les lignes du journal des suppressions plus vieilles que les sauvegardes.
+ * puis les lignes du journal des suppressions plus vieilles que les sauvegardes
+ * et les messages Messenger en échec depuis plus de 7 jours.
  *
  * Les demandes d'un compte en attente restent jusqu'à sa suppression : la
  * plus récente date sa dernière invitation, et elles partent en cascade avec
@@ -42,6 +46,14 @@ final readonly class DataPurger
      */
     public const string DELETION_JOURNAL_RETENTION = '30 days';
 
+    /**
+     * Durée d'un message dans la file `failed` après son dernier échec : le
+     * temps de voir l'alerte Sentry, d'enquêter et de relancer un mail encore
+     * utile (l'avertissement d'inactivité l'est 30 jours). Les liens à jeton
+     * ont expiré bien avant.
+     */
+    public const string FAILED_MESSAGE_RETENTION = '7 days';
+
     public function __construct(
         private UserRepository $userRepository,
         private ResetPasswordRequestRepository $resetPasswordRequestRepository,
@@ -51,6 +63,8 @@ final readonly class DataPurger
         private MailerInterface $mailer,
         private ClockInterface $clock,
         private LoggerInterface $logger,
+        #[Autowire(service: 'messenger.transport.failed')]
+        private ListableReceiverInterface $failedTransport,
     ) {
     }
 
@@ -75,14 +89,16 @@ final readonly class DataPurger
             resetPasswordRequests: $this->resetPasswordRequestRepository->removeExpiredRequestsOfActiveUsers($now),
             // En dernier : les suppressions de cette purge sont au journal.
             deletionJournalEntries: $this->deletionJournal->purgeBefore($now->modify('-'.self::DELETION_JOURNAL_RETENTION)),
+            failedMessages: $this->removeFailedMessages($now),
         );
 
-        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted, {resetPasswordRequests} expired reset password requests deleted and {deletionJournalEntries} deletion journal lines removed.', [
+        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted, {resetPasswordRequests} expired reset password requests deleted, {deletionJournalEntries} deletion journal lines removed and {failedMessages} failed messages removed.', [
             'pendingAccounts' => $summary->pendingAccounts,
             'inactivityWarnings' => $summary->inactivityWarnings,
             'inactiveAccounts' => $summary->inactiveAccounts,
             'resetPasswordRequests' => $summary->resetPasswordRequests,
             'deletionJournalEntries' => $summary->deletionJournalEntries,
+            'failedMessages' => $summary->failedMessages,
         ]);
 
         return $summary;
@@ -136,6 +152,27 @@ final readonly class DataPurger
         }
 
         return $deleted;
+    }
+
+    /**
+     * Toute la file, quelle que soit la classe du message. La date est celle
+     * du dernier échec, qu'affiche `messenger:failed:show` : un message relancé
+     * qui échoue de nouveau repart pour la durée entière.
+     */
+    private function removeFailedMessages(\DateTimeImmutable $now): int
+    {
+        $failedBefore = $now->modify('-'.self::FAILED_MESSAGE_RETENTION);
+
+        $removed = 0;
+        foreach ($this->failedTransport->all() as $envelope) {
+            $failedAt = $envelope->last(RedeliveryStamp::class)?->getRedeliveredAt();
+            if (null !== $failedAt && $failedAt < $failedBefore) {
+                $this->failedTransport->reject($envelope);
+                ++$removed;
+            }
+        }
+
+        return $removed;
     }
 
     private function isLastAdmin(User $user): bool
