@@ -25,7 +25,7 @@ La configuration et les enregistrements DNS sont décrits dans [docs/exploitatio
 - Les mails de l'offre gratuite peuvent porter le logo Brevo : accepté.
 - Un futur expéditeur sur `gaelv.com` partagera la réputation du domaine et sa politique DMARC.
 - Impossible d'envoyer en `contact@gaelv.com` depuis une boîte personnelle : le DMARC `p=reject` le refuserait sans DKIM aligné.
-- Au-delà du quota, ou si Brevo est en panne, un mail épuise ses tentatives et finit dans la file Messenger `failed` ; son rejet remonte à Sentry. Il y reste, en base et dans les sauvegardes, avec l'adresse du destinataire et le lien (valable 24 h pour une invitation, 1 h pour une réinitialisation), jusqu'à ce qu'on le relance ou le supprime.
+- Au-delà du quota, ou si Brevo est en panne, un mail épuise ses tentatives et finit dans la file Messenger `failed` ; son rejet remonte à Sentry. Il y reste, en base, avec l'adresse du destinataire et le lien (valable 24 h pour une invitation, 1 h pour une réinitialisation), jusqu'à ce qu'on le relance ou le supprime, et au plus 7 jours après son dernier échec, où la purge nocturne le supprime ; puis 30 jours dans les sauvegardes.
 
 ## Sources
 

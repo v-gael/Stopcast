@@ -21,6 +21,11 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Mailer\Messenger\SendEmailMessage;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
+use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
+use Symfony\Component\Messenger\Transport\TransportInterface;
 use Symfony\Component\Mime\Email;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
 use Zenstruck\Foundry\Test\Factories;
@@ -297,6 +302,67 @@ final class DataPurgerTest extends KernelTestCase
         self::assertStringContainsString('Comptes inactifs supprimés 0', $display);
         self::assertStringContainsString('Demandes de réinitialisation supprimées 1', $display);
         self::assertStringContainsString('Lignes du journal des suppressions retirées 0', $display);
+        self::assertStringContainsString('Messages en échec supprimés 0', $display);
+    }
+
+    public function testFailedMessagesOlderThan7DaysAreRemoved(): void
+    {
+        $this->sendToFailedQueue('old@example.com', failedAt: now('-7 days -1 minute'));
+        $this->sendToFailedQueue('recent@example.com', failedAt: now('-6 days'));
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->failedMessages);
+        self::assertSame(['recent@example.com'], $this->failedQueueRecipients());
+    }
+
+    public function testFailedMessageWithoutFailureDateIsKeptAndAWarningIsLogged(): void
+    {
+        $this->sendToFailedQueue('undated@example.com', failedAt: null);
+        $logs = $this->appLogs();
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(0, $summary->failedMessages);
+        self::assertSame(['undated@example.com'], $this->failedQueueRecipients());
+        self::assertTrue($logs->hasWarningThatContains('Purge: failed message {id} has no failure date, it is kept.'));
+    }
+
+    /**
+     * Sans date d'échec, le message n'a pas de `RedeliveryStamp`, comme un
+     * message que Messenger n'a pas pu relire.
+     */
+    private function sendToFailedQueue(string $recipient, ?\DateTimeImmutable $failedAt): void
+    {
+        $email = new Email()->from('no-reply@stopcast.local')->to($recipient)->subject('Invitation')->text('Lien');
+        $stamps = $failedAt instanceof \DateTimeImmutable ? [new RedeliveryStamp(0, $failedAt)] : [];
+        $this->failedTransport()->send(new Envelope(new SendEmailMessage($email), $stamps));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function failedQueueRecipients(): array
+    {
+        $recipients = [];
+        foreach ($this->failedTransport()->all() as $envelope) {
+            $message = $envelope->getMessage();
+            self::assertInstanceOf(SendEmailMessage::class, $message);
+            $email = $message->getMessage();
+            self::assertInstanceOf(Email::class, $email);
+            $recipients[] = $email->getTo()[0]->getAddress();
+        }
+
+        return $recipients;
+    }
+
+    private function failedTransport(): TransportInterface&ListableReceiverInterface
+    {
+        $transport = self::getContainer()->get('messenger.transport.failed');
+        self::assertInstanceOf(TransportInterface::class, $transport);
+        self::assertInstanceOf(ListableReceiverInterface::class, $transport);
+
+        return $transport;
     }
 
     private function invite(string $email): User
