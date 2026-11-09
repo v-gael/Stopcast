@@ -13,7 +13,7 @@ Revue au regard du [WCAG 2.2](https://www.w3.org/TR/WCAG22/), niveau AA. Le RGAA
 | Administration | utilisateurs, invitation, modification d'un compte | `admin/user/` |
 | Communs | layouts, composants, thème de formulaire | `base.html.twig`, `layout/`, `components/`, `form/tailwind_layout.html.twig`, `assets/styles/app.css` |
 
-La page d'affichage du panneau n'existe pas encore : elle sera revue pour les contrastes et la lisibilité seulement, puisqu'elle n'est pas interactive. Les emails (`templates/email/`) sont hors périmètre.
+La page d'affichage (`templates/display/`) n'a pas encore été revue : elle le sera pour les contrastes et la lisibilité seulement, puisqu'elle n'est pas interactive. Les emails (`templates/email/`) sont hors périmètre.
 
 ## Méthode
 
@@ -89,5 +89,24 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Anciens liens d'action (corrigés) | amber-600 `#e17100` | blanc | 3,20 | 4,5 |
 | Ancien survol du bouton danger (corrigé) | blanc | red-500 `#fb2c36` | 3,81 | 4,5 |
 | Anciennes bordures des champs (corrigées) | slate-300 `#cad5e2` | blanc | 1,49 | 3 |
+
+## Lighthouse
+
+Mesure ponctuelle du 9 novembre 2026 sur la production, derrière Cloudflare, avec Lighthouse 13.6 en ligne de commande. Cible : 90 dans chaque catégorie.
+
+| Page | Appareil | Performance | Accessibilité | Bonnes pratiques | SEO |
+|---|---|---|---|---|---|
+| Accueil et connexion (`/`) | mobile | 96 | 100 | 100 | 100 |
+| Accueil et connexion (`/`) | desktop | 100 | 100 | 100 | 100 |
+| Mon compte (`/account`) | mobile | 97 | 100 | 100 | 63 |
+| Mon compte (`/account`) | desktop | 100 | 100 | 100 | 63 |
+| Fiche d'un dispositif (`/devices/1`) | mobile | 100 | 100 | 100 | 63 |
+| Fiche d'un dispositif (`/devices/1`) | desktop | 100 | 100 | 100 | 63 |
+| Écran d'appairage (`/display`, écran non appairé) | desktop | 100 | 97 | 100 | 54 |
+| Page d'affichage (`/display`, écran appairé) | desktop | 100 | 96 | 100 | 54 |
+
+Le SEO sous 90 est un écart voulu : ces pages portent volontairement `noindex` (`templates/base.html.twig`, `templates/display/`), et seul l'accueil est indexé. La cible de 90 en SEO ne vaut donc que pour l'accueil. Le 63 vient du seul audit `is-crawlable` ; le 54 des deux pages de `/display` y ajoute `meta-description`, sans objet sur une page non indexée.
+
+`/display` remplit un écran en paysage : seule la mesure desktop y est représentative. Son accessibilité perd quelques points sur l'audit `landmark-one-main`, ces pages n'ayant pas d'élément `<main>`.
 
 ## Passe manuelle
