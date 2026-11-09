@@ -43,14 +43,8 @@ final class PurgeCommandTest extends KernelTestCase
     public function testAFailedPurgePingsTheFailureUrlAndKeepsTheError(): void
     {
         $failure = $this->breakThePurge();
-        $tester = $this->command();
 
-        try {
-            $tester->execute([]);
-            self::fail('La purge aurait dû échouer.');
-        } catch (\RuntimeException $runtimeException) {
-            self::assertSame($failure, $runtimeException);
-        }
+        $this->assertThePurgeRethrows($this->command(), $failure);
 
         self::assertSame([self::PING_URL.'/fail'], $this->pings);
     }
@@ -68,16 +62,20 @@ final class PurgeCommandTest extends KernelTestCase
     public function testAnEmptyHealthcheckUrlSendsNoPingWhenThePurgeFails(): void
     {
         $failure = $this->breakThePurge();
-        $tester = $this->command(pingUrl: '');
 
+        $this->assertThePurgeRethrows($this->command(pingUrl: ''), $failure);
+
+        self::assertSame([], $this->pings);
+    }
+
+    private function assertThePurgeRethrows(CommandTester $tester, \RuntimeException $failure): void
+    {
         try {
             $tester->execute([]);
             self::fail('La purge aurait dû échouer.');
         } catch (\RuntimeException $runtimeException) {
             self::assertSame($failure, $runtimeException);
         }
-
-        self::assertSame([], $this->pings);
     }
 
     /**

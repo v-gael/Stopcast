@@ -16,7 +16,8 @@ use Symfony\Component\Scheduler\Attribute\AsCronTask;
 
 /**
  * Lancée chaque nuit par le worker, entre l'import GTFS (3 h) et la
- * sauvegarde (3 h 30).
+ * sauvegarde (3 h 30). Chaque réussite et chaque échec sont signalés à
+ * Healthchecks.io.
  */
 #[AsCommand(
     name: 'app:purge',
