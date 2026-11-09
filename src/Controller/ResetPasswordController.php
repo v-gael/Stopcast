@@ -100,7 +100,7 @@ final class ResetPasswordController extends AbstractController
 
         $token = $this->getTokenFromSession();
         if (null === $token) {
-            throw $this->createNotFoundException('Aucun jeton de réinitialisation dans l\'URL ni en session.');
+            throw $this->createNotFoundException("Aucun jeton de réinitialisation dans l'URL ni en session.");
         }
 
         try {

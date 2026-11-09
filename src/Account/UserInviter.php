@@ -59,7 +59,7 @@ final readonly class UserInviter
     private function assertPending(User $user): void
     {
         if (!$user->isPending()) {
-            throw new \LogicException(\sprintf('Le compte %s a déjà un mot de passe : il n\'est plus en attente d\'invitation.', $user->getEmail()));
+            throw new \LogicException(\sprintf("Le compte %s a déjà un mot de passe : il n'est plus en attente d'invitation.", $user->getEmail()));
         }
     }
 
