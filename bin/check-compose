@@ -43,6 +43,27 @@ else
     echo 'OK : la prod ne construit aucune image'
 fi
 
+# Une tâche planifiée tourne dans le worker : sans sa variable, elle lit la
+# valeur vide de .env et son ping ne part jamais, sans aucune erreur.
+variables=$(grep -rhoE "env: 'HEALTHCHECKS_[A-Z0-9_]+'" src/Command | sed "s/env: '//; s/'//" | sort -u)
+worker=$(sed -n '/^  worker:/,/^ \{0,2\}[a-z]/p' compose.prod.yaml)
+pings=0
+if [ -z "$variables" ]; then
+    printf 'Échec : aucune variable HEALTHCHECKS_* trouvée dans src/Command\n\n'
+    pings=1
+fi
+for variable in $variables; do
+    if ! printf '%s\n' "$worker" | grep -Fqx "      $variable: \${$variable:-}"; then
+        printf 'Échec : le worker de compose.prod.yaml ne reçoit pas %s, son ping ne partirait jamais\n\n' "$variable"
+        pings=1
+    fi
+done
+if [ "$pings" -eq 0 ]; then
+    echo 'OK : le worker reçoit les URL de ping des tâches planifiées'
+else
+    status=1
+fi
+
 if [ "$status" -eq 0 ]; then
     echo 'Fichiers Compose valides.'
 fi
