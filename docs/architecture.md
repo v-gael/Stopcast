@@ -12,10 +12,10 @@ Au-delà de l'affichage lui-même (relativement simple), l'essentiel du travail 
 
 ```
 ┌─────────────────────┐      ┌─────────────────┐      ┌───────────────────┐
-│   GTFS statique     │      │   GTFS-RT (RT)  │      │   Raspberry Pi    │
-│  (import ponctuel,  │      │  (récupéré à    │      │  (navigateur en   │
-│   CLI Symfony)      │      │   intervalle    │      │  kiosque, écran   │
-└──────────┬──────────┘      │   régulier)     │      │  480x320)         │
+│   GTFS statique     │      │   GTFS-RT (RT)  │      │       Écran       │
+│  (import ponctuel,  │      │  (récupéré à    │      │  (navigateur :    │
+│   CLI Symfony)      │      │   intervalle    │      │  Raspberry Pi,    │
+└──────────┬──────────┘      │   régulier)     │      │  tablette…)       │
            │                 └─────────┬───────┘      └──────────┬────────┘
            ▼                           │                         │
    ┌────────────────┐                  │                         │
@@ -33,11 +33,11 @@ Au-delà de l'affichage lui-même (relativement simple), l'essentiel du travail 
 
 1. **Import du référentiel statique** (`bin/console app:gtfs:import`, ou `make import`), exécuté ponctuellement (à chaque changement d'horaires du réseau). Upsert sur les identifiants naturels GTFS (`stop_id`, `route_id`) pour ne jamais casser les configurations déjà enregistrées.
 2. **Enregistrement du dispositif et sélection du/des quai(s)**, une fois, à la configuration initiale — depuis l'espace web, par le propriétaire du dispositif (voir [ADR 0003](adr/0003-front-twig.md)). Son écran y est appairé par un code (voir [Appairage d'un écran](#appairage-dun-écran)). Le libellé d'aide au choix (lignes desservies, destinations principales) est calculé à l'import pour rendre le sens de circulation intuitif sans jargon GTFS.
-3. **En fonctionnement courant**, le navigateur du Raspberry Pi ouvre `/display`, authentifié par le cookie de son écran appairé — pas d'identifiant dans l'URL — puis relit les écrans (`/display?fragment=1`) à la cadence du dispositif. Stopcast résout le dispositif à partir du cookie, télécharge/parse le flux GTFS-RT une seule fois (mis en cache le temps de `GTFS_REALTIME_CACHE_TTL` secondes, partagé entre tous les dispositifs), et rend pour chaque quai configuré (en rotation, dans l'ordre de `position`) les prochains passages (ligne, destination, couleurs, délai), sans les bus qui terminent leur course à ce quai.
+3. **En fonctionnement courant**, le navigateur de l'écran (Raspberry Pi, tablette…) ouvre `/display`, authentifié par le cookie de son écran appairé — pas d'identifiant dans l'URL — puis relit les écrans (`/display?fragment=1`) à la cadence du dispositif. Stopcast résout le dispositif à partir du cookie, télécharge/parse le flux GTFS-RT une seule fois (mis en cache le temps de `GTFS_REALTIME_CACHE_TTL` secondes, partagé entre tous les dispositifs), et rend pour chaque quai configuré (en rotation, dans l'ordre de `position`) les prochains passages (ligne, destination, couleurs, délai), sans les bus qui terminent leur course à ce quai.
 
 ## Page d'affichage
 
-Stopcast fait lui-même la mise en page de l'écran, sous forme de page HTML : la page d'affichage. Elle reprend la disposition de l'image dessinée par le client Python du Raspberry Pi (barre du haut avec le nom du quai et l'heure, en-têtes de colonnes, cinq passages par écran avec la pastille de la ligne aux couleurs GTFS, le délai et la destination), ses couleurs et sa police, Roboto Condensed Bold. L'espace web en montre un aperçu ; l'écran l'affiche sur ses vraies données dans un navigateur en kiosque, sur `/display`, après un appairage par code (voir [ADR 0008](adr/0008-affichage-html-et-appairage.md)).
+Stopcast fait lui-même la mise en page de l'écran, sous forme de page HTML : la page d'affichage. Elle reprend la disposition de l'image dessinée par l'ancien client Python (barre du haut avec le nom du quai et l'heure, en-têtes de colonnes, cinq passages par écran avec la pastille de la ligne aux couleurs GTFS, le délai et la destination), ses couleurs et sa police, Roboto Condensed Bold. L'espace web en montre un aperçu ; l'écran l'affiche sur ses vraies données dans un navigateur, sur `/display`, après un appairage par code (voir [ADR 0008](adr/0008-affichage-html-et-appairage.md)).
 
 - **Données** : `App\Display\DisplayAssembler` assemble ce qu'un dispositif affiche, une entrée (`DisplayItem`) par configuration active dans l'ordre de rotation. `forDevice()` lit les passages réels du flux temps réel (c'est ce qu'appelle `DisplayController` pour `/display`) ; `sampleForDevice()` et `sampleForConfiguration()` prennent les passages d'exemple de `App\Display\SamplePassages`, fictifs, écrits dans le code et identiques pour toute configuration. `App\Display\ScreenPaginator` découpe ensuite chaque configuration en écrans de cinq passages, sans les passages déjà partis ; une configuration sans passage donne l'écran « aucun passage ».
 - **Page** : `templates/display/page.html.twig`, autonome (sans le layout de l'espace web), avec son propre point d'entrée AssetMapper `display` (`assets/display.js`, `assets/styles/display.css`), sans Tailwind ni Turbo. Les écrans sont dans `templates/display/_screens.html.twig`, avec l'écran « aucun quai affiché » quand aucune configuration n'est active.

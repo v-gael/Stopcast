@@ -19,7 +19,7 @@ make fixtures                # (optionnel) crée un compte admin et des disposit
 
 `make import` importe toujours le référentiel ; `app:gtfs:import --if-changed` ne l'importe que si le serveur annonce un nouveau fichier, comme l'import nocturne de la prod ([exploitation.md](exploitation.md#import-gtfs-planifié)).
 
-La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un Raspberry Pi du réseau local puisse l'ouvrir par l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
+La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://localhost/`. En dev, le serveur écoute sur toutes les interfaces (`SERVER_NAME=:80`) pour qu'un appareil du réseau local (Raspberry Pi, tablette…) puisse l'ouvrir par l'IP de la machine. Pour revenir au HTTPS local auto-signé, définir `SERVER_NAME=localhost` dans `.env.local`.
 
 `make help` liste toutes les commandes disponibles.
 
@@ -89,10 +89,7 @@ Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 
 Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre l'aperçu de l'écran, qui fait tourner les configurations affichées sur des passages d'exemple, à côté de ses réglages ; un interrupteur y masque ou affiche chaque configuration, et une configuration masquée a son nom grisé (voir [architecture.md](architecture.md#page-daffichage)).
 
-Pour voir l'écran tel que le Pi l'affiche, ouvrir `http://localhost/display` dans un autre navigateur (ou une fenêtre privée) : il montre un code d'appairage, à saisir depuis « Appairer un écran » sur la fiche d'un dispositif ; la page passe alors sur l'affichage (voir [architecture.md](architecture.md#appairage-dun-écran)).
-
-Pour essayer sur le Raspberry Pi contre le dev, le Pi en kiosque ouvre `http://localhost:8080/display`, joint par un tunnel SSH ouvert depuis le Mac : `ssh -N -R 8080:localhost:80 admin@<IP_DU_PI>`. Les cookies de l'écran ne sont `Secure` qu'en HTTPS : cog les refuse en HTTP, même sur `localhost`. Un écran qui n'arrive pas à garder son cookie de demande change de code à chaque interrogation et atteint vite la limite de 150 codes par heure ; en dev, `make console c="cache:pool:clear cache.rate_limiter"` la remet à zéro.
-
+Pour voir la page d'affichage telle qu'un écran la montre, ouvrir `http://localhost/display` dans un autre navigateur (ou une fenêtre privée) : il montre un code d'appairage, à saisir depuis « Appairer un écran » sur la fiche d'un dispositif ; la page passe alors sur l'affichage (voir [architecture.md](architecture.md#appairage-dun-écran)).
 ## Configurations d'affichage
 
 Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis le détail de leur dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
@@ -270,7 +267,7 @@ Valeurs par environnement :
 | Environnement | `TRUSTED_PROXIES` | `TRUSTED_HOSTS` |
 |---|---|---|
 | `.env` (tests compris) | vide | `localhost` et `127.0.0.1` |
-| `.env.dev` | vide | `localhost` et toute adresse IPv4, pour le Raspberry Pi du réseau local |
+| `.env.dev` | vide | `localhost` et toute adresse IPv4, pour un appareil du réseau local |
 | Prod (`compose.prod.yaml`, depuis `.env.prod.local`) | plage du réseau `edge` (`172.30.0.0/24` sur le serveur) | domaine servi (`stopcast.gaelv.com`) et `localhost`, que le healthcheck interroge (`curl http://localhost/`) |
 
 `compose.prod.yaml` passe les deux variables aux services `app` et `worker` : une valeur vide dans `.env.prod.local` l'emporte sur celle de `.env`, et désactive donc la vérification de l'hôte.
