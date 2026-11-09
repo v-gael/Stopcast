@@ -50,7 +50,8 @@ export default class extends Controller {
 
         try {
             const response = await fetch(this.urlValue, {
-                headers: { Accept: 'text/html' },
+                // Requête XHR pour Symfony : sinon, une session perdue fait retenir le fragment comme page à rouvrir après la connexion.
+                headers: { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' },
                 cache: 'no-store',
                 signal: this.request.signal,
             });
