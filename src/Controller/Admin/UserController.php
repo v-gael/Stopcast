@@ -43,6 +43,7 @@ final class UserController extends AbstractController
             $userInviter->invite($user);
 
             $this->addFlash('success', \sprintf('Invitation envoyée à %s.', $user->getEmail()));
+            $this->addInvitationReminderFlash();
 
             return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
         }
@@ -65,6 +66,7 @@ final class UserController extends AbstractController
         $userInviter->resend($user);
 
         $this->addFlash('success', \sprintf('Invitation renvoyée à %s.', $user->getEmail()));
+        $this->addInvitationReminderFlash();
 
         return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
     }
@@ -108,5 +110,16 @@ final class UserController extends AbstractController
             'user' => $user,
             'form' => $form,
         ]);
+    }
+
+    /**
+     * En avertissement : il reste affiché jusqu'à « Fermer », car il demande un geste.
+     */
+    private function addInvitationReminderFlash(): void
+    {
+        $this->addFlash('warning', \sprintf(
+            'Prévenez cette personne : le mail peut arriver dans ses courriers indésirables, et son lien expire après %d heures.',
+            UserInviter::INVITATION_LIFETIME_IN_HOURS,
+        ));
     }
 }
