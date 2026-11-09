@@ -6,29 +6,20 @@ namespace App\Tests\Integration\Command;
 
 use App\Account\DataPurger;
 use App\Command\PurgeCommand;
-use App\Monitoring\HealthcheckPinger;
 use App\Tests\Support\ContainerServiceTrait;
-use Psr\Log\NullLogger;
+use App\Tests\Support\HealthcheckPingsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class PurgeCommandTest extends KernelTestCase
 {
     use ContainerServiceTrait;
+    use HealthcheckPingsTrait;
     use ResetDatabase;
 
     private const string PING_URL = 'https://hc-ping.test/purge';
-
-    /**
-     * URL des pings envoyés.
-     *
-     * @var list<string>
-     */
-    private array $pings = [];
 
     public function testASuccessfulPurgePingsHealthchecks(): void
     {
@@ -93,15 +84,9 @@ final class PurgeCommandTest extends KernelTestCase
 
     private function command(string $pingUrl = self::PING_URL): CommandTester
     {
-        $httpClient = new MockHttpClient(function (string $method, string $url): MockResponse {
-            $this->pings[] = $url;
-
-            return new MockResponse('OK');
-        });
-
         return new CommandTester(new PurgeCommand(
             $this->service(DataPurger::class),
-            new HealthcheckPinger($httpClient, new NullLogger()),
+            $this->recordingPinger(),
             $pingUrl,
         ));
     }
