@@ -90,6 +90,9 @@ Pour la prod locale, repartir d'une base vierge avec `make prod-reset`.
 Le formulaire d'un dispositif règle aussi les cadences de sa page d'affichage : la durée d'un écran (5 s par défaut, de 3 à 60 s) et l'intervalle entre deux rafraîchissements des données (60 s par défaut, de 30 à 300 s). Sa page de détail montre l'aperçu de l'écran, qui fait tourner les configurations affichées sur des passages d'exemple, à côté de ses réglages ; un interrupteur y masque ou affiche chaque configuration, et une configuration masquée a son nom grisé (voir [architecture.md](architecture.md#page-daffichage)).
 
 Pour voir la page d'affichage telle qu'un écran la montre, ouvrir `http://localhost/display` dans un autre navigateur (ou une fenêtre privée) : il montre un code d'appairage, à saisir depuis « Appairer un écran » sur la fiche d'un dispositif ; la page passe alors sur l'affichage (voir [architecture.md](architecture.md#appairage-dun-écran)).
+
+Un écran qui n'arrive pas à garder son cookie de demande change de code à chaque interrogation et atteint vite la limite de 150 codes par heure ; en dev, `make console c="cache:pool:clear cache.rate_limiter"` la remet à zéro.
+
 ## Configurations d'affichage
 
 Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèrent depuis le détail de leur dispositif, avec les mêmes règles d'accès que le dispositif : propriétaire uniquement.
@@ -137,7 +140,7 @@ Les tests (CI GitHub, `make ci-run`) ne compilent pas la CSS. En environnement `
 
 Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les affiche la page d'affichage. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
 
-Pour le voir sur un écran, appairer `http://localhost/display` (ou le Pi, voir [Dispositifs](#dispositifs)) à ce dispositif. `make fixtures` supprime les dispositifs : un écran appairé revient alors à l'écran d'appairage.
+Pour le voir sur un écran, appairer `http://localhost/display` (ou un appareil du réseau local, par l'IP de la machine) à ce dispositif. `make fixtures` supprime les dispositifs : un écran appairé revient alors à l'écran d'appairage.
 
 ## Logs
 
