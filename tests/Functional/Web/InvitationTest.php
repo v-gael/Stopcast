@@ -29,6 +29,8 @@ final class InvitationTest extends WebTestCase
 
     private const string PASSWORD = 'mot-de-passe-choisi';
 
+    private const string SPAM_REMINDER = 'Prévenez cette personne : le mail peut arriver dans ses courriers indésirables, et son lien expire après 24 heures.';
+
     private KernelBrowser $client;
 
     private User $admin;
@@ -57,6 +59,7 @@ final class InvitationTest extends WebTestCase
 
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Invitation envoyée à lea@example.com.');
+        self::assertSelectorTextContains('[role="alert"]', self::SPAM_REMINDER);
         self::assertSame('Invitation en attente', $this->statusOf(self::EMAIL));
 
         $user = $this->findUser(self::EMAIL);
@@ -241,6 +244,7 @@ final class InvitationTest extends WebTestCase
         self::assertEmailHeaderSame($email, 'Subject', 'Activez votre compte Stopcast');
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Invitation renvoyée à lea@example.com.');
+        self::assertSelectorTextContains('[role="alert"]', self::SPAM_REMINDER);
 
         $this->client->getCookieJar()->clear();
         $this->followInvitationLink($oldLink);

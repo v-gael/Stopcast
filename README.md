@@ -1,6 +1,6 @@
 # Stopcast
 
-Réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
+Réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi, tablette…), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
 
 <p align="center">
   <img src="docs/demo.gif" alt="Aperçu du panneau : deux arrêts avec leurs prochains passages, puis un arrêt sans passage prévu" width="480">
@@ -16,7 +16,7 @@ Stopcast croise les deux flux de données ouvertes publiés par la plupart des r
 - le **GTFS statique** (lignes, arrêts, quais, destinations des trajets), importé en base ;
 - le **GTFS-RT** (horaires en temps réel), interrogé et mis en cache à la volée.
 
-Ce dépôt contient l'**application Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et le sert sous forme de page d'affichage au navigateur en kiosque d'un Raspberry Pi, appairé par un code.
+Ce dépôt contient l'**application Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et le sert sous forme de page d'affichage à tout écran doté d'un navigateur (Raspberry Pi, tablette…), appairé par un code.
 
 L'essentiel du travail porte sur la modélisation GTFS : un arrêt se compose de plusieurs quais (un par sens), une ligne peut avoir plusieurs terminus, et les identifiants des flux statique et temps réel doivent concorder. Détails dans [docs/architecture.md](docs/architecture.md).
 
@@ -33,7 +33,7 @@ flowchart LR
     end
     ST -- "à chaque changement d'horaires" --> I
     RT -- "à la demande" --> C
-    A -- "HTML, rafraîchi 1×/min<br/>(cookie de l'écran)" --> D["Dispositif<br/>(navigateur en kiosque sur Raspberry Pi)"]
+    A -- "HTML, rafraîchi 1×/min<br/>(cookie de l'écran)" --> D["Dispositif<br/>(navigateur d'un écran : Raspberry Pi, tablette…)"]
 ```
 
 ## Stack
@@ -59,7 +59,7 @@ make up && make migrate && make import
 
 ## État du projet
 
-Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, page d'affichage appairée par code. Comptes utilisateurs, connexion, gestion de ses dispositifs et de leurs configurations d'affichage (choix des quais, ordre de rotation) dans l'espace web en place ; emails et gestion des comptes par un administrateur sont en cours. Prochaine étape : script d'installation du Raspberry Pi en kiosque.
+Proof of concept fonctionnel : import GTFS, exploitation du flux temps réel, gestion multi-dispositifs, page d'affichage appairée par code. Comptes utilisateurs, connexion, gestion de ses dispositifs et de leurs configurations d'affichage (choix des quais, ordre de rotation) dans l'espace web en place ; emails et gestion des comptes par un administrateur sont en cours.
 
 ## Sources des données
 

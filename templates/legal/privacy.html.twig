@@ -6,7 +6,7 @@
 {% block content %}
     <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Politique de confidentialité</h1>
-        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 8 novembre 2026.</p>
+        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 9 novembre 2026.</p>
 
         <div class="mt-8 space-y-8 text-slate-700">
             <section>
@@ -22,7 +22,7 @@
                 <ul class="list-disc space-y-2 pl-6">
                     <li><strong>Votre compte</strong> : email, rôle, mot de passe haché (jamais en clair), date de création. Il sert à vous connecter et à gérer vos écrans. Base légale : l'exécution des <a href="{{ path('app_legal_terms') }}" class="font-medium text-amber-700 underline hover:text-amber-600">conditions d'utilisation</a>.</li>
                     <li><strong>Vos dispositifs et configurations d'affichage</strong> : nom de chaque écran et haché du secret de son appairage, arrêts choisis, ordre de rotation. Ils servent à afficher les prochains passages. Base légale : l'exécution des conditions d'utilisation.</li>
-                    <li><strong>Les mails du service</strong> : invitation, réinitialisation du mot de passe, avis liés au compte. Ils utilisent votre email. Base légale : l'exécution des conditions d'utilisation.</li>
+                    <li><strong>Les mails du service</strong> : invitation, réinitialisation du mot de passe, avis liés au compte. Ils utilisent votre email. Base légale : l'exécution des conditions d'utilisation. Le suivi ajouté par Brevo est décrit dans « Destinataires et sous-traitants ».</li>
                     <li><strong>La sécurité</strong> : journaux du serveur (adresse IP tronquée, email masqué), limites du nombre d'essais (identifiant saisi, adresse IP), captcha Cloudflare Turnstile (adresse IP, navigateur et empreinte TLS de sa connexion), refus des mots de passe ayant fuité. Base légale : l'intérêt légitime de protéger le service et vos comptes.</li>
                     <li><strong>Le suivi des erreurs</strong> : les erreurs de l'application sont envoyées à Sentry, sans adresse IP ni email. Base légale : l'intérêt légitime de corriger le service.</li>
                     <li><strong>Les sauvegardes</strong> : une copie chiffrée de la base, et la liste des comptes supprimés (identifiant et date de création, sans email) pour qu'une restauration ne les fasse pas revenir. Base légale : l'intérêt légitime d'assurer la continuité du service.</li>
@@ -50,13 +50,18 @@
                 <ul class="mt-2 list-disc space-y-2 pl-6">
                     <li><strong>OVH</strong> (France) : hébergement du serveur et de la base de données.</li>
                     <li><strong>Cloudflare</strong> (États-Unis et Union européenne) : nom de domaine, proxy et tunnel vers le serveur, captcha Turnstile, stockage des sauvegardes chiffrées, redirection de l'adresse de contact.</li>
-                    <li><strong>Brevo</strong> (Union européenne) : envoi des mails du service.</li>
+                    <li><strong>Brevo</strong> (Union européenne) : envoi des mails du service, avec le suivi décrit ci-dessous.</li>
                     <li><strong>Sentry</strong> (Allemagne) : suivi des erreurs, sans adresse IP ni email.</li>
                     <li><strong>UptimeRobot</strong> et <strong>Healthchecks.io</strong> : surveillance de la disponibilité du service, sans aucune donnée personnelle.</li>
                 </ul>
                 <p class="mt-2">
                     Cloudflare utilise aussi les signaux du captcha (adresse IP, navigateur, empreinte TLS) en tant que responsable de traitement, au titre de son intérêt légitime, pour améliorer sa détection des robots :
                     voir sa <a href="https://www.cloudflare.com/turnstile-privacy-policy/" class="font-medium text-amber-700 underline hover:text-amber-600">politique de confidentialité de Turnstile</a> (en anglais).
+                </p>
+                <p class="mt-2">
+                    Brevo ajoute à ses mails une image invisible et fait passer leurs boutons par ses serveurs, ce qui lui permet de compter les ouvertures et les clics. Stopcast n'utilise pas ces mesures et a activé l'option de suivi anonyme de Brevo, qui ne les associe pas à un destinataire.
+                    Lors d'une ouverture ou d'un clic, Brevo reçoit tout de même, comme tout serveur, votre adresse IP et le type de votre navigateur. Pour l'éviter, bloquez l'affichage des images dans votre messagerie et utilisez l'adresse écrite sous le bouton, qui mène directement à Stopcast.
+                    Base légale : l'intérêt légitime d'assurer l'envoi des mails.
                 </p>
                 <p class="mt-2">
                     Pour refuser les mots de passe ayant fuité, Stopcast interroge <strong>Have I Been Pwned</strong> sans lui transmettre ni votre mot de passe ni aucune donnée personnelle :
@@ -77,6 +82,7 @@
                 <p>
                     Stopcast ne pose que des cookies strictement nécessaires : le cookie de session, qui vous garde connecté, et le cookie « se souvenir de moi » (30 jours), si vous cochez la case.
                     Le captcha Turnstile ne pose pas de cookie de suivi. Aucun cookie de mesure d'audience ni de publicité : il n'y a donc pas de bandeau de consentement.
+                    Le suivi ajouté aux mails par Brevo est décrit dans la section « Destinataires et sous-traitants ».
                 </p>
             </section>
 
@@ -85,7 +91,7 @@
                 <ul class="list-disc space-y-2 pl-6">
                     <li><strong>Accès et portabilité</strong> : téléchargez vos données au format JSON depuis « Mon compte ».</li>
                     <li><strong>Effacement</strong> : supprimez votre compte depuis « Mon compte ».</li>
-                    <li><strong>Rectification, opposition, limitation, accès aux journaux du serveur</strong> : écrivez à <a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a>.</li>
+                    <li><strong>Rectification, opposition, limitation, accès aux journaux du serveur</strong> : écrivez à <a href="mailto:contact@gaelv.com" class="font-medium text-amber-700 underline hover:text-amber-600">contact@gaelv.com</a>. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans la section « Destinataires et sous-traitants ».</li>
                 </ul>
                 <p class="mt-2">
                     Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
