@@ -90,4 +90,19 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Ancien survol du bouton danger (corrigé) | blanc | red-500 `#fb2c36` | 3,81 | 4,5 |
 | Anciennes bordures des champs (corrigées) | slate-300 `#cad5e2` | blanc | 1,49 | 3 |
 
+## Lighthouse
+
+Mesure ponctuelle du 9 novembre 2026 sur la production, derrière Cloudflare, avec Lighthouse 13.6 en ligne de commande. Cible : 90 dans chaque catégorie.
+
+| Page | Appareil | Performance | Accessibilité | Bonnes pratiques | SEO |
+|---|---|---|---|---|---|
+| Accueil et connexion (`/`) | mobile | 96 | 100 | 100 | 100 |
+| Accueil et connexion (`/`) | desktop | 100 | 100 | 100 | 100 |
+| Mon compte (`/account`) | mobile | 97 | 100 | 100 | 63 |
+| Mon compte (`/account`) | desktop | 100 | 100 | 100 | 63 |
+| Fiche d'un dispositif (`/devices/1`) | mobile | 100 | 100 | 100 | 63 |
+| Fiche d'un dispositif (`/devices/1`) | desktop | 100 | 100 | 100 | 63 |
+
+Le SEO de 63 vient du seul audit `is-crawlable` : les pages connectées portent volontairement `noindex` (`templates/base.html.twig`), et seul l'accueil est indexé. C'est un écart voulu, la cible de 90 en SEO ne vaut que pour l'accueil.
+
 ## Passe manuelle
