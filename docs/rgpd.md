@@ -5,9 +5,9 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Responsable du traitement** : `v-gael`, particulier, joignable à `contact@gaelv.com`.
 - **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris) et les visiteurs des pages publiques.
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
-- **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
+- **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 8 novembre 2026.
+Dernière mise à jour : 9 novembre 2026.
 
 ## Traitements
 
@@ -38,11 +38,11 @@ Dernière mise à jour : 8 novembre 2026.
 | | |
 |---|---|
 | Finalité | Envoyer les invitations, les liens de réinitialisation du mot de passe et les avis liés au compte. |
-| Données | Email du destinataire, contenu du mail (lien à usage unique). |
+| Données | Email du destinataire, contenu du mail (lien à usage unique). Suivi ajouté par Brevo : ouvertures et clics, adresse IP et navigateur reçus lors d'une ouverture ou d'un clic. Stopcast n'utilise pas ces mesures. Pour l'éviter : bloquer l'affichage des images dans sa messagerie et utiliser l'adresse écrite sous le bouton, qui mène directement à Stopcast. |
 | Personnes concernées | Utilisateurs et personnes invitées. |
-| Base légale | Exécution du contrat. |
+| Base légale | Exécution du contrat ; pour le suivi ajouté par Brevo, intérêt légitime d'assurer l'envoi des mails. |
 | Durée | Côté Stopcast, rien n'est conservé hors de la demande elle-même (voir « Gestion des comptes »), sauf un mail en échec : après ses tentatives, il reste dans la file `failed`, en base, avec l'adresse du destinataire et son contenu, jusqu'à ce qu'on le relance ou le supprime, et au plus 7 jours après son dernier échec, où la purge nocturne le supprime ([exploitation.md](exploitation.md#mails-en-échec)) ; puis 30 jours dans les sauvegardes. Côté Brevo : non précisé. |
-| Destinataires et sous-traitants | Brevo (envoi). |
+| Destinataires et sous-traitants | Brevo (envoi et suivi des ouvertures et des clics, avec l'option de suivi anonyme activée). |
 
 ### Export des données du compte
 
@@ -108,7 +108,7 @@ Dernière mise à jour : 8 novembre 2026.
 | Personnes concernées | Utilisateurs. |
 | Base légale | Intérêt légitime (limitation de la conservation). |
 | Durée | Avertissement par email 30 jours avant la suppression ; compte supprimé après 2 ans sans connexion. |
-| Destinataires et sous-traitants | Brevo (avertissement), OVH, Cloudflare. |
+| Destinataires et sous-traitants | Brevo (avertissement, avec le suivi décrit dans « Mails transactionnels »), OVH, Cloudflare. |
 
 ## Sous-traitants
 
@@ -118,7 +118,7 @@ Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026. Une inform
 |---|---|---|---|---|---|
 | OVH SAS | Hébergement du serveur (VPS) et de la base | Toutes les données de l'application, journaux | France (Strasbourg) | Aucun : le serveur est dans le datacenter choisi, dans l'UE | [Sécurité juridique et confidentialité](https://www.ovhcloud.com/fr/personal-data-protection/legal-privacy-security/) |
 | Cloudflare, Inc. | DNS, proxy, Tunnel, Turnstile, stockage des sauvegardes (R2), Email Routing (`contact@gaelv.com`). Pour Turnstile, aussi responsable de traitement distinct : il utilise les signaux pour améliorer sa détection des robots | Trafic du site (IP, requêtes), signaux Turnstile (IP, empreinte TLS, user-agent), sauvegardes chiffrées, mails envoyés à l'adresse de contact | États-Unis et UE (métadonnées et journaux) ; sauvegardes R2 : UE si le bucket est créé avec la juridiction UE | EU-U.S. Data Privacy Framework, clauses contractuelles types à défaut | [DPA](https://www.cloudflare.com/cloudflare-customer-dpa/), [GDPR](https://www.cloudflare.com/trust-hub/gdpr/), [Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/), [R2](https://developers.cloudflare.com/r2/reference/data-location/) |
-| Brevo | Envoi des mails transactionnels | Email du destinataire, contenu du mail | UE : France et Allemagne (OVH), Belgique (Google Cloud) | Non précisé | [Data storage location](https://help.brevo.com/hc/en-us/articles/360001005510-Data-storage-location) |
+| Brevo | Envoi des mails transactionnels, suivi des ouvertures et des clics (pixel, liens réécrits ; option de suivi anonyme activée, relevé le 9 novembre 2026) | Email du destinataire, contenu du mail, adresse IP et navigateur lors d'une ouverture ou d'un clic | UE : France et Allemagne (OVH), Belgique (Google Cloud) | Non précisé | [Data storage location](https://help.brevo.com/hc/en-us/articles/360001005510-Data-storage-location) |
 | Sentry | Suivi des erreurs | Erreurs sans IP ni email | Allemagne (Francfort) pour les événements ; États-Unis pour les données du compte Sentry | EU-U.S. Data Privacy Framework, clauses contractuelles types à défaut | [Data storage location](https://docs.sentry.io/organization/data-storage-location/), [DPA](https://sentry.io/legal/dpa/) |
 | UptimeRobot s. r. o. | Sonde de disponibilité | Aucune donnée personnelle | UE en principal, États-Unis en secondaire | Clauses contractuelles types | [DPA](https://uptimerobot.com/dpa/) |
 | SIA Monkey See Monkey Do (Healthchecks.io) | Surveillance des tâches planifiées | Aucune donnée personnelle | Non précisé (hébergé chez Hetzner, sauvegardes chez AWS) | Non précisé | [Privacy Policy](https://healthchecks.io/privacy/) |

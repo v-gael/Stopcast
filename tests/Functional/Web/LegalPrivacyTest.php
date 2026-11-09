@@ -71,6 +71,18 @@ final class LegalPrivacyTest extends WebTestCase
         self::assertCount(1, $crawler->filter('main a[href="https://www.cloudflare.com/turnstile-privacy-policy/"]'));
     }
 
+    public function testPrivacyPolicyDisclosesTheMailTrackingAddedByBrevo(): void
+    {
+        $client = self::createClient();
+
+        $client->request('GET', '/confidentialite');
+
+        self::assertSelectorTextContains('main', 'compter les ouvertures et les clics');
+        self::assertSelectorTextContains('main', "l'option de suivi anonyme de Brevo");
+        self::assertSelectorTextContains('main', "utilisez l'adresse écrite sous le bouton");
+        self::assertSelectorTextContains('main', "l'intérêt légitime d'assurer l'envoi des mails");
+    }
+
     public function testTermsLinkToThePrivacyPolicy(): void
     {
         $client = self::createClient();
