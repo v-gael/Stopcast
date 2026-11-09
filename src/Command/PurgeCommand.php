@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Account\DataPurger;
+use App\Monitoring\HealthcheckPinger;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Scheduler\Attribute\AsCronTask;
 
 /**
  * Lancée chaque nuit par le worker, entre l'import GTFS (3 h) et la
- * sauvegarde (3 h 30).
+ * sauvegarde (3 h 30). Chaque réussite et chaque échec sont signalés à
+ * Healthchecks.io.
  */
 #[AsCommand(
     name: 'app:purge',
@@ -25,6 +28,9 @@ class PurgeCommand extends Command
 {
     public function __construct(
         private readonly DataPurger $purger,
+        private readonly HealthcheckPinger $pinger,
+        #[Autowire(env: 'HEALTHCHECKS_PURGE_URL')]
+        private readonly string $healthcheckUrl,
     ) {
         parent::__construct();
     }
@@ -34,7 +40,13 @@ class PurgeCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('Purge des données expirées');
 
-        $summary = $this->purger->purge();
+        try {
+            $summary = $this->purger->purge();
+        } catch (\Throwable $throwable) {
+            $this->pinger->pingFailure($this->healthcheckUrl);
+
+            throw $throwable;
+        }
 
         $io->definitionList(
             ['Comptes en attente supprimés' => $summary->pendingAccounts],
@@ -45,6 +57,8 @@ class PurgeCommand extends Command
             ['Messages en échec supprimés' => $summary->failedMessages],
         );
         $io->success('Purge terminée.');
+
+        $this->pinger->ping($this->healthcheckUrl);
 
         return Command::SUCCESS;
     }

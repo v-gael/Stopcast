@@ -10,7 +10,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Signale à Healthchecks.io qu'une tâche planifiée a réussi : c'est l'absence
- * de signal qui alerte. Un ping raté ne fait jamais échouer la tâche.
+ * de signal qui alerte. Une tâche peut aussi signaler son échec. Un ping raté
+ * ne fait jamais échouer la tâche.
  */
 final readonly class HealthcheckPinger
 {
@@ -37,5 +38,18 @@ final readonly class HealthcheckPinger
         } catch (ExceptionInterface $exception) {
             $this->logger->warning('Healthcheck ping failed: {error}', ['error' => $exception->getMessage()]);
         }
+    }
+
+    /**
+     * Alerte tout de suite, sans attendre l'absence de signal. Une URL vide
+     * n'envoie rien, comme pour ping().
+     */
+    public function pingFailure(string $url): void
+    {
+        if ('' === $url) {
+            return;
+        }
+
+        $this->ping($url.'/fail');
     }
 }
