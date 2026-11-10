@@ -9,6 +9,9 @@ use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Validator\Constraints\NotCompromisedPasswordValidator;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -21,6 +24,9 @@ final class AccountTest extends WebTestCase
     private const string EMAIL = 'lea@example.com';
 
     private const string NEW_PASSWORD = 'nouveau-mot-de-passe-1';
+
+    /** Empreinte SHA-1 de NEW_PASSWORD, sans les 5 caractères envoyés à l'API. */
+    private const string NEW_PASSWORD_HASH_SUFFIX = '73C7DB578755080D889C907D7B33ABF2C34';
 
     private KernelBrowser $client;
 
@@ -62,6 +68,31 @@ final class AccountTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('main form', 'Le mot de passe doit faire au moins 12 caractères.');
+    }
+
+    public function testLeakedPasswordErrorLinksToAnExplanationInANewWindow(): void
+    {
+        $this->client->disableReboot();
+        self::getContainer()->set('validator.not_compromised_password', new NotCompromisedPasswordValidator(
+            new MockHttpClient(new MockResponse(self::NEW_PASSWORD_HASH_SUFFIX.":3\r\n")),
+        ));
+
+        $this->changePassword(UserFactory::DEFAULT_PASSWORD, self::NEW_PASSWORD, self::NEW_PASSWORD);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('main form', 'Ce mot de passe apparaît dans des fuites de données connues.');
+        $link = $this->client->getCrawler()->filter('main form li a');
+        self::assertSame('https://haveibeenpwned.com/Passwords', $link->attr('href'));
+        self::assertSame('_blank', $link->attr('target'));
+        self::assertSame('noopener noreferrer', $link->attr('rel'));
+    }
+
+    public function testOtherPasswordErrorsHaveNoLink(): void
+    {
+        $this->changePassword(UserFactory::DEFAULT_PASSWORD, 'court', 'court');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertCount(0, $this->client->getCrawler()->filter('main form li a'));
     }
 
     public function testMismatchedConfirmationIsRefused(): void
