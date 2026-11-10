@@ -12,7 +12,6 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\DependencyInjection\Attribute\Target;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\UriSigner;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -77,10 +76,13 @@ final readonly class EmailChanger
      * Le changement que porte ce lien, s'il est encore applicable : lien
      * intact et non expiré, compte toujours à l'adresse d'origine, nouvelle
      * adresse toujours libre.
+     *
+     * @param string $signedUri URI complète du lien reçu, signature comprise
+     * @param string $token     son jeton
      */
-    public function pendingChange(Request $request, string $token): ?PendingEmailChange
+    public function pendingChange(string $signedUri, string $token): ?PendingEmailChange
     {
-        if (!$this->uriSigner->checkRequest($request)) {
+        if (!$this->uriSigner->check($signedUri)) {
             return null;
         }
 
@@ -89,7 +91,7 @@ final readonly class EmailChanger
         [$userId, $newEmail, $currentEmailFingerprint] = $payload;
 
         $user = $this->userRepository->find($userId);
-        if (!$user instanceof User || self::fingerprint($user->getEmail()) !== $currentEmailFingerprint) {
+        if (!$user instanceof User || $this->fingerprint($user->getEmail()) !== $currentEmailFingerprint) {
             return null;
         }
 

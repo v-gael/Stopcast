@@ -26,7 +26,7 @@ final class EmailChangeController extends AbstractController
     #[Route('/{token}', name: 'app_email_change_confirm', methods: ['GET', 'POST'])]
     public function confirm(Request $request, string $token, EmailChanger $emailChanger): Response
     {
-        $change = $emailChanger->pendingChange($request, $token);
+        $change = $emailChanger->pendingChange($request->getUri(), $token);
         if (!$change instanceof PendingEmailChange) {
             return $this->invalidLink();
         }

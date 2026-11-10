@@ -9,7 +9,6 @@ use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -51,12 +50,11 @@ final class AccountEmailChangeRequestTest extends WebTestCase
 
     public function testValidRequestSendsTheLinkToTheNewAddressAndKeepsTheEmail(): void
     {
-        $this->submit(' Lea.Nouvelle@Example.com ');
+        $this->requestEmailChange(' Lea.Nouvelle@Example.com ');
 
         self::assertResponseRedirects('/account', 303);
         self::assertQueuedEmailCount(1);
-        $email = self::getMailerMessage();
-        self::assertInstanceOf(Email::class, $email);
+        $email = $this->lastEmail();
         self::assertSame(self::NEW_EMAIL, $email->getTo()[0]->getAddress());
         self::assertMatchesRegularExpression('#/email-change/[\w-]+\?_expiration=\d+&_hash=#', (string) $email->getTextBody());
         self::assertStringContainsString('ignorez', (string) $email->getTextBody());
@@ -69,14 +67,14 @@ final class AccountEmailChangeRequestTest extends WebTestCase
 
     public function testWrongPasswordIsRefusedWithoutConsumingARequest(): void
     {
-        $this->submit(self::NEW_EMAIL, 'mauvais-mot-de-passe');
+        $this->requestEmailChange(self::NEW_EMAIL, 'mauvais-mot-de-passe');
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', 'Le mot de passe actuel est incorrect.');
         self::assertQueuedEmailCount(0);
 
         for ($i = 1; $i <= 3; ++$i) {
-            $this->submit(\sprintf('nouvelle%d@example.com', $i));
+            $this->requestEmailChange(\sprintf('nouvelle%d@example.com', $i));
             self::assertResponseRedirects('/account', 303);
         }
     }
@@ -84,10 +82,10 @@ final class AccountEmailChangeRequestTest extends WebTestCase
     public function testPasswordAttemptsAreLimited(): void
     {
         for ($i = 1; $i <= 5; ++$i) {
-            $this->submit(self::NEW_EMAIL, 'mauvais-mot-de-passe');
+            $this->requestEmailChange(self::NEW_EMAIL, 'mauvais-mot-de-passe');
         }
 
-        $this->submit(self::NEW_EMAIL);
+        $this->requestEmailChange(self::NEW_EMAIL);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', "Trop d'essais. Réessayez plus tard.");
@@ -96,7 +94,7 @@ final class AccountEmailChangeRequestTest extends WebTestCase
 
     public function testCurrentAddressIsRefusedAfterNormalization(): void
     {
-        $this->submit(' LEA@example.com');
+        $this->requestEmailChange(' LEA@example.com');
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', "C'est déjà l'adresse de votre compte.");
@@ -107,7 +105,7 @@ final class AccountEmailChangeRequestTest extends WebTestCase
     {
         UserFactory::createOne(['email' => 'paul@example.com']);
 
-        $this->submit('PAUL@example.com');
+        $this->requestEmailChange('PAUL@example.com');
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', 'Un compte existe déjà avec cet email.');
@@ -117,11 +115,11 @@ final class AccountEmailChangeRequestTest extends WebTestCase
     public function testFourthRequestWithinTheHourIsRefused(): void
     {
         for ($i = 1; $i <= 3; ++$i) {
-            $this->submit(\sprintf('nouvelle%d@example.com', $i));
+            $this->requestEmailChange(\sprintf('nouvelle%d@example.com', $i));
             self::assertResponseRedirects('/account', 303);
         }
 
-        $this->submit(self::NEW_EMAIL);
+        $this->requestEmailChange(self::NEW_EMAIL);
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('body', self::TOO_MANY_REQUESTS);
@@ -133,11 +131,11 @@ final class AccountEmailChangeRequestTest extends WebTestCase
         UserFactory::createOne(['email' => 'paul@example.com']);
 
         for ($i = 1; $i <= 3; ++$i) {
-            $this->submit('paul@example.com');
+            $this->requestEmailChange('paul@example.com');
             self::assertSelectorTextContains('body', 'Un compte existe déjà avec cet email.');
         }
 
-        $this->submit('paul@example.com');
+        $this->requestEmailChange('paul@example.com');
 
         self::assertSelectorTextContains('body', self::TOO_MANY_REQUESTS);
         self::assertSelectorTextNotContains('body', 'Un compte existe déjà avec cet email.');
@@ -150,14 +148,5 @@ final class AccountEmailChangeRequestTest extends WebTestCase
 
         self::assertResponseRedirects();
         self::assertStringEndsWith('/', (string) $this->client->getResponse()->headers->get('Location'));
-    }
-
-    private function submit(string $email, string $password = UserFactory::DEFAULT_PASSWORD): void
-    {
-        $this->client->request('GET', '/account/email');
-        $this->client->submitForm('Envoyer le lien', [
-            'change_email[newEmail]' => $email,
-            'change_email[currentPassword]' => $password,
-        ]);
     }
 }

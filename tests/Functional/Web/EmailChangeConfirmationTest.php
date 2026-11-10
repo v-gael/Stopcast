@@ -6,13 +6,13 @@ namespace App\Tests\Functional\Web;
 
 use App\Entity\User;
 use App\Factory\UserFactory;
+use App\Tests\Support\ContainerServiceTrait;
 use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
-use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
@@ -23,6 +23,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class EmailChangeConfirmationTest extends WebTestCase
 {
     use ClockSensitiveTrait;
+    use ContainerServiceTrait;
     use Factories;
     use ResetDatabase;
     use WebTestTrait;
@@ -62,8 +63,7 @@ final class EmailChangeConfirmationTest extends WebTestCase
         self::assertSame(self::NEW_EMAIL, $this->storedUser(self::NEW_EMAIL)->getEmail());
 
         self::assertQueuedEmailCount(1);
-        $email = self::getMailerMessage();
-        self::assertInstanceOf(Email::class, $email);
+        $email = $this->lastEmail();
         self::assertSame(self::EMAIL, $email->getTo()[0]->getAddress());
         self::assertStringContainsString('l***@e***.com', (string) $email->getTextBody());
         self::assertStringNotContainsString(self::NEW_EMAIL, (string) $email->getTextBody());
@@ -187,8 +187,7 @@ final class EmailChangeConfirmationTest extends WebTestCase
     public function testLinkOfADeletedAccountIsRefused(): void
     {
         $link = $this->requestChangeAndForgetSession();
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager = $this->service(EntityManagerInterface::class);
         $entityManager->remove($this->storedUser(self::EMAIL));
         $entityManager->flush();
 
@@ -227,11 +226,7 @@ final class EmailChangeConfirmationTest extends WebTestCase
     private function requestChange(): string
     {
         $this->client->loginUser($this->user);
-        $this->client->request('GET', '/account/email');
-        $this->client->submitForm('Envoyer le lien', [
-            'change_email[newEmail]' => self::NEW_EMAIL,
-            'change_email[currentPassword]' => UserFactory::DEFAULT_PASSWORD,
-        ]);
+        $this->requestEmailChange(self::NEW_EMAIL);
         self::assertResponseRedirects('/account', 303);
 
         return $this->tokenFromEmail('#(/email-change/\S+)#');
