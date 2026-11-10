@@ -88,6 +88,35 @@ final class DisplayPreviewTest extends WebTestCase
         self::assertSelectorTextSame('.screen__message', 'Aucun quai affiché');
     }
 
+    public function testDevicePreviewLeavesOutDeprecatedQuays(): void
+    {
+        $this->configure('Gare', 'GARE ROUTIERE');
+        $this->configure('Disparu', 'VIEUX QUAI', position: 1, deprecated: true);
+
+        $crawler = $this->client->request('GET', $this->devicePreview());
+
+        self::assertSame(['GARE ROUTIERE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+    }
+
+    public function testDevicePreviewWithOnlyDeprecatedQuaysShowsItsStateScreen(): void
+    {
+        $this->configure('Disparu', 'VIEUX QUAI', deprecated: true);
+
+        $this->client->request('GET', $this->devicePreview());
+
+        self::assertSelectorTextSame('.screen__message', 'Aucun quai affiché');
+    }
+
+    public function testConfigurationPreviewStillShowsADeprecatedQuay(): void
+    {
+        $configuration = $this->configure('Disparu', 'VIEUX QUAI', deprecated: true);
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/preview', $configuration->getId()));
+
+        self::assertSame(['VIEUX QUAI'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
+    }
+
     public function testConfigurationPreviewShowsThatConfigurationEvenHidden(): void
     {
         $this->configure('Gare', 'GARE ROUTIERE');
@@ -226,13 +255,17 @@ final class DisplayPreviewTest extends WebTestCase
         return \sprintf('/devices/%d/preview', $this->device->getId());
     }
 
-    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true): DisplayConfiguration
+    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true, bool $deprecated = false): DisplayConfiguration
     {
         $entityManager = $this->entityManager();
         $device = $entityManager->find(Device::class, $this->device->getId());
         self::assertInstanceOf(Device::class, $device);
 
         $quay = new Quay('S'.$quayName, $quayName, 38.5, -28.6, 'P'.$quayName);
+        if ($deprecated) {
+            $quay->markDeprecated();
+        }
+
         $configuration = new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position)->setActive($active);
         $entityManager->persist($quay);
         $entityManager->persist($configuration);
