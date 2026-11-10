@@ -59,6 +59,39 @@ final class DevicePairingTest extends WebTestCase
         self::assertSelectorNotExists('[data-replace-warning]');
     }
 
+    public function testPairingPageGivesTheDisplayAddressAsPlainText(): void
+    {
+        $this->client->request('GET', $this->pairPath());
+
+        self::assertSelectorTextSame('[data-display-address]', 'https://localhost/display');
+        self::assertSelectorNotExists('main a[href$="/display"]');
+    }
+
+    public function testPairingPageSaysTheAddressIsForTheScreenToPair(): void
+    {
+        $this->client->request('GET', $this->pairPath());
+
+        self::assertSelectorTextContains('main', "Sur l'écran à appairer, et non sur cet appareil, ouvrez cette adresse.");
+    }
+
+    public function testPairingPageOffersAQrCodeForAScreenWithACamera(): void
+    {
+        $this->client->request('GET', $this->pairPath());
+
+        self::assertSelectorExists('[role="img"][aria-label="QR code vers https://localhost/display"] svg');
+        self::assertSelectorTextContains('main', "L'écran est un téléphone ou une tablette ? Scannez ce QR code avec lui.");
+    }
+
+    /**
+     * Le JavaScript ne le montre que si le navigateur permet la copie.
+     */
+    public function testCopyButtonStartsHidden(): void
+    {
+        $this->client->request('GET', $this->pairPath());
+
+        self::assertSelectorExists('button[data-clipboard-target="button"][hidden]');
+    }
+
     public function testDeviceWithAScreenOffersToReplaceOrUnpairIt(): void
     {
         $this->pairAScreen();
@@ -73,6 +106,8 @@ final class DevicePairingTest extends WebTestCase
 
         self::assertSelectorTextSame('h1', "Remplacer l'écran");
         self::assertSelectorTextContains('[data-replace-warning]', 'il sera déconnecté');
+        self::assertSelectorTextSame('[data-display-address]', 'https://localhost/display');
+        self::assertSelectorExists('[role="img"][aria-label="QR code vers https://localhost/display"] svg');
     }
 
     public function testUnpairingForgetsTheScreen(): void

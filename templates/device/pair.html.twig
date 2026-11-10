@@ -6,7 +6,19 @@
     <h1 class="mb-6 text-2xl font-bold text-slate-900">{{ device.hasPairedScreen ? "Remplacer l'écran" : 'Appairer un écran' }}</h1>
 
     <twig:Card class="max-w-md">
-        <p class="mb-4 text-sm text-slate-700">Ouvrez la page d'affichage sur l'écran : il montre un code, valable une minute. Saisissez-le ici pour qu'il affiche « {{ device.label }} ».</p>
+        <p class="mb-4 text-sm text-slate-700">Sur l'écran à appairer, et non sur cet appareil, ouvrez cette adresse. Il montre un code, valable une minute. Saisissez-le ici pour qu'il affiche « {{ device.label }} ».</p>
+
+        <div class="mb-4 flex flex-wrap items-center gap-3" data-controller="clipboard">
+            <p class="font-mono text-sm break-all text-slate-900 select-all" data-display-address data-clipboard-target="source">{{ display_url }}</p>
+            <twig:Button variant="secondary" data-clipboard-target="button" data-action="clipboard#copy" hidden>Copier</twig:Button>
+            <span class="sr-only" role="status" data-clipboard-target="status"></span>
+        </div>
+
+        <div class="mb-4 flex items-center gap-4">
+            {# Le SVG est produit par QrCodeSvg à partir de l'URL de la page d'affichage. #}
+            <div class="w-32 shrink-0" role="img" aria-label="QR code vers {{ display_url }}">{{ display_qr_code|raw }}</div>
+            <p class="text-sm text-slate-700">L'écran est un téléphone ou une tablette ? Scannez ce QR code avec lui.</p>
+        </div>
 
         {% if device.hasPairedScreen %}
             <p class="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-slate-800" data-replace-warning>Un écran est déjà appairé à ce dispositif : il sera déconnecté et affichera de nouveau un code d'appairage.</p>

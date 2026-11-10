@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Display\Pairing\PairingCode;
 use App\Display\Pairing\PairingConfirmation;
+use App\Display\Pairing\QrCodeSvg;
 use App\Display\Pairing\ScreenPairing;
 use App\Entity\Device;
 use App\Entity\User;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
@@ -202,7 +204,7 @@ final class DeviceController extends AbstractController
      */
     #[Route('/{id}/pair', name: 'app_device_pair', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     #[IsGranted(DeviceVoter::EDIT, 'device')]
-    public function pair(Request $request, Device $device, ScreenPairing $screenPairing): Response
+    public function pair(Request $request, Device $device, ScreenPairing $screenPairing, QrCodeSvg $qrCodeSvg): Response
     {
         $form = $this->createForm(PairScreenType::class);
         $form->handleRequest($request);
@@ -223,9 +225,13 @@ final class DeviceController extends AbstractController
             $form->get('code')->addError(new FormError($error));
         }
 
+        $displayUrl = $this->generateUrl('app_display', referenceType: UrlGeneratorInterface::ABSOLUTE_URL);
+
         return $this->render('device/pair.html.twig', [
             'device' => $device,
             'form' => $form,
+            'display_url' => $displayUrl,
+            'display_qr_code' => $qrCodeSvg->render($displayUrl),
         ]);
     }
 
