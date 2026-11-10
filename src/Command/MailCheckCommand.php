@@ -16,13 +16,13 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Scheduler\Attribute\AsCronTask;
 
 /**
- * Lancée chaque mois par le worker pour détecter une panne d'envoi avant un
- * vrai mail. Le mail part directement par le transport, sans la file, pour que
- * le ping ne parte que si le prestataire l'a accepté.
+ * Lancée chaque mois par le worker : Brevo désactive une clé SMTP restée
+ * 90 jours sans envoi réussi. Le mail part directement par le transport, sans
+ * la file, pour que le ping ne parte que si Brevo l'a accepté.
  */
 #[AsCommand(
     name: 'app:mail:check',
-    description: "Envoie un mail de contrôle pour détecter une panne d'envoi",
+    description: 'Envoie un mail de contrôle pour garder la clé SMTP active',
 )]
 #[AsCronTask('0 4 1 * *', timezone: 'Europe/Paris')]
 class MailCheckCommand extends Command

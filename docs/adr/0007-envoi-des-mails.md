@@ -1,7 +1,5 @@
 # Envoi des mails par Brevo, depuis `gaelv.com`
 
-> Remplacé par l'[ADR 0010](0010-envoi-des-mails-par-ahasend.md).
-
 Stopcast envoie des mails transactionnels : invitations, liens de réinitialisation du mot de passe, avis liés au compte. Ils ne demandent pas de lien de désinscription, mais ils doivent arriver en boîte de réception. En prod, `MAILER_DSN` valait `null://null` : aucun mail ne partait. Le budget n'admet aucun service payant ([ADR 0006](0006-hebergement.md)), et Cloudflare Email Routing, qui reçoit `contact@gaelv.com`, ne sait pas envoyer.
 
 Nous envoyons par **Brevo**, sur l'offre gratuite **sans carte bancaire** : 300 mails par jour. Sans carte, un dépassement du quota bloque l'envoi au lieu d'être facturé.
