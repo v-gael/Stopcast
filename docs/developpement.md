@@ -33,7 +33,7 @@ L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs,
 make console c="app:user:create lea@example.com --role=ROLE_ADMIN"
 ```
 
-Le mot de passe (12 caractères minimum) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
+Le mot de passe (12 caractères minimum, dont au moins une lettre, un chiffre et un caractère spécial) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
 
 La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. « Se souvenir de moi » garde la session 30 jours, et les tentatives échouées sont limitées (5 par minute pour un même email et une même IP).
 

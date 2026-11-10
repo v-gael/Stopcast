@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Validator;
 
 use App\Validator\PasswordRequirements;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -19,10 +20,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class PasswordRequirementsTest extends TestCase
 {
-    /** Son empreinte SHA-1 est 2451F04D62956CF5E910CCE1F0E17D29E315D879. */
-    private const string PASSWORD = 'motdepasse123';
+    /** Son empreinte SHA-1 est 5787A4C1F134B100C54E83DCBEFE4A0295B51F05. */
+    private const string PASSWORD = 'motdepasse123!';
 
-    private const string LEAKED_HASH_SUFFIX = '04D62956CF5E910CCE1F0E17D29E315D879';
+    private const string LEAKED_HASH_SUFFIX = '4C1F134B100C54E83DCBEFE4A0295B51F05';
 
     private const string LEAK_MESSAGE = 'Ce mot de passe apparaît dans des fuites de données connues. Choisissez-en un autre.';
 
@@ -63,6 +64,35 @@ final class PasswordRequirementsTest extends TestCase
             $this->violationMessages('court', $client),
         );
         self::assertSame(0, $client->getRequestsCount());
+    }
+
+    #[DataProvider('incompletePasswords')]
+    public function testRefusesAPasswordMissingACharacterType(string $password): void
+    {
+        $client = new MockHttpClient(new MockResponse(self::LEAKED_HASH_SUFFIX.":3\r\n"));
+
+        self::assertSame(
+            ['Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial.'],
+            $this->violationMessages($password, $client),
+        );
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function incompletePasswords(): iterable
+    {
+        yield 'sans lettre' => ['1234-5678-9012'];
+        yield 'sans chiffre' => ['seulement-des-lettres'];
+        yield 'sans caractère spécial' => ['motdepasse123'];
+    }
+
+    public function testCountsAccentsAsLettersAndSpacesAsSpecialCharacters(): void
+    {
+        $client = new MockHttpClient(new MockResponse("00000000000000000000000000000000000:3\r\n"));
+
+        self::assertSame([], $this->violationMessages('éàèùçêôîûâëï 7 ', $client));
     }
 
     /**

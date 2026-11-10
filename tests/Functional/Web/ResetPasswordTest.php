@@ -23,7 +23,7 @@ final class ResetPasswordTest extends WebTestCase
 
     private const string EMAIL = 'lea@example.com';
 
-    private const string NEW_PASSWORD = 'nouveau-mot-de-passe';
+    private const string NEW_PASSWORD = 'nouveau-mot-de-passe-1';
 
     private KernelBrowser $client;
 

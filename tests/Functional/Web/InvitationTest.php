@@ -27,7 +27,7 @@ final class InvitationTest extends WebTestCase
 
     private const string EMAIL = 'lea@example.com';
 
-    private const string PASSWORD = 'mot-de-passe-choisi';
+    private const string PASSWORD = 'mot-de-passe-choisi-1';
 
     private const string SPAM_REMINDER = 'Prévenez cette personne : le mail peut arriver dans ses courriers indésirables, et son lien expire après 24 heures.';
 

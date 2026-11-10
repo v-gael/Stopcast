@@ -28,7 +28,7 @@ final class CurrentPasswordThrottlingTest extends WebTestCase
 
     private const string WRONG_PASSWORD = 'mauvais-mot-de-passe';
 
-    private const string NEW_PASSWORD = 'nouveau-mot-de-passe';
+    private const string NEW_PASSWORD = 'nouveau-mot-de-passe-1';
 
     private const string INCORRECT = 'Le mot de passe actuel est incorrect.';
 
