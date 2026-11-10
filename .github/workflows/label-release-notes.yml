@@ -1,0 +1,48 @@
+# Pose sur chaque PR le label qui la range dans les notes de release
+# (.github/release.yml), d'après le préfixe Conventional Commits de son titre.
+# pull_request_target pour avoir le droit d'écrire aussi sur les PR de forks et
+# de Dependabot : ce workflow ne récupère jamais le code de la PR, et le titre
+# ne passe que par l'environnement.
+name: Label de release
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions: {}
+
+jobs:
+  label:
+    name: Poser le label
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Mettre à jour le label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          security='^(security(\([^)]*\))?|[a-z]+\(security\))!?:'
+          wanted=
+          if [[ $TITLE =~ ^chore\(release\)!?: ]]; then
+            wanted=release
+          elif [[ $TITLE =~ $security ]]; then
+            wanted=security
+          elif [[ $TITLE =~ ^feat(\([^\)]*\))?!?: ]]; then
+            wanted=enhancement
+          elif [[ $TITLE =~ ^fix(\([^\)]*\))?!?: ]]; then
+            wanted=bug
+          fi
+
+          for label in release security enhancement bug; do
+            if [ "$label" = "$wanted" ]; then
+              gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels" -f "labels[]=$label" > /dev/null
+            else
+              # Titre corrigé : retire l'ancien label ; 404 si la PR ne l'a pas.
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/$label" > /dev/null 2>&1 || true
+            fi
+          done
