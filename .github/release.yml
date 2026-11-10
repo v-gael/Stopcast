@@ -1,0 +1,19 @@
+# Catégories des notes générées par GitHub. GitHub ne range les PR que par
+# labels : label-release-notes.yml les pose d'après le titre de la PR.
+changelog:
+  exclude:
+    labels:
+      - release
+  categories:
+    - title: Fonctionnalités
+      labels:
+        - enhancement
+    - title: Corrections
+      labels:
+        - bug
+    - title: Sécurité
+      labels:
+        - security
+    - title: Maintenance
+      labels:
+        - '*'
