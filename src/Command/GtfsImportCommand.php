@@ -44,7 +44,7 @@ class GtfsImportCommand extends Command
 
     protected function configure(): void
     {
-        $this->addOption('if-changed', null, InputOption::VALUE_NONE, 'Saute l\'import si le serveur répond que le fichier n\'a pas changé depuis le dernier import réussi');
+        $this->addOption('if-changed', null, InputOption::VALUE_NONE, "Saute l'import si le serveur répond que le fichier n'a pas changé depuis le dernier import réussi");
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

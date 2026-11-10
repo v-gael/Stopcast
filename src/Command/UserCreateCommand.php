@@ -41,7 +41,7 @@ class UserCreateCommand extends Command
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Email du compte, qui sert à se connecter')
             ->addOption('role', null, InputOption::VALUE_REQUIRED, \sprintf('Rôle du compte (%s)', $this->roleValues()), Role::User->value)
-            ->addOption('password', null, InputOption::VALUE_REQUIRED, 'Mot de passe ; demandé de façon masquée s\'il est absent')
+            ->addOption('password', null, InputOption::VALUE_REQUIRED, "Mot de passe ; demandé de façon masquée s'il est absent")
         ;
     }
 

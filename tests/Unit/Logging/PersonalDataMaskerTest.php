@@ -106,7 +106,7 @@ final class PersonalDataMaskerTest extends TestCase
     public static function untouchedProvider(): iterable
     {
         yield 'version' => ['symfony/http-kernel 8.1.9'];
-        yield 'quatre nombres suivis d\'un cinquième' => ['OID 1.3.6.1.4.1'];
+        yield "quatre nombres suivis d'un cinquième" => ['OID 1.3.6.1.4.1'];
         yield 'heure' => ['2026-11-06T10:20:30+01:00'];
         yield 'appel statique PHP' => ['App\Gtfs\Importer::add() failed in Foo::bar'];
         yield 'adresse MAC' => ['aa:bb:cc:dd:ee:ff'];

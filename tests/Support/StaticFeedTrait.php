@@ -77,6 +77,6 @@ trait StaticFeedTrait
 
     private function staticFeedFixturesPath(?string $case = null): string
     {
-        return \dirname(__DIR__).'/Fixtures/Gtfs'.(null !== $case ? '/'.$case : '');
+        return __DIR__.'/../Fixtures/Gtfs'.(null !== $case ? '/'.$case : '');
     }
 }
