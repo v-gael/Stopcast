@@ -27,7 +27,7 @@ final class ScannedPairingTest extends WebTestCase
     use ResetDatabase;
     use ScreenPairingTrait;
 
-    private const string UNKNOWN_CODE = 'Ce code est inconnu ou a expiré. Scannez le nouveau code affiché sur l\'écran.';
+    private const string UNKNOWN_CODE = "Ce code est inconnu ou a expiré. Scannez le nouveau code affiché sur l'écran.";
 
     private KernelBrowser $client;
 

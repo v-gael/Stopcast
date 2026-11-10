@@ -65,7 +65,7 @@ final class AppFixtures extends Fixture
     private function removeDevices(ObjectManager $manager): void
     {
         if (!$manager instanceof EntityManagerInterface) {
-            throw new \LogicException('Les fixtures nécessitent l\'ORM Doctrine.');
+            throw new \LogicException("Les fixtures nécessitent l'ORM Doctrine.");
         }
 
         $manager->createQuery(\sprintf('DELETE FROM %s', DisplayConfiguration::class))->execute();
@@ -81,7 +81,7 @@ final class AppFixtures extends Fixture
     private function replaceDevUser(ObjectManager $manager, User $devUser): void
     {
         if (!$manager instanceof EntityManagerInterface) {
-            throw new \LogicException('Les fixtures nécessitent l\'ORM Doctrine.');
+            throw new \LogicException("Les fixtures nécessitent l'ORM Doctrine.");
         }
 
         $manager->createQuery(\sprintf('DELETE FROM %s u WHERE u.email = :email', User::class))
@@ -97,7 +97,7 @@ final class AppFixtures extends Fixture
         $selection = $this->quaySelector->select(self::DEV_DEVICE_QUAY_COUNT);
 
         if (null !== $selection->fallbackReason) {
-            $this->logger->warning(\sprintf('Quais de l\'appareil de développement : %s, complété par les quais desservis par le plus de lignes.', $selection->fallbackReason));
+            $this->logger->warning(\sprintf("Quais de l'appareil de développement : %s, complété par les quais desservis par le plus de lignes.", $selection->fallbackReason));
         }
 
         $manager->persist($device);

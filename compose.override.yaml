@@ -17,7 +17,7 @@ services:
       XDEBUG_MODE: ${XDEBUG_MODE:-off}
       # ":80" écoute sur toutes les interfaces sans nom d'hôte fixe, ce qui
       # permet d'accéder à l'app depuis un autre appareil du réseau local
-      # (ex: un Raspberry Pi) via l'IP LAN de la machine. Surcharger avec
+      # (Raspberry Pi, tablette…) via l'IP LAN de la machine. Surcharger avec
       # SERVER_NAME=localhost dans .env.local pour revenir au HTTPS local
       # auto-signé si besoin.
       SERVER_NAME: ${SERVER_NAME:-:80}

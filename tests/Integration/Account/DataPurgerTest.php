@@ -103,7 +103,7 @@ final class DataPurgerTest extends KernelTestCase
         self::assertSame(1, $summary->pendingAccounts);
         self::assertFalse($this->userExists(self::EMAIL));
         self::assertSame(0, repository(ResetPasswordRequest::class)->count());
-        self::assertQueuedEmailCount(1, message: 'Seule l\'invitation part : un compte en attente supprimé ne reçoit pas de mail.');
+        self::assertQueuedEmailCount(1, message: "Seule l'invitation part : un compte en attente supprimé ne reçoit pas de mail.");
     }
 
     public function testPendingAccountStays29DaysAfterItsInvitationExpired(): void

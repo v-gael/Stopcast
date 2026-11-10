@@ -17,7 +17,7 @@ security:
     firewalls:
         dev:
             # Ensure dev tools and static assets are always allowed
-            pattern: ^/(_profiler|_wdt|assets|build)/
+            pattern: ^/(_profiler(/|$)|(_wdt|assets|build)/)
             security: false
         # L'écran d'affichage s'authentifie par le cookie reçu à l'appairage, à
         # part des comptes : une session n'ouvre pas la page d'affichage, et le

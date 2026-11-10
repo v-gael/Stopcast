@@ -54,7 +54,7 @@ class ReplayDeletionsCommand extends Command
         try {
             $entries = $this->journal->entries();
         } catch (UnreadableDeletionJournalException $unreadableDeletionJournalException) {
-            $io->error(\sprintf('La ligne %d du journal est illisible : corrigez-la, puis relancez. Aucun compte n\'a été supprimé.', $unreadableDeletionJournalException->lineNumber));
+            $io->error(\sprintf("La ligne %d du journal est illisible : corrigez-la, puis relancez. Aucun compte n'a été supprimé.", $unreadableDeletionJournalException->lineNumber));
 
             return Command::FAILURE;
         }

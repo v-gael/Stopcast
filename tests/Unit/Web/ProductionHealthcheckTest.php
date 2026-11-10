@@ -25,7 +25,7 @@ final class ProductionHealthcheckTest extends TestCase
         $accepted = array_filter($patterns, static fn (string $pattern): bool => 1 === preg_match(\sprintf('{%s}i', $pattern), $host));
         self::assertNotEmpty(
             $accepted,
-            \sprintf('Le healthcheck de app interroge %s : TRUSTED_HOSTS doit l\'accepter, sinon il reçoit une 400 et le conteneur passe unhealthy.', $host),
+            \sprintf("Le healthcheck de app interroge %s : TRUSTED_HOSTS doit l'accepter, sinon il reçoit une 400 et le conteneur passe unhealthy.", $host),
         );
     }
 

@@ -133,7 +133,7 @@ final class ResetPasswordTest extends WebTestCase
     {
         $this->followResetLink('/reset-password/reset/'.str_repeat('x', 40));
 
-        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe n\'est pas valide.');
+        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe est invalide.');
     }
 
     public function testLinkCannotBeUsedTwice(): void
@@ -144,7 +144,7 @@ final class ResetPasswordTest extends WebTestCase
 
         $this->followResetLink($link);
 
-        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe n\'est pas valide.');
+        $this->assertLinkRefused('Le lien de réinitialisation du mot de passe est invalide.');
     }
 
     public function testLinkExpiresAfterAnHour(): void
@@ -154,7 +154,7 @@ final class ResetPasswordTest extends WebTestCase
         self::mockTime('+1 hour');
         $this->followResetLink($link);
 
-        $this->assertLinkRefused('Le lien dans votre e-mail est expiré.');
+        $this->assertLinkRefused('Le lien de votre e-mail est expiré.');
     }
 
     public function testLinkIsStillValidJustBeforeTheHour(): void
@@ -200,7 +200,7 @@ final class ResetPasswordTest extends WebTestCase
         $email = self::getMailerMessage();
         self::assertInstanceOf(Email::class, $email);
         if (1 !== preg_match('#http://localhost(/reset-password/reset/\S+)#', (string) $email->getTextBody(), $matches)) {
-            self::fail('Aucun lien de réinitialisation dans l\'email.');
+            self::fail("Aucun lien de réinitialisation dans l'email.");
         }
 
         return $matches[1];

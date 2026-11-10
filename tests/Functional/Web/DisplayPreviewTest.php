@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -24,6 +25,7 @@ final class DisplayPreviewTest extends WebTestCase
 {
     use Factories;
     use ResetDatabase;
+    use WebTestTrait;
 
     private KernelBrowser $client;
 
@@ -190,6 +192,24 @@ final class DisplayPreviewTest extends WebTestCase
         $this->client->request('GET', $url);
 
         self::assertResponseRedirects('/');
+    }
+
+    /**
+     * Un aperçu resté ouvert continue de relire son fragment après la perte de
+     * la session : la connexion suivante ne doit pas y ramener.
+     */
+    public function testLoggingInAfterAnOpenPreviewLostItsSessionOpensTheDevices(): void
+    {
+        $url = $this->devicePreview().'?fragment=1';
+        $this->client->getCookieJar()->clear();
+        $this->client->restart();
+
+        $this->client->xmlHttpRequest('GET', $url);
+        self::assertResponseRedirects('/');
+
+        $this->logIn($this->user->getEmail(), UserFactory::DEFAULT_PASSWORD);
+
+        self::assertResponseRedirects('/devices');
     }
 
     private function previewUrl(string $preview): string

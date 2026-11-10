@@ -21,6 +21,8 @@ final readonly class UserInviter
 {
     public const int INVITATION_LIFETIME = 86400;
 
+    public const int INVITATION_LIFETIME_IN_HOURS = self::INVITATION_LIFETIME / 3600;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         // La classe plutôt que l'interface : seule elle accepte une durée par lien (l'interface l'aura en 2.0).
@@ -57,7 +59,7 @@ final readonly class UserInviter
     private function assertPending(User $user): void
     {
         if (!$user->isPending()) {
-            throw new \LogicException(\sprintf('Le compte %s a déjà un mot de passe : il n\'est plus en attente d\'invitation.', $user->getEmail()));
+            throw new \LogicException(\sprintf("Le compte %s a déjà un mot de passe : il n'est plus en attente d'invitation.", $user->getEmail()));
         }
     }
 
@@ -73,7 +75,7 @@ final readonly class UserInviter
             ->context([
                 'invitationToken' => $invitationToken,
                 // « 24 heures » : la traduction du bundle dirait « 1 jour ».
-                'lifetimeInHours' => intdiv(self::INVITATION_LIFETIME, 3600),
+                'lifetimeInHours' => self::INVITATION_LIFETIME_IN_HOURS,
             ])
         );
     }
