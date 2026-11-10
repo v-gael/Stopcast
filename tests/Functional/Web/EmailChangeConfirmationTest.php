@@ -161,7 +161,7 @@ final class EmailChangeConfirmationTest extends WebTestCase
     {
         $link = $this->requestChangeAndForgetSession();
 
-        $this->client->request('GET', preg_replace('#_hash=.#', '_hash=~', $link));
+        $this->client->request('GET', (string) preg_replace('#_hash=.#', '_hash=~', $link));
 
         $this->assertInvalidLink();
     }

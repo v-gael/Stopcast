@@ -5,7 +5,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Responsable du traitement** : `v-gael`, particulier, joignable à `contact@gaelv.com`.
 - **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris) et les visiteurs des pages publiques.
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
-- **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
+- **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
 Dernière mise à jour : 10 novembre 2026.
 
@@ -60,7 +60,7 @@ Dernière mise à jour : 10 novembre 2026.
 | | |
 |---|---|
 | Finalité | Protéger le service et les comptes : journaux du serveur, limites de débit (connexion, mot de passe oublié, mot de passe actuel), captcha, refus des mots de passe ayant fuité. |
-| Données | Journaux : adresse IP tronquée, email masqué, requête (méthode, URL sans jeton de réinitialisation ni d'invitation, statut) et erreur ; aucun en-tête HTTP. Limites de débit : identifiant saisi ou compte, adresse IP, compteurs. Captcha : adresse IP, empreinte TLS, user-agent, transmis à Cloudflare Turnstile. Mots de passe ayant fuité : seuls les 5 premiers caractères de l'empreinte SHA-1 du mot de passe sont envoyés à Have I Been Pwned. |
+| Données | Journaux : adresse IP tronquée, email masqué, requête (méthode, URL sans jeton de réinitialisation, d'invitation ni de changement d'email, statut) et erreur ; aucun en-tête HTTP. Limites de débit : identifiant saisi ou compte, adresse IP, compteurs. Captcha : adresse IP, empreinte TLS, user-agent, transmis à Cloudflare Turnstile. Mots de passe ayant fuité : seuls les 5 premiers caractères de l'empreinte SHA-1 du mot de passe sont envoyés à Have I Been Pwned. |
 | Personnes concernées | Utilisateurs et visiteurs. |
 | Base légale | Intérêt légitime (sécurité du service). Pas de consentement pour le captcha : la CNIL en dispense les traceurs destinés à la sécurité d'un mécanisme d'authentification, et Turnstile ne protège que la connexion et « mot de passe oublié », sans son cookie de pre-clearance ; Cloudflare qualifie ses signaux de strictement nécessaires à la détection des robots. |
 | Durée | Journaux : jusqu'au déploiement suivant, qui recrée les conteneurs, et au plus 50 Mo par service (rotation par taille). Compteurs des limites : 15 minutes après le dernier essai. Captcha et contrôle des mots de passe : rien n'est conservé par Stopcast. |
