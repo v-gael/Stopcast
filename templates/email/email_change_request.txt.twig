@@ -1,0 +1,13 @@
+{% extends 'email/base.txt.twig' %}
+
+{% block content %}
+Bonjour,
+
+Cette adresse a été indiquée comme nouvelle adresse d'un compte Stopcast. Pour confirmer ce changement, suivez ce lien :
+
+{{ link }}
+
+Ce lien est valable 1 heure.
+
+Si vous n'avez rien demandé, ignorez ce message : aucun changement ne sera fait.
+{% endblock %}

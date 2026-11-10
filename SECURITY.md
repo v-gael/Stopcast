@@ -14,11 +14,15 @@ Seule la **dernière release** publiée reçoit des correctifs de sécurité.
 Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre glissante) :
 
 - à la connexion, par couple identifiant + adresse IP (`login_throttling`) ;
-- au changement de mot de passe et à la suppression du compte, avec un seul compteur par compte, partagé entre ces deux formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
+- au changement de mot de passe, au changement d'email et à la suppression du compte, avec un seul compteur par compte, partagé entre ces trois formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
 
 ## Captcha
 
 La connexion et « mot de passe oublié » demandent un captcha Cloudflare Turnstile, vérifié côté serveur avant le mot de passe ou l'envoi du mail. Un jeton refusé par Cloudflare bloque l'envoi ; si Cloudflare est injoignable, l'envoi passe et seules les limites ci-dessous protègent ces formulaires (voir [ADR 0004](docs/adr/0004-captcha-turnstile.md)).
+
+## Limite des demandes de changement d'email
+
+Un compte ne peut demander que **3 changements d'email par heure** (fenêtre glissante). Une demande compte dès que le mot de passe actuel est correct, même si l'adresse est ensuite refusée : un compte connecté ne peut pas tester sans limite quelles adresses ont un compte.
 
 ## Limite des demandes de réinitialisation du mot de passe
 
@@ -61,6 +65,7 @@ L'application ne croit les en-têtes `X-Forwarded-*` que venant des proxys list�
 - « Se souvenir de moi », sur case à cocher, garde la connexion **30 jours**.
 - Les deux cookies sont `HttpOnly` et `SameSite=Lax` ; en production, ils sont aussi `Secure` et préfixés `__Host-`, ce qui interdit à un autre site du domaine parent de les remplacer.
 - Changer son mot de passe déconnecte les autres sessions ouvertes sur le compte et invalide les cookies « se souvenir de moi » émis avant le changement.
+- Confirmer un changement d'email déconnecte les autres sessions ouvertes sur le compte, le navigateur qui confirme restant connecté, et invalide les cookies « se souvenir de moi », qui portent l'email. Les liens de réinitialisation du mot de passe en cours sont supprimés.
 - Les sessions sont stockées sur le serveur d'application : un redéploiement les ferme, « se souvenir de moi » reconnecte.
 
 ## Signaler une vulnérabilité

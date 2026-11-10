@@ -32,8 +32,6 @@ final class DeviceVoter extends Voter
     {
         $user = $token->getUser();
 
-        // L'email identifie le compte et ne change pas : il se compare aussi hors
-        // base, contrairement à un id encore nul.
-        return $user instanceof User && $subject->getOwner()->getUserIdentifier() === $user->getUserIdentifier();
+        return $user instanceof User && $subject->getOwner()->isSameAccountAs($user);
     }
 }

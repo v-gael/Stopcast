@@ -12,6 +12,7 @@
         </dl>
 
         <div class="mt-6 flex flex-wrap gap-3">
+            <twig:Button href="{{ path('app_account_email') }}" variant="secondary">Modifier mon adresse</twig:Button>
             <twig:Button href="{{ path('app_account_password') }}" variant="secondary">Modifier mon mot de passe</twig:Button>
             {# Hors Turbo, pour que le navigateur télécharge le fichier. #}
             <form method="post" action="{{ path('app_account_export') }}" data-turbo="false">

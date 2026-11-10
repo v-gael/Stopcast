@@ -10,8 +10,8 @@ namespace App\Logging;
  * - IPv4 tronquées en /24, IPv6 en /48 ;
  * - emails réduits à leurs premières lettres et à leur domaine de premier
  *   niveau (voir EMAIL) ;
- * - jeton d'un lien de réinitialisation du mot de passe ou d'invitation
- *   remplacé : il est secret tant qu'il est valable ;
+ * - jeton d'un lien de réinitialisation du mot de passe, d'invitation ou
+ *   de changement d'email remplacé : il est secret tant qu'il est valable ;
  * - dans un tableau (maskValues), valeur d'une clé « token » remplacée.
  */
 final class PersonalDataMasker
@@ -20,7 +20,7 @@ final class PersonalDataMasker
 
     // Une alternative par route à jeton ({token}) : PersonalDataMaskingTest
     // vérifie qu'aucune n'est oubliée.
-    private const string TOKEN_IN_URL = '#(/reset-password/reset/|/invitation/)[^/?\s"\'&]+#';
+    private const string TOKEN_IN_URL = '#(/reset-password/reset/|/invitation/|/email-change/)[^/?\s"\'&]+#';
 
     // jeanne@example.com devient j***@e***.com. Le domaine de premier niveau
     // est facultatif : PostgreSQL tronque les valeurs de ses messages d'erreur
