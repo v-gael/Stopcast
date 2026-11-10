@@ -51,7 +51,7 @@ final class LegalPrivacyTest extends WebTestCase
 
         $client->request('GET', '/confidentialite');
 
-        foreach (['OVH', 'Cloudflare', 'Brevo', 'Sentry', 'UptimeRobot', 'Healthchecks.io', 'Have I Been Pwned'] as $service) {
+        foreach (['OVH', 'Cloudflare', 'AhaSend', 'Sentry', 'UptimeRobot', 'Healthchecks.io', 'Have I Been Pwned'] as $service) {
             self::assertSelectorTextContains('main', $service);
         }
     }
@@ -71,15 +71,24 @@ final class LegalPrivacyTest extends WebTestCase
         self::assertCount(1, $crawler->filter('main a[href="https://www.cloudflare.com/turnstile-privacy-policy/"]'));
     }
 
-    public function testPrivacyPolicyDisclosesTheMailTrackingAddedByBrevo(): void
+    public function testPrivacyPolicyStatesThatMailsAreNotTracked(): void
     {
         $client = self::createClient();
 
         $client->request('GET', '/confidentialite');
 
-        self::assertSelectorTextContains('main', 'compter les ouvertures et les clics');
-        self::assertSelectorTextContains('main', "l'option de suivi anonyme de Brevo");
-        self::assertSelectorTextContains('main', "utilisez l'adresse écrite sous le bouton");
+        self::assertSelectorTextContains('main', 'sans suivi des ouvertures ni des clics');
+        self::assertSelectorTextContains('main', 'aucune image de suivi');
+        self::assertSelectorTextNotContains('main', 'Brevo');
+    }
+
+    public function testPrivacyPolicyDisclosesTheContentAnalysisByTheMailProvider(): void
+    {
+        $client = self::createClient();
+
+        $client->request('GET', '/confidentialite');
+
+        self::assertSelectorTextContains('main', 'analyser automatiquement leur contenu');
         self::assertSelectorTextContains('main', "l'intérêt légitime d'assurer l'envoi des mails");
     }
 
