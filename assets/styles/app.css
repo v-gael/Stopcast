@@ -66,3 +66,36 @@
         color: var(--color-slate-500);
     }
 }
+
+/*
+ * Ligne de rotation dont le quai a disparu : hachures, et message ancré au ⓘ
+ * de sa ligne. Sans ancrage CSS, le message reste centré à l'écran (la marge
+ * automatique, retirée par le preflight de Tailwind, est rétablie ici).
+ */
+@layer components {
+    .quay-gone {
+        background: repeating-linear-gradient(135deg, var(--color-slate-100) 0 6px, var(--color-white) 6px 12px);
+    }
+
+    .quay-gone__message {
+        margin: auto;
+    }
+
+    @supports (anchor-scope: --quay-gone-info) {
+        .quay-gone {
+            anchor-scope: --quay-gone-info;
+        }
+
+        .quay-gone__info {
+            anchor-name: --quay-gone-info;
+        }
+
+        .quay-gone__message {
+            inset: auto;
+            margin: calc(var(--spacing) * 1.5) 0;
+            position-anchor: --quay-gone-info;
+            position-area: bottom span-right;
+            position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+        }
+    }
+}

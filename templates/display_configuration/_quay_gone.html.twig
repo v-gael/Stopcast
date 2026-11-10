@@ -1,0 +1,21 @@
+{# Mention « Quai disparu » d'une ligne de rotation et son message : un popover natif, sans JavaScript (ancrage dans app.css). #}
+{% set message_id = 'quay-gone-' ~ configuration.id %}
+{% set quay_name = configuration.quay.name %}
+<p class="flex items-center gap-0.5 text-sm font-medium text-red-700">
+    Quai disparu
+    <button type="button" popovertarget="{{ message_id }}" class="quay-gone__info flex size-6 items-center justify-center rounded-full transition-colors hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="size-4" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9.5v4M10 6.5v.01"/></svg>
+        <span class="sr-only">Explications sur le quai {{ quay_name }}</span>
+    </button>
+</p>
+<div id="{{ message_id }}" popover role="dialog" aria-labelledby="{{ message_id }}-title" class="quay-gone__message w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white p-5 text-slate-900 shadow-lg">
+    <h3 id="{{ message_id }}-title" class="font-semibold">Quai « {{ quay_name }} » disparu</h3>
+    <p class="mt-2 text-sm text-slate-800">Ce quai n'est plus dans les données du réseau. Le dispositif ne l'affiche que si des passages sont encore annoncés. Vous pouvez le conserver, au cas où il reviendrait, ou le supprimer.</p>
+    <div class="mt-4 flex justify-end gap-2">
+        <twig:Button variant="secondary" popovertarget="{{ message_id }}" popovertargetaction="hide" autofocus>Conserver<span class="sr-only"> {{ name }}</span></twig:Button>
+        <form method="post" action="{{ path('app_display_configuration_delete', {id: configuration.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete-display-configuration-' ~ configuration.id) }}">
+            <twig:Button type="submit" variant="danger">Supprimer<span class="sr-only"> {{ name }}</span></twig:Button>
+        </form>
+    </div>
+</div>

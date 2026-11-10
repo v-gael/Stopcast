@@ -8,7 +8,8 @@
     <ol class="divide-y divide-slate-200">
         {% for configuration in configurations %}
             {% set name = configuration.label ?: configuration.quay.name %}
-            <li class="flex items-start gap-2 py-2">
+            {% set quay_gone = not configuration.quay.active %}
+            <li class="flex items-start gap-2 py-2{{ quay_gone ? ' quay-gone -mx-2 px-2' }}">
                 {# Flèches de rotation ; aux extrémités, un emplacement vide garde l'alignement. #}
                 <div class="flex shrink-0 flex-col gap-1">
                     {% for move in [
@@ -29,10 +30,13 @@
                     {% endfor %}
                 </div>
                 <div class="min-w-0 flex-1">
-                    {# Masquée : nom en gris moyen, qui garde un contraste AA. #}
-                    <p class="truncate font-medium {{ configuration.active ? 'text-slate-900' : 'text-slate-500' }}" data-label>{{ name }}</p>
-                    <p class="truncate text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
-                    {{ include('display_configuration/_deprecated_quay.html.twig') }}
+                    {# Masquée : nom en gris moyen, un cran plus foncé sur les hachures, pour garder un contraste AA. #}
+                    <p class="truncate font-medium {{ configuration.active ? 'text-slate-900' : (quay_gone ? 'text-slate-600' : 'text-slate-500') }}" data-label>{{ name }}</p>
+                    {% if quay_gone %}
+                        {{ include('display_configuration/_quay_gone.html.twig') }}
+                    {% else %}
+                        <p class="truncate text-sm text-slate-500">Quai {{ configuration.quay.name }}</p>
+                    {% endif %}
                 </div>
                 <div class="flex shrink-0 gap-1">
                     {# Interrupteur : vert, affichée ; gris, masquée. Son nom ne change pas, aria-checked porte l'état. #}

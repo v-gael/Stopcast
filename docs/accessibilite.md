@@ -47,7 +47,7 @@ Déjà conformes, sans changement : `lang="fr"`, titres de page distincts, landm
 | Badges (anneaux de couleur claire) | 1.4.11 | Décoratifs : le texte du badge porte l'information et atteint 4,5:1. |
 | Cases à cocher de 16 px | 2.5.8 | Exception d'espacement : aucune autre cible dans un cercle de 24 px, et le libellé, cliquable, agrandit la zone. |
 | Texte grisé des champs désactivés (slate-500 sur slate-100, 4,35:1) | 1.4.3 | Exemption des composants inactifs. |
-| Badge « Quai absent du dernier import » | 4.1.2 | L'explication est dans le `title` et en texte masqué : certains lecteurs d'écran pourraient la lire deux fois. |
+| Badge « Quai disparu » de la page de modification d'un quai | 4.1.2 | L'explication est dans le `title` et en texte masqué : certains lecteurs d'écran pourraient la lire deux fois. |
 
 ## Contrastes calculés
 

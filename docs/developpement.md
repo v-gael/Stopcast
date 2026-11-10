@@ -99,7 +99,7 @@ Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèr
 
 - Le quai se choisit par son nom dans un champ à autocomplétion qui ne propose que les quais actifs, suivis de leurs destinations desservies (« MAIRIE → Centre-ville, Hôtel de ville ») pour distinguer les deux sens de circulation.
 - Une nouvelle configuration se place en fin de rotation. Les boutons « Monter » et « Descendre » changent l'ordre dans lequel l'écran fait tourner les quais. Une configuration masquée garde sa place, mais n'est plus affichée.
-- Une configuration dont le quai a disparu du dernier import porte le badge « Quai absent du dernier import ». Elle reste modifiable sans changer de quai.
+- Une configuration dont le quai a disparu du dernier import a sa ligne hachurée dans la rotation, avec « Quai disparu » et un ⓘ qui ouvre un popover natif pour la conserver ou la supprimer. Sa page de modification porte le badge « Quai disparu ». Elle reste modifiable sans changer de quai.
 
 ## Front : Twig et Tailwind
 
