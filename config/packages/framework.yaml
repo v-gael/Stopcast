@@ -26,6 +26,12 @@ framework:
                 base_uri: 'https://challenges.cloudflare.com'
                 timeout: 5
                 max_duration: 5
+            # API Pwned Passwords, branchée sur le validateur par Kernel. Au-delà
+            # de 5 s, le mot de passe est accepté : le formulaire n'attend pas.
+            hibp.client:
+                base_uri: 'https://api.pwnedpasswords.com'
+                timeout: 5
+                max_duration: 5
 
     #esi: true
     #fragments: true

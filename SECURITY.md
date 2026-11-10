@@ -16,6 +16,10 @@ Un mot de passe ne peut être essayé que **5 fois par 15 minutes** (fenêtre gl
 - à la connexion, par couple identifiant + adresse IP (`login_throttling`) ;
 - au changement de mot de passe, au changement d'email et à la suppression du compte, avec un seul compteur par compte, partagé entre ces trois formulaires. Seul un mot de passe actuel erroné consomme un essai, un mot de passe juste remet le compteur à zéro. Au-delà, le mot de passe saisi n'est plus vérifié, la session reste ouverte, et le dépassement est journalisé.
 
+## Mots de passe ayant fuité
+
+Un nouveau mot de passe présent dans une fuite connue est refusé, partout où l'on en choisit un. Stopcast interroge [Have I Been Pwned](https://haveibeenpwned.com/Passwords) par k-anonymat : seuls les 5 premiers caractères de l'empreinte SHA-1 du mot de passe sont envoyés. Si le service est injoignable, répond en erreur ou dépasse 5 secondes, le mot de passe est accepté et seules les autres règles s'appliquent.
+
 ## Captcha
 
 La connexion et « mot de passe oublié » demandent un captcha Cloudflare Turnstile, vérifié côté serveur avant le mot de passe ou l'envoi du mail. Un jeton refusé par Cloudflare bloque l'envoi ; si Cloudflare est injoignable, l'envoi passe et seules les limites ci-dessous protègent ces formulaires (voir [ADR 0004](docs/adr/0004-captcha-turnstile.md)).
