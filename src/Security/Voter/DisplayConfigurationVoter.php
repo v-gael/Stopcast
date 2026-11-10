@@ -31,7 +31,6 @@ final class DisplayConfigurationVoter extends Voter
     {
         $user = $token->getUser();
 
-        // Même comparaison par email que DeviceVoter.
-        return $user instanceof User && $subject->getDevice()->getOwner()->getUserIdentifier() === $user->getUserIdentifier();
+        return $user instanceof User && $subject->getDevice()->getOwner()->isSameAccountAs($user);
     }
 }

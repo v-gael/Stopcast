@@ -76,6 +76,24 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
     }
 
+    public function testDeprecatedQuayWithoutPassageLeavesTheRotation(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
+
+        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+    }
+
+    public function testDeviceWhoseQuaysAllDisappearedShowsItsStateScreen(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
+
+        self::assertNotContains('VIEUX QUAI', $this->displayedQuays($device));
+        self::assertSelectorTextSame('.screen__message', 'Aucun quai affiché');
+    }
+
     public function testDeletingRemovesTheConfigurationFromTheRotation(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
@@ -410,16 +428,102 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame('GARE', $this->reload($configuration)->getQuay()->getName());
     }
 
+    public function testConfigurationOnADeprecatedQuayIsFlaggedAndExplainedInARow(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        $row = $crawler->filter('main li')->eq(0);
+        self::assertStringContainsString('quay-deprecated', (string) $row->attr('class'));
+        self::assertStringContainsString('Quai disparu', $row->text());
+        self::assertStringNotContainsString('Quai VIEUX QUAI', $row->text());
+        self::assertStringNotContainsString('Quai absent du dernier import', $row->text());
+
+        $info = $row->filter('button[popovertarget]:not([popovertargetaction])');
+        self::assertCount(1, $info);
+        self::assertStringContainsString('VIEUX QUAI', $info->text());
+
+        $message = $row->filter('#'.$info->attr('popovertarget'));
+        self::assertSame('', $message->attr('popover'));
+        self::assertSame('dialog', $message->attr('role'));
+        self::assertSame('Quai « VIEUX QUAI » disparu', $row->filter('#'.$message->attr('aria-labelledby'))->text());
+        self::assertStringContainsString("Ce quai n'est plus dans les données du réseau. Le dispositif ne l'affiche que si des passages sont encore annoncés. Vous pouvez le conserver, au cas où il reviendrait, ou le supprimer.", $message->text());
+
+        $keep = $message->selectButton('Conserver');
+        self::assertSame($info->attr('popovertarget'), $keep->attr('popovertarget'));
+        self::assertSame('hide', $keep->attr('popovertargetaction'));
+        self::assertNotNull($keep->attr('autofocus'));
+    }
+
+    public function testDeletingFromTheMessageSkipsTheConfirmation(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier');
+        $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $form = $crawler->filter('main li [popover]')->selectButton('Supprimer')->form();
+        self::assertFalse($form->getFormNode()->hasAttribute('data-turbo-confirm'));
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="status"]', 'Le quai « Ancien arrêt » a été supprimé.');
+        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+    }
+
+    public function testConfigurationOnAnActiveQuayHasNoFlagNorMessage(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $this->configure($device, 'Premier', $this->quay('S1', 'MAIRIE'));
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        $row = $crawler->filter('main li')->eq(0);
+        self::assertStringNotContainsString('quay-deprecated', (string) $row->attr('class'));
+        self::assertStringContainsString('Quai MAIRIE', $row->text());
+        self::assertCount(0, $row->filter('[popover], [popovertarget]'));
+    }
+
+    public function testRowBecomesNormalWhenTheQuayComesBack(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $quay = $this->quay('S9', 'VIEUX QUAI', deprecated: true);
+        $this->configure($device, 'Ancien arrêt', $quay);
+
+        $entityManager = $this->entityManager();
+        $entityManager->find(Quay::class, $quay->getId())?->markActive();
+        $entityManager->flush();
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        $row = $crawler->filter('main li')->eq(0);
+        self::assertStringNotContainsString('quay-deprecated', (string) $row->attr('class'));
+        self::assertStringContainsString('Quai VIEUX QUAI', $row->text());
+    }
+
+    public function testHiddenConfigurationOnADeprecatedQuayKeepsAReadableName(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $configuration = $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
+        $configuration->setActive(false);
+        $this->entityManager()->flush();
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
+        self::assertStringContainsString('text-slate-600', (string) $crawler->filter('main li [data-label]')->attr('class'));
+    }
+
     public function testConfigurationOnADeprecatedQuayStaysEditableWithoutChangingQuay(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $configuration = $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
 
-        $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        self::assertSelectorTextContains('main li', 'Quai absent du dernier import');
-
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
-        self::assertSelectorTextContains('main', 'Quai absent du dernier import');
+        self::assertSelectorTextContains('main .mb-6', 'Quai disparu');
+        self::assertCount(0, $crawler->filter('main [popover]'));
         $this->client->submit($crawler->selectButton('Enregistrer')->form(['display_configuration[label]' => 'Toujours là']));
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);

@@ -1,0 +1,17 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Confirmer ma nouvelle adresse · Stopcast{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Confirmer ma nouvelle adresse" :titleLevel="1" class="max-w-md">
+            <p class="mb-4 text-slate-600">Confirmer le changement vers {{ newEmail }}</p>
+
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+
+                <twig:Button type="submit">Confirmer</twig:Button>
+            {{ form_end(form) }}
+        </twig:Card>
+    </section>
+{% endblock %}

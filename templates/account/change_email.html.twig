@@ -1,0 +1,20 @@
+{% extends 'layout/space.html.twig' %}
+
+{% block title %}Modifier mon adresse · Stopcast{% endblock %}
+
+{% block content %}
+    <h1 class="mb-6 text-2xl font-bold text-slate-900">Modifier mon adresse</h1>
+
+    <twig:Card class="max-w-md">
+        <p class="mb-4 text-slate-600">Un lien de confirmation sera envoyé à la nouvelle adresse. L'adresse de votre compte ne changera qu'une fois ce lien confirmé.</p>
+
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+
+            <div class="flex flex-wrap gap-3">
+                <twig:Button type="submit">Envoyer le lien</twig:Button>
+                <twig:Button href="{{ path('app_account') }}" variant="secondary">Annuler</twig:Button>
+            </div>
+        {{ form_end(form) }}
+    </twig:Card>
+{% endblock %}

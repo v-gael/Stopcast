@@ -52,13 +52,20 @@ final readonly class DisplayAssembler
 
     /**
      * Mêmes écrans que forDevice, sur les passages d'exemple : pour l'aperçu,
-     * sans appel au flux temps réel.
+     * sans appel au flux temps réel. Un quai déprécié en est exclu : sans
+     * passage annoncé, cas courant, l'écran réel le saute.
      *
      * @return list<DisplayItem>
      */
     public function sampleForDevice(Device $device): array
     {
-        return array_map($this->sampleForConfiguration(...), $device->getActiveDisplayConfigurations());
+        return array_values(array_map(
+            $this->sampleForConfiguration(...),
+            array_filter(
+                $device->getActiveDisplayConfigurations(),
+                static fn (DisplayConfiguration $configuration): bool => $configuration->getQuay()->isActive(),
+            ),
+        ));
     }
 
     /**
@@ -79,6 +86,7 @@ final readonly class DisplayAssembler
             label: $configuration->getLabel(),
             quayName: $configuration->getQuay()->getName(),
             nextPassages: $nextPassages,
+            quayDeprecated: !$configuration->getQuay()->isActive(),
         );
     }
 }

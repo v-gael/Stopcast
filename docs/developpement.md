@@ -33,7 +33,7 @@ L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs,
 make console c="app:user:create lea@example.com --role=ROLE_ADMIN"
 ```
 
-Le mot de passe (12 caractères minimum) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
+Le mot de passe (12 caractères minimum, dont au moins une lettre, un chiffre et un caractère spécial) est demandé deux fois, sans s'afficher. L'option `--password` le passe directement, au prix de le laisser dans l'historique du shell. Sans `--role`, le compte est `ROLE_USER`. Le compte est actif tout de suite.
 
 La connexion se fait depuis la vitrine et mène à la liste de ses dispositifs. « Se souvenir de moi » garde la session 30 jours, et les tentatives échouées sont limitées (5 par minute pour un même email et une même IP).
 
@@ -43,7 +43,7 @@ La connexion et « mot de passe oublié » portent un captcha Cloudflare Turnsti
 
 Depuis « Mon compte », « Supprimer mon compte » supprime le compte, immédiatement et définitivement, après confirmation par le mot de passe actuel. Ses dispositifs et leurs configurations disparaissent avec lui : leurs écrans appairés reviennent à l'écran d'appairage. Tout compte peut se supprimer, y compris le dernier administrateur ; l'accès de secours reste `app:user:create`. Un email, sans lien ni détail, prévient l'adresse du compte supprimé, que la suppression vienne de la personne ou d'un administrateur : « Votre compte Stopcast a été supprimé, avec ses écrans d'affichage. Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur. » Un compte en attente ne reçoit rien : le supprimer annule simplement son invitation.
 
-Depuis « Mon compte », « Télécharger mes données » renvoie un fichier JSON, `stopcast-donnees-AAAA-MM-JJ.json`, pour les droits d'accès et de portabilité : le compte (email, rôle, date de création, date de dernière connexion), ses dispositifs et leurs configurations d'affichage (quai, libellé, position, état, dates en ISO 8601). Il ne contient ni le hash du mot de passe, ni le haché du cookie des écrans, ni les identifiants internes ; les logs se demandent par email. La réponse n'est pas mise en cache (`Cache-Control: no-store`).
+Depuis « Mon compte », « Télécharger mes données » renvoie un fichier JSON, `stopcast-donnees-AAAA-MM-JJ.json`, pour les droits d'accès et de portabilité : le compte (email, rôle, date de création, date de dernière connexion, date de l'avertissement d'inactivité, nulle dès qu'une connexion l'a annulé), ses dispositifs (libellé, état, durée d'affichage, intervalle de rafraîchissement, date du dernier contact de l'écran) et leurs configurations d'affichage (quai, libellé, position, état), avec les dates en ISO 8601. Il ne contient ni le hash du mot de passe, ni le haché du cookie des écrans, ni les identifiants internes ; les logs se demandent par email. La réponse n'est pas mise en cache (`Cache-Control: no-store`).
 
 Un administrateur voit tous les comptes depuis « Utilisateurs » (`/admin/users`), du plus récent au plus ancien : email, rôle, statut (« Actif » ou « Invitation en attente »), nombre de dispositifs et date de création. Ce lien de navigation n'apparaît que pour `ROLE_ADMIN`. « Modifier » change le rôle d'un compte, jamais son email ; ses sessions ouvertes sont alors déconnectées. « Supprimer » supprime un autre compte, avec ses dispositifs et leurs configurations, après une confirmation qui annonce combien de dispositifs partent avec lui ; un administrateur supprime son propre compte depuis « Mon compte », avec son mot de passe.
 
@@ -99,7 +99,7 @@ Une configuration d'affichage dit quel quai un dispositif affiche. Elles se gèr
 
 - Le quai se choisit par son nom dans un champ à autocomplétion qui ne propose que les quais actifs, suivis de leurs destinations desservies (« MAIRIE → Centre-ville, Hôtel de ville ») pour distinguer les deux sens de circulation.
 - Une nouvelle configuration se place en fin de rotation. Les boutons « Monter » et « Descendre » changent l'ordre dans lequel l'écran fait tourner les quais. Une configuration masquée garde sa place, mais n'est plus affichée.
-- Une configuration dont le quai a disparu du dernier import porte le badge « Quai absent du dernier import ». Elle reste modifiable sans changer de quai.
+- Une configuration dont le quai a disparu du dernier import a sa ligne hachurée dans la rotation, avec « Quai disparu » et un ⓘ qui ouvre un popover natif pour la conserver ou la supprimer. Sa page de modification porte le badge « Quai disparu ». Elle reste modifiable sans changer de quai.
 
 ## Front : Twig et Tailwind
 
@@ -197,7 +197,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
 - Les rôles en session sont comparés à ceux relus en base : après avoir changé le rôle d'un compte, le relire (`refresh()`) avant `loginUser()`, sinon sa session est déconnectée à la requête suivante.
 - La durée d'un lien du reset-password-bundle (`expirationMessageKey|trans`) s'affiche dans la plus grande unité entière : 86 400 s donne « 1 jour », pas « 24 heures ».
-- Les limites d'essais (connexion, mot de passe actuel et demandes de réinitialisation) partagent en test un stockage en mémoire, `app.rate_limiter.test_storage`, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`, `ResetPasswordThrottlingTest` et `TrustedProxiesTest`) ; sans lui, chaque requête repart d'un compteur vide.
+- Les limites d'essais (connexion, mot de passe actuel, demandes de réinitialisation et de changement d'email) partagent en test un stockage en mémoire, `app.rate_limiter.test_storage`, qui ne survit d'une requête à l'autre qu'avec `disableReboot()` (voir `CurrentPasswordThrottlingTest`, `ResetPasswordThrottlingTest` et `TrustedProxiesTest`) ; sans lui, chaque requête repart d'un compteur vide.
 - `TRUSTED_PROXIES` est lu au démarrage du noyau et appliqué en statique sur `Request` : pour le fixer dans un test, le définir dans `$_ENV` et `$_SERVER` avant `createClient()`, puis remettre la valeur d'origine et `Request::setTrustedProxies([], 0)` dans `tearDown()` (voir `TrustedProxiesTest`). Le client de test envoie ses requêtes depuis `127.0.0.1`, avec l'hôte `localhost`.
 - Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache (`make cc`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - Les cookies de l'écran d'affichage sont `Secure` en HTTPS, comme en prod, et BrowserKit ne renvoie un cookie `Secure` qu'en HTTPS : créer le client avec `self::createClient(server: ['HTTPS' => 'on'])` (voir `DisplayPairingTest`).
@@ -281,3 +281,39 @@ Valeurs par environnement :
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
 - Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases. Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
 - Quand `develop` avance pendant qu'une PR est ouverte, fusionner `develop` dans la branche en local, puis pousser : relancer un check de la PR ne suffit pas, il réutilise l'ancien commit de fusion avec `develop`.
+
+### Publier une release
+
+Les versions suivent [SemVer](https://semver.org/lang/fr/), étiquetées `vX.Y.Z` sur `main`. Tant que la version est en `0.x` : le mineur monte pour une fonctionnalité ou un changement incompatible (`0.1.0` → `0.2.0`), le patch pour des corrections seules (`0.1.0` → `0.1.1`).
+
+Merger sur `main` met en production ([exploitation.md](exploitation.md#déploiement)). Depuis `develop` à jour :
+
+```sh
+git switch -c release/X.Y.Z
+git push -u origin release/X.Y.Z
+gh pr create --base main --title 'chore(release): vX.Y.Z' --body '<résumé de la release>'
+```
+
+La CI passée, merger la PR avec un commit de merge, puis étiqueter ce commit et publier la release :
+
+```sh
+gh pr merge --merge release/X.Y.Z
+git fetch origin
+git tag -a vX.Y.Z -m 'vX.Y.Z' origin/main
+git push origin vX.Y.Z
+gh release create vX.Y.Z --verify-tag --title vX.Y.Z --generate-notes
+```
+
+Le push du tag ajoute l'étiquette `vX.Y.Z` à l'image déjà publiée pour ce commit (`tag-image.yml`). Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
+
+Les notes listent les PR mergées depuis la release précédente, rangées par `.github/release.yml` en Fonctionnalités, Corrections, Sécurité et Maintenance. GitHub ne les trie que par labels : `label-release-notes.yml` pose le label d'après le titre de chaque PR.
+
+| Titre de la PR | Label | Catégorie |
+|---|---|---|
+| `chore(release): …` | `release` | Aucune, exclue des notes |
+| type ou scope `security` | `security` | Sécurité |
+| `feat…` | `enhancement` | Fonctionnalités |
+| `fix…` | `bug` | Corrections |
+| Le reste | Aucun | Maintenance |
+
+Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main` : une modification n'agit qu'une fois mergée sur `main`.

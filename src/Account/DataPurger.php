@@ -119,7 +119,8 @@ final readonly class DataPurger
                 ->textTemplate('email/inactivity_warning.txt.twig')
             );
 
-            // Daté après l'envoi : un compte dont le mail n'est pas parti n'est pas supprimé.
+            // Le mail n'est qu'en file à ce stade : s'il échoue, il faut le relancer à la main
+            // (docs/exploitation.md, « Mails en échec »), sinon le compte sera supprimé sans avertissement.
             $user->markInactivityWarned($now);
             $this->entityManager->flush();
         }

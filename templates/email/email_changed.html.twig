@@ -1,0 +1,7 @@
+{% extends 'email/base.html.twig' %}
+
+{% block content %}
+    <p style="margin: 0 0 16px;">Bonjour,</p>
+    <p style="margin: 0 0 16px;">L'adresse de votre compte Stopcast a été remplacée par {{ maskedNewEmail }}. Cette adresse-ci ne permet plus de vous connecter.</p>
+    <p style="margin: 0;">Si vous n'êtes pas à l'origine de ce changement, contactez l'administrateur.</p>
+{% endblock %}

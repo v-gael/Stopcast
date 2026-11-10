@@ -25,7 +25,7 @@ final readonly class AccountDataExporter
     /**
      * @return array{
      *     exportedAt: string,
-     *     account: array{email: string, role: string, createdAt: string, lastLoginAt: ?string},
+     *     account: array{email: string, role: string, createdAt: string, lastLoginAt: ?string, inactivityWarnedAt: ?string},
      *     devices: list<array<string, mixed>>,
      * }
      */
@@ -38,6 +38,7 @@ final readonly class AccountDataExporter
                 'role' => $user->getRole()->value,
                 'createdAt' => $user->getCreatedAt()->format(\DATE_ATOM),
                 'lastLoginAt' => $user->getLastLoginAt()?->format(\DATE_ATOM),
+                'inactivityWarnedAt' => $user->getInactivityWarnedAt()?->format(\DATE_ATOM),
             ],
             'devices' => array_map(
                 $this->device(...),
@@ -54,6 +55,9 @@ final readonly class AccountDataExporter
         return [
             'label' => $device->getLabel(),
             'active' => $device->isActive(),
+            'screenDuration' => $device->getScreenDuration(),
+            'refreshInterval' => $device->getRefreshInterval(),
+            'lastSeenAt' => $device->getLastSeenAt()?->format(\DATE_ATOM),
             'createdAt' => $device->getCreatedAt()->format(\DATE_ATOM),
             'updatedAt' => $device->getUpdatedAt()->format(\DATE_ATOM),
             'displayConfigurations' => array_map(

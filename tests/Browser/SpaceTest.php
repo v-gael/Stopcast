@@ -38,6 +38,8 @@ final class SpaceTest extends PantherTestCase
 
     private const string EMAIL = 'admin@example.com';
 
+    private const string COPY_BUTTON = 'button[data-clipboard-target="button"]';
+
     private Client $client;
 
     private Device $device;
@@ -104,6 +106,67 @@ final class SpaceTest extends PantherTestCase
     }
 
     /**
+     * Le presse-papiers est simulé : Chrome headless refuse d'y écrire sans
+     * autorisation.
+     */
+    public function testCopyButtonCopiesTheDisplayAddress(): void
+    {
+        $this->visitPairingPageWithCopyButton();
+        $this->client->executeScript('navigator.clipboard.writeText = async (text) => { window.stopcastCopied = text; };');
+
+        $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector(self::COPY_BUTTON))->click();
+
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copié');
+        self::assertSelectorTextSame('main [role="status"]', 'Copié');
+        $copied = $this->client->executeScript('return window.stopcastCopied;');
+        self::assertIsString($copied);
+        self::assertStringEndsWith('/display', $copied);
+
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copier');
+        $this->assertNoBrowserErrors($this->client, "copie de l'adresse");
+    }
+
+    /**
+     * Un retour arrière restaure une copie de la page prise par Turbo, ici
+     * pendant que le bouton dit « Copié ».
+     */
+    public function testCopyButtonComesBackToItsLabelFromARestoredPage(): void
+    {
+        $this->visitPairingPageWithCopyButton();
+        $this->client->executeScript('navigator.clipboard.writeText = async () => {};');
+        $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector(self::COPY_BUTTON))->click();
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copié');
+
+        $this->client->executeScript('const block = document.querySelector(\'[data-controller="clipboard"]\'); block.replaceWith(block.cloneNode(true));');
+
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copier', 5);
+        $this->assertNoBrowserErrors($this->client, 'page restaurée');
+    }
+
+    public function testCopyButtonSaysWhenTheBrowserRefuses(): void
+    {
+        $this->visitPairingPageWithCopyButton();
+        $this->client->executeScript('navigator.clipboard.writeText = () => Promise.reject(new DOMException("refus", "NotAllowedError"));');
+
+        $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector(self::COPY_BUTTON))->click();
+
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copie impossible');
+        self::assertSelectorTextSame('main [role="status"]', 'Copie impossible');
+        $this->assertNoBrowserErrors($this->client, 'copie refusée');
+    }
+
+    /**
+     * Le QR code prend sa taille de l'espace connecté, sans la feuille de
+     * style de l'écran d'appairage.
+     */
+    public function testPairingPageSizesTheQrCode(): void
+    {
+        $this->visitWithCleanConsole($this->client, $this->devicePath().'/pair');
+
+        self::assertSame(128, $this->client->executeScript('return Math.round(document.querySelector(\'main [role="img"] svg\').getBoundingClientRect().width);'));
+    }
+
+    /**
      * @return iterable<string, array{string, string}>
      */
     public static function otherPages(): iterable
@@ -119,6 +182,12 @@ final class SpaceTest extends PantherTestCase
         $this->visitWithCleanConsole($this->client, $path);
 
         self::assertSelectorTextContains('main h1', $heading);
+    }
+
+    private function visitPairingPageWithCopyButton(): void
+    {
+        $this->visitWithCleanConsole($this->client, $this->devicePath().'/pair');
+        $this->client->waitForVisibility(self::COPY_BUTTON);
     }
 
     private function devicePath(): string

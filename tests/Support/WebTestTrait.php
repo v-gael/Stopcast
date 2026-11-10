@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\User;
+use App\Factory\UserFactory;
 use App\Security\TurnstileVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -98,14 +99,35 @@ trait WebTestTrait
     }
 
     /**
+     * Demande de changement d'email depuis « Mon compte », connecté.
+     */
+    private function requestEmailChange(string $email, string $password = UserFactory::DEFAULT_PASSWORD): void
+    {
+        $this->browser()->request('GET', '/account/email');
+        $this->browser()->submitForm('Envoyer le lien', [
+            'change_email[newEmail]' => $email,
+            'change_email[currentPassword]' => $password,
+        ]);
+    }
+
+    /**
+     * Dernier email envoyé par la dernière requête.
+     */
+    private function lastEmail(): Email
+    {
+        $email = self::getMailerMessage();
+        self::assertInstanceOf(Email::class, $email);
+
+        return $email;
+    }
+
+    /**
      * Jeton du lien de l'email envoyé par la dernière requête : le premier
      * groupe capturé par le motif dans la version texte.
      */
     private function tokenFromEmail(string $pattern): string
     {
-        $email = self::getMailerMessage();
-        self::assertInstanceOf(Email::class, $email);
-        if (1 !== preg_match($pattern, (string) $email->getTextBody(), $matches)) {
+        if (1 !== preg_match($pattern, (string) $this->lastEmail()->getTextBody(), $matches)) {
             self::fail("Aucun lien dans l'email.");
         }
 

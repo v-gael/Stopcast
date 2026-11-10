@@ -23,7 +23,7 @@ final class UserCreateCommandTest extends KernelTestCase
 
     private const string EMAIL = 'lea@example.com';
 
-    private const string PASSWORD = 'un-mot-de-passe-solide';
+    private const string PASSWORD = 'un-mot-de-passe-solide-1';
 
     public function testCreatesAnActiveUserByDefault(): void
     {

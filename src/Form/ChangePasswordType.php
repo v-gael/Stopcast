@@ -31,7 +31,7 @@ final class ChangePasswordType extends AbstractType
                 'invalid_message' => 'Les deux mots de passe ne correspondent pas.',
                 'first_options' => [
                     'label' => 'Nouveau mot de passe',
-                    'help' => \sprintf('%d caractères minimum.', PasswordRequirements::MIN_LENGTH),
+                    'help' => PasswordRequirements::HELP,
                     'attr' => ['autocomplete' => 'new-password'],
                 ],
                 'second_options' => [

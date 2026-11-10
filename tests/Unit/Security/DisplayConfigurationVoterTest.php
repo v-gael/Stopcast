@@ -10,6 +10,7 @@ use App\Entity\Quay;
 use App\Entity\User;
 use App\Enum\Role;
 use App\Security\Voter\DisplayConfigurationVoter;
+use App\Tests\Support\UserWithIdTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Authentication\Token\NullToken;
@@ -19,6 +20,8 @@ use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 
 final class DisplayConfigurationVoterTest extends TestCase
 {
+    use UserWithIdTrait;
+
     /**
      * @return iterable<string, array{string}>
      */
@@ -31,7 +34,7 @@ final class DisplayConfigurationVoterTest extends TestCase
     #[DataProvider('attributes')]
     public function testDeviceOwnerIsGranted(string $attribute): void
     {
-        $owner = new User('lea@example.com');
+        $owner = $this->userWithId(1, 'lea@example.com');
 
         self::assertSame(VoterInterface::ACCESS_GRANTED, $this->vote($this->tokenFor($owner), $this->configurationOf($owner), $attribute));
     }
@@ -39,25 +42,39 @@ final class DisplayConfigurationVoterTest extends TestCase
     #[DataProvider('attributes')]
     public function testAnotherUserIsDenied(string $attribute): void
     {
-        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor(new User('noe@example.com')), $this->configurationOf(new User('lea@example.com')), $attribute));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor($this->userWithId(2, 'noe@example.com')), $this->configurationOf($this->userWithId(1, 'lea@example.com')), $attribute));
     }
 
     #[DataProvider('attributes')]
     public function testAdministratorIsDeniedOnAnotherUsersConfiguration(string $attribute): void
     {
-        $administrator = new User('admin@example.com', Role::Admin);
+        $administrator = $this->userWithId(3, 'admin@example.com', Role::Admin);
 
-        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor($administrator), $this->configurationOf(new User('lea@example.com')), $attribute));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor($administrator), $this->configurationOf($this->userWithId(1, 'lea@example.com')), $attribute));
+    }
+
+    public function testOwnerKeepsAccessWhenTheEmailOfTheirSessionDiffers(): void
+    {
+        $configuration = $this->configurationOf($this->userWithId(1, 'lea@example.com'));
+
+        self::assertSame(VoterInterface::ACCESS_GRANTED, $this->vote($this->tokenFor($this->userWithId(1, 'lea.nouvelle@example.com')), $configuration, DisplayConfigurationVoter::EDIT));
+    }
+
+    public function testUnsavedUserIsDenied(): void
+    {
+        $configuration = $this->configurationOf(new User('lea@example.com'));
+
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($this->tokenFor(new User('noe@example.com')), $configuration, DisplayConfigurationVoter::EDIT));
     }
 
     public function testAnonymousVisitorIsDenied(): void
     {
-        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new NullToken(), $this->configurationOf(new User('lea@example.com')), DisplayConfigurationVoter::EDIT));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new NullToken(), $this->configurationOf($this->userWithId(1, 'lea@example.com')), DisplayConfigurationVoter::EDIT));
     }
 
     public function testOtherAttributesAndSubjectsAreNotItsConcern(): void
     {
-        $owner = new User('lea@example.com');
+        $owner = $this->userWithId(1, 'lea@example.com');
 
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($this->tokenFor($owner), $this->configurationOf($owner), 'ROLE_USER'));
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($this->tokenFor($owner), new Device($owner, 'Salon'), DisplayConfigurationVoter::EDIT));
