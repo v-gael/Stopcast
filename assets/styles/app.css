@@ -73,27 +73,27 @@
  * automatique, retirée par le preflight de Tailwind, est rétablie ici).
  */
 @layer components {
-    .quay-gone {
+    .quay-deprecated {
         background: repeating-linear-gradient(135deg, var(--color-slate-100) 0 6px, var(--color-white) 6px 12px);
     }
 
-    .quay-gone__message {
+    .quay-deprecated__message {
         margin: auto;
     }
 
-    @supports (anchor-scope: --quay-gone-info) {
-        .quay-gone {
-            anchor-scope: --quay-gone-info;
+    @supports (anchor-scope: --quay-deprecated-info) {
+        .quay-deprecated {
+            anchor-scope: --quay-deprecated-info;
         }
 
-        .quay-gone__info {
-            anchor-name: --quay-gone-info;
+        .quay-deprecated__info {
+            anchor-name: --quay-deprecated-info;
         }
 
-        .quay-gone__message {
+        .quay-deprecated__message {
             inset: auto;
             margin: calc(var(--spacing) * 1.5) 0;
-            position-anchor: --quay-gone-info;
+            position-anchor: --quay-deprecated-info;
             position-area: bottom span-right;
             position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
         }

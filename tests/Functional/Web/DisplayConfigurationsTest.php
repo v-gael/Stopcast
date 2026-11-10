@@ -436,7 +436,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
 
         $row = $crawler->filter('main li')->eq(0);
-        self::assertStringContainsString('quay-gone', (string) $row->attr('class'));
+        self::assertStringContainsString('quay-deprecated', (string) $row->attr('class'));
         self::assertStringContainsString('Quai disparu', $row->text());
         self::assertStringNotContainsString('Quai VIEUX QUAI', $row->text());
         self::assertStringNotContainsString('Quai absent du dernier import', $row->text());
@@ -482,7 +482,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
 
         $row = $crawler->filter('main li')->eq(0);
-        self::assertStringNotContainsString('quay-gone', (string) $row->attr('class'));
+        self::assertStringNotContainsString('quay-deprecated', (string) $row->attr('class'));
         self::assertStringContainsString('Quai MAIRIE', $row->text());
         self::assertCount(0, $row->filter('[popover], [popovertarget]'));
     }
@@ -500,7 +500,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
 
         $row = $crawler->filter('main li')->eq(0);
-        self::assertStringNotContainsString('quay-gone', (string) $row->attr('class'));
+        self::assertStringNotContainsString('quay-deprecated', (string) $row->attr('class'));
         self::assertStringContainsString('Quai VIEUX QUAI', $row->text());
     }
 

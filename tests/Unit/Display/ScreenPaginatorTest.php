@@ -19,8 +19,8 @@ final class ScreenPaginatorTest extends TestCase
     public function testEachConfigurationGivesOneScreenPerFivePassages(): void
     {
         $screens = $this->paginate([
-            new DisplayItem('Centre', 'CENTRE VILLE', $this->passages(7)),
-            new DisplayItem(null, 'GARE', $this->passages(5)),
+            new DisplayItem('Centre', 'CENTRE VILLE', $this->passages(7), quayDeprecated: false),
+            new DisplayItem(null, 'GARE', $this->passages(5), quayDeprecated: false),
         ]);
 
         self::assertSame(['CENTRE VILLE', 'CENTRE VILLE', 'GARE'], array_map(static fn (Screen $screen): string => $screen->quayName, $screens));
@@ -31,7 +31,7 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testConfigurationWithoutPassageGivesTheNoBusScreen(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'GARE', [])]);
+        $screens = $this->paginate([new DisplayItem(null, 'GARE', [], quayDeprecated: false)]);
 
         self::assertCount(1, $screens);
         self::assertSame('GARE', $screens[0]->quayName);
@@ -42,7 +42,7 @@ final class ScreenPaginatorTest extends TestCase
     {
         $screens = $this->paginate([
             new DisplayItem(null, 'DISPARU', [], quayDeprecated: true),
-            new DisplayItem(null, 'GARE', $this->passages(1)),
+            new DisplayItem(null, 'GARE', $this->passages(1), quayDeprecated: false),
         ]);
 
         self::assertSame(['GARE'], array_map(static fn (Screen $screen): string => $screen->quayName, $screens));
@@ -70,7 +70,7 @@ final class ScreenPaginatorTest extends TestCase
         $screens = $this->paginate([new DisplayItem(null, 'GARE', [
             $this->passage('1', -1),
             $this->passage('2', 0),
-        ])]);
+        ], quayDeprecated: false)]);
 
         self::assertSame(['2'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $screens[0]->passages));
     }
@@ -80,7 +80,7 @@ final class ScreenPaginatorTest extends TestCase
         $screens = $this->paginate([new DisplayItem(null, 'GARE', [
             new NextPassage('1', 'FF5500', 'FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+3 minutes 55 seconds')),
             new NextPassage('2', 'FF5500', 'FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+59 seconds')),
-        ])]);
+        ], quayDeprecated: false)]);
 
         self::assertSame([3, 0], array_map(static fn (ScreenPassage $passage): int => $passage->minutes, $screens[0]->passages));
     }
@@ -90,7 +90,7 @@ final class ScreenPaginatorTest extends TestCase
         $screens = $this->paginate([new DisplayItem(null, 'GARE', [
             new NextPassage('1', 'a020f0', '', null, new \DateTimeImmutable(self::NOW)->modify('+5 minutes')),
             new NextPassage('2', 'red', '#FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+6 minutes')),
-        ])]);
+        ], quayDeprecated: false)]);
 
         [$first, $second] = $screens[0]->passages;
         self::assertSame(['A020F0', null, ''], [$first->routeColor, $first->routeTextColor, $first->headsign]);
