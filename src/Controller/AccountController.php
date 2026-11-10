@@ -6,7 +6,10 @@ namespace App\Controller;
 
 use App\Account\AccountDataExporter;
 use App\Account\AccountDeleter;
+use App\Account\EmailChanger;
+use App\Account\EmailChangeRefusedException;
 use App\Entity\User;
+use App\Form\ChangeEmailType;
 use App\Form\ChangePasswordType;
 use App\Form\DeleteAccountType;
 use App\Repository\DeviceRepository;
@@ -14,6 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,6 +57,34 @@ final class AccountController extends AbstractController
         }
 
         return $this->render('account/change_password.html.twig', [
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/email', name: 'app_account_email', methods: ['GET', 'POST'])]
+    public function changeEmail(
+        Request $request,
+        #[CurrentUser] User $user,
+        EmailChanger $emailChanger,
+    ): Response {
+        $form = $this->createForm(ChangeEmailType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var string $newEmail */
+            $newEmail = $form->get('newEmail')->getData();
+
+            try {
+                $newEmail = $emailChanger->request($user, $newEmail);
+                $this->addFlash('success', \sprintf("Un lien de confirmation a été envoyé à %s, valable 1 heure. L'adresse de votre compte reste inchangée d'ici là.", $newEmail));
+
+                return $this->redirectToRoute('app_account', status: Response::HTTP_SEE_OTHER);
+            } catch (EmailChangeRefusedException $emailChangeRefusedException) {
+                $form->get('newEmail')->addError(new FormError($emailChangeRefusedException->getMessage()));
+            }
+        }
+
+        return $this->render('account/change_email.html.twig', [
             'form' => $form,
         ]);
     }

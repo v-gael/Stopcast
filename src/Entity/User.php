@@ -94,6 +94,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * Même compte, enregistré : l'email peut changer, l'id reste.
+     */
+    public function isSameAccountAs(self $other): bool
+    {
+        return null !== $this->id && $this->id === $other->id;
+    }
+
+    /**
      * @return non-empty-string
      */
     public function getUserIdentifier(): string
