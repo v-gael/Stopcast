@@ -5,19 +5,20 @@ import { Controller } from '@hotwired/stimulus';
  * le HTML, il n'apparaît que si le navigateur permet la copie (page en HTTPS
  * ou sur localhost) ; le texte reste sélectionnable dans tous les cas.
  */
+const LABEL = 'Copier';
 const FEEDBACK_DURATION_MS = 2000;
 
 export default class extends Controller {
     static targets = ['source', 'button', 'status'];
 
+    // Une page restaurée par Turbo peut avoir été copiée pendant un retour « Copié ».
     connect() {
-        this.label = this.buttonTarget.textContent;
+        this.#reset();
         this.buttonTarget.hidden = !navigator.clipboard;
     }
 
-    // Turbo garde la page en cache : elle ne doit pas y rester sur « Copié ».
     disconnect() {
-        this.reset();
+        clearTimeout(this.timeout);
     }
 
     async copy() {
@@ -29,9 +30,9 @@ export default class extends Controller {
         }
     }
 
-    reset() {
+    #reset() {
         clearTimeout(this.timeout);
-        this.buttonTarget.textContent = this.label;
+        this.buttonTarget.textContent = LABEL;
         this.statusTarget.textContent = '';
     }
 
@@ -39,6 +40,6 @@ export default class extends Controller {
         clearTimeout(this.timeout);
         this.buttonTarget.textContent = message;
         this.statusTarget.textContent = message;
-        this.timeout = setTimeout(() => this.reset(), FEEDBACK_DURATION_MS);
+        this.timeout = setTimeout(() => this.#reset(), FEEDBACK_DURATION_MS);
     }
 }

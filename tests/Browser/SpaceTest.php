@@ -126,6 +126,23 @@ final class SpaceTest extends PantherTestCase
         $this->assertNoBrowserErrors($this->client, "copie de l'adresse");
     }
 
+    /**
+     * Un retour arrière restaure une copie de la page prise par Turbo, ici
+     * pendant que le bouton dit « Copié ».
+     */
+    public function testCopyButtonComesBackToItsLabelFromARestoredPage(): void
+    {
+        $this->visitPairingPageWithCopyButton();
+        $this->client->executeScript('navigator.clipboard.writeText = async () => {};');
+        $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector(self::COPY_BUTTON))->click();
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copié');
+
+        $this->client->executeScript('const block = document.querySelector(\'[data-controller="clipboard"]\'); block.replaceWith(block.cloneNode(true));');
+
+        $this->client->waitForElementToContain(self::COPY_BUTTON, 'Copier', 5);
+        $this->assertNoBrowserErrors($this->client, 'page restaurée');
+    }
+
     public function testCopyButtonSaysWhenTheBrowserRefuses(): void
     {
         $this->visitPairingPageWithCopyButton();
