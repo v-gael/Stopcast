@@ -1,0 +1,9 @@
+{% extends 'email/base.txt.twig' %}
+
+{% block content %}
+Bonjour,
+
+L'adresse de votre compte Stopcast a été remplacée par {{ maskedNewEmail }}. Cette adresse-ci ne permet plus de vous connecter.
+
+Si vous n'êtes pas à l'origine de ce changement, contactez l'administrateur.
+{% endblock %}

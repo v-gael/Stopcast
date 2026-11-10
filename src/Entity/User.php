@@ -94,6 +94,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * Les autres sessions ouvertes du compte sont déconnectées à leur requête
+     * suivante : Security compare leur identifiant à celui relu en base.
+     */
+    public function changeEmail(string $email): void
+    {
+        $this->email = EmailNormalizer::normalize($email);
+    }
+
+    /**
      * Même compte, enregistré : l'email peut changer, l'id reste.
      */
     public function isSameAccountAs(self $other): bool
