@@ -281,3 +281,39 @@ Valeurs par environnement :
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
 - Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases. Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
 - Quand `develop` avance pendant qu'une PR est ouverte, fusionner `develop` dans la branche en local, puis pousser : relancer un check de la PR ne suffit pas, il réutilise l'ancien commit de fusion avec `develop`.
+
+### Publier une release
+
+Les versions suivent [SemVer](https://semver.org/lang/fr/), étiquetées `vX.Y.Z` sur `main`. Tant que la version est en `0.x` : le mineur monte pour une fonctionnalité ou un changement incompatible (`0.1.0` → `0.2.0`), le patch pour des corrections seules (`0.1.0` → `0.1.1`).
+
+Merger sur `main` met en production ([exploitation.md](exploitation.md#déploiement)). Depuis `develop` à jour :
+
+```sh
+git switch -c release/X.Y.Z
+git push -u origin release/X.Y.Z
+gh pr create --base main --title 'chore(release): vX.Y.Z' --body '<résumé de la release>'
+```
+
+La CI passée, merger la PR avec un commit de merge, puis étiqueter ce commit et publier la release :
+
+```sh
+gh pr merge --merge release/X.Y.Z
+git fetch origin
+git tag -a vX.Y.Z -m 'vX.Y.Z' origin/main
+git push origin vX.Y.Z
+gh release create vX.Y.Z --verify-tag --title vX.Y.Z --generate-notes
+```
+
+Le push du tag ajoute l'étiquette `vX.Y.Z` à l'image déjà publiée pour ce commit (`tag-image.yml`). Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
+
+Les notes listent les PR mergées depuis la release précédente, rangées par `.github/release.yml` en Fonctionnalités, Corrections, Sécurité et Maintenance. GitHub ne les trie que par labels : `label-release-notes.yml` pose le label d'après le titre de chaque PR.
+
+| Titre de la PR | Label | Catégorie |
+|---|---|---|
+| `chore(release): …` | `release` | Aucune, exclue des notes |
+| type ou scope `security` | `security` | Sécurité |
+| `feat…` | `enhancement` | Fonctionnalités |
+| `fix…` | `bug` | Corrections |
+| Le reste | Aucun | Maintenance |
+
+Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main` : une modification n'agit qu'une fois mergée sur `main`.
