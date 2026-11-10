@@ -6,7 +6,7 @@
 {% block content %}
     <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Politique de confidentialité</h1>
-        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 9 novembre 2026.</p>
+        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 10 novembre 2026.</p>
 
         <div class="mt-8 space-y-8 text-slate-700">
             <section>
@@ -21,12 +21,12 @@
                 <h2 class="mb-2 text-xl font-semibold text-slate-900">Données traitées et pourquoi</h2>
                 <ul class="list-disc space-y-2 pl-6">
                     <li><strong>Votre compte</strong> : email, rôle, mot de passe haché (jamais en clair), date de création. Il sert à vous connecter et à gérer vos écrans. Base légale : l'exécution des <a href="{{ path('app_legal_terms') }}" class="font-medium text-amber-700 underline hover:text-amber-600">conditions d'utilisation</a>.</li>
-                    <li><strong>Vos dispositifs et configurations d'affichage</strong> : nom de chaque écran et haché du secret de son appairage, arrêts choisis, ordre de rotation. Ils servent à afficher les prochains passages. Base légale : l'exécution des conditions d'utilisation.</li>
+                    <li><strong>Vos dispositifs et configurations d'affichage</strong> : nom de chaque écran et haché du secret de son appairage, arrêts choisis, ordre de rotation, durée d'affichage et intervalle de rafraîchissement, date du dernier contact de l'écran. Ils servent à afficher les prochains passages et à vous signaler un écran hors ligne. Base légale : l'exécution des conditions d'utilisation.</li>
                     <li><strong>Les mails du service</strong> : invitation, réinitialisation du mot de passe, avis liés au compte. Ils utilisent votre email. Base légale : l'exécution des conditions d'utilisation. Le suivi ajouté par Brevo est décrit dans « Destinataires et sous-traitants ».</li>
                     <li><strong>La sécurité</strong> : journaux du serveur (adresse IP tronquée, email masqué), limites du nombre d'essais (identifiant saisi, adresse IP), captcha Cloudflare Turnstile (adresse IP, navigateur et empreinte TLS de sa connexion), refus des mots de passe ayant fuité. Base légale : l'intérêt légitime de protéger le service et vos comptes.</li>
                     <li><strong>Le suivi des erreurs</strong> : les erreurs de l'application sont envoyées à Sentry, sans adresse IP ni email. Base légale : l'intérêt légitime de corriger le service.</li>
                     <li><strong>Les sauvegardes</strong> : une copie chiffrée de la base, et la liste des comptes supprimés (identifiant et date de création, sans email) pour qu'une restauration ne les fasse pas revenir. Base légale : l'intérêt légitime d'assurer la continuité du service.</li>
-                    <li><strong>La purge des comptes inactifs</strong> : la date de votre dernière connexion, et votre email pour vous prévenir. Base légale : l'intérêt légitime de ne pas garder les comptes abandonnés.</li>
+                    <li><strong>La purge des comptes inactifs</strong> : la date de votre dernière connexion, votre email pour vous prévenir et la date de l'avertissement. Base légale : l'intérêt légitime de ne pas garder les comptes abandonnés.</li>
                 </ul>
                 <p class="mt-2">Aucun traitement ne repose sur votre consentement. Vos données ne sont ni vendues, ni utilisées à des fins publicitaires.</p>
             </section>

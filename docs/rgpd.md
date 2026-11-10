@@ -7,7 +7,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », effacement par la suppression du compte (« Mon compte »), le reste (rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 9 novembre 2026.
+Dernière mise à jour : 10 novembre 2026.
 
 ## Traitements
 
@@ -26,8 +26,8 @@ Dernière mise à jour : 9 novembre 2026.
 
 | | |
 |---|---|
-| Finalité | Afficher les prochains passages sur les écrans de l'utilisateur. |
-| Données | Nom de chaque dispositif et haché du secret de son écran appairé (gardé par l'écran dans un cookie), état actif, dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
+| Finalité | Afficher les prochains passages sur les écrans de l'utilisateur ; montrer le dernier contact de chaque écran et signaler un écran hors ligne. |
+| Données | Nom de chaque dispositif et haché du secret de son écran appairé (gardé par l'écran dans un cookie), état actif, durée d'affichage et intervalle de rafraîchissement, date du dernier contact de l'écran (à 5 minutes près), dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Jusqu'à la suppression du dispositif ou du compte. |
@@ -104,7 +104,7 @@ Dernière mise à jour : 9 novembre 2026.
 | | |
 |---|---|
 | Finalité | Ne pas conserver les comptes abandonnés. |
-| Données | Email, date de dernière connexion (l'activité d'un écran ne compte pas). |
+| Données | Email, date de dernière connexion (l'activité d'un écran ne compte pas), date de l'avertissement. |
 | Personnes concernées | Utilisateurs. |
 | Base légale | Intérêt légitime (limitation de la conservation). |
 | Durée | Avertissement par email 30 jours avant la suppression ; compte supprimé après 2 ans sans connexion. |

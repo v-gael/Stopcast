@@ -31,6 +31,10 @@ final class AccountExportTest extends WebTestCase
 
     private const string LAST_LOGIN = '2026-10-01 08:15:00';
 
+    private const string LAST_CONTACT = '2026-10-29 21:05:00';
+
+    private const string INACTIVITY_WARNING = '2026-10-15 03:15:00';
+
     private KernelBrowser $client;
 
     private User $user;
@@ -64,6 +68,7 @@ final class AccountExportTest extends WebTestCase
             'role' => 'ROLE_USER',
             'createdAt' => $this->user->getCreatedAt()->format(\DATE_ATOM),
             'lastLoginAt' => new \DateTimeImmutable(self::LAST_LOGIN)->format(\DATE_ATOM),
+            'inactivityWarnedAt' => null,
         ], $data['account']);
 
         self::assertIsArray($data['devices']);
@@ -71,7 +76,7 @@ final class AccountExportTest extends WebTestCase
         [$salon, $cuisine] = $data['devices'];
         self::assertIsArray($salon);
         self::assertIsArray($cuisine);
-        self::assertSame(['label', 'active', 'createdAt', 'updatedAt', 'displayConfigurations'], array_keys($salon));
+        self::assertSame(['label', 'active', 'screenDuration', 'refreshInterval', 'lastSeenAt', 'createdAt', 'updatedAt', 'displayConfigurations'], array_keys($salon));
         self::assertTrue($salon['active']);
         self::assertSame($device->getCreatedAt()->format(\DATE_ATOM), $salon['createdAt']);
         self::assertSame([], $cuisine['displayConfigurations']);
@@ -84,6 +89,51 @@ final class AccountExportTest extends WebTestCase
         self::assertSame(['name' => 'CENTRE VILLE', 'gtfsStopId' => 'S1'], $configuration['quay']);
         self::assertSame(0, $configuration['position']);
         self::assertFalse($configuration['active']);
+    }
+
+    public function testTheExportGivesTheLastContactOfEachScreen(): void
+    {
+        DeviceFactory::new()
+            ->afterInstantiate(static function (Device $device): void {
+                $device->recordContact(new \DateTimeImmutable(self::LAST_CONTACT));
+            })
+            ->create(['owner' => $this->user, 'label' => 'Salon']);
+        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Cuisine']);
+
+        $data = $this->download();
+
+        self::assertIsArray($data['devices']);
+        [$salon, $cuisine] = $data['devices'];
+        self::assertIsArray($salon);
+        self::assertIsArray($cuisine);
+        self::assertSame(new \DateTimeImmutable(self::LAST_CONTACT)->format(\DATE_ATOM), $salon['lastSeenAt']);
+        self::assertArrayHasKey('lastSeenAt', $cuisine);
+        self::assertNull($cuisine['lastSeenAt']);
+    }
+
+    public function testTheExportGivesTheDateOfTheInactivityWarning(): void
+    {
+        $this->user = UserFactory::new()
+            ->afterInstantiate(static fn (User $user) => $user->markInactivityWarned(new \DateTimeImmutable(self::INACTIVITY_WARNING)))
+            ->create(['email' => 'averti@example.com']);
+
+        $data = $this->download();
+
+        self::assertIsArray($data['account']);
+        self::assertSame(new \DateTimeImmutable(self::INACTIVITY_WARNING)->format(\DATE_ATOM), $data['account']['inactivityWarnedAt']);
+    }
+
+    public function testTheExportGivesTheScreenSettingsOfEachDevice(): void
+    {
+        DeviceFactory::createOne(['owner' => $this->user, 'screenDuration' => 12, 'refreshInterval' => 90]);
+
+        $data = $this->download();
+
+        self::assertIsArray($data['devices']);
+        $device = $data['devices'][0];
+        self::assertIsArray($device);
+        self::assertSame(12, $device['screenDuration']);
+        self::assertSame(90, $device['refreshInterval']);
     }
 
     public function testTheExportLeavesOutSecretsInternalIdsAndOtherAccounts(): void
