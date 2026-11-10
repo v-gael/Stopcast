@@ -38,6 +38,28 @@ final class ScreenPaginatorTest extends TestCase
         self::assertSame([], $screens[0]->passages);
     }
 
+    public function testDeprecatedQuayWithoutPassageGivesNoScreen(): void
+    {
+        $screens = $this->paginate([
+            new DisplayItem(null, 'DISPARU', [], quayDeprecated: true),
+            new DisplayItem(null, 'GARE', $this->passages(1)),
+        ]);
+
+        self::assertSame(['GARE'], array_map(static fn (Screen $screen): string => $screen->quayName, $screens));
+    }
+
+    public function testDeprecatedQuayWhosePassagesAreAllGoneGivesNoScreen(): void
+    {
+        self::assertSame([], $this->paginate([new DisplayItem(null, 'DISPARU', [$this->passage('1', -1)], quayDeprecated: true)]));
+    }
+
+    public function testDeprecatedQuayStillAnnouncedKeepsItsScreens(): void
+    {
+        $screens = $this->paginate([new DisplayItem(null, 'DISPARU', [$this->passage('1', 2)], quayDeprecated: true)]);
+
+        self::assertSame(['1'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $screens[0]->passages));
+    }
+
     public function testNoActiveConfigurationGivesNoScreen(): void
     {
         self::assertSame([], $this->paginate([]));

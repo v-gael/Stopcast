@@ -11,7 +11,8 @@ use Symfony\Component\Clock\ClockInterface;
 /**
  * Découpe les configurations d'un dispositif en écrans de la page
  * d'affichage : une configuration donne un écran par tranche de
- * PASSAGES_PER_SCREEN passages, ou un seul écran « aucun passage ».
+ * PASSAGES_PER_SCREEN passages, ou un seul écran « aucun passage ». Un quai
+ * déprécié sans passage n'a pas d'écran : il sort de la rotation.
  */
 final readonly class ScreenPaginator
 {
@@ -40,7 +41,9 @@ final readonly class ScreenPaginator
             ));
 
             if ([] === $passages) {
-                $screens[] = new Screen($item->quayName, []);
+                if (!$item->quayDeprecated) {
+                    $screens[] = new Screen($item->quayName, []);
+                }
 
                 continue;
             }

@@ -13,6 +13,7 @@ final readonly class DisplayItem
         public ?string $label,
         public string $quayName,
         public array $nextPassages,
+        public bool $quayDeprecated = false,
     ) {
     }
 }
