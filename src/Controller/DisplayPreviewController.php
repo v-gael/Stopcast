@@ -31,6 +31,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  */
 final class DisplayPreviewController extends AbstractController
 {
+    use LiveDisplayRendering;
+
     public function __construct(
         private readonly DisplayAssembler $displayAssembler,
         private readonly ScreenPaginator $screenPaginator,
@@ -56,26 +58,19 @@ final class DisplayPreviewController extends AbstractController
 
     /**
      * Ce que montre l'écran du dispositif, sur les passages réels : écran
-     * désactivé, flux en panne et quais dépréciés compris.
+     * désactivé et flux en panne compris ; un quai déprécié n'y reste que
+     * s'il a encore des passages, comme sur l'écran (ScreenPaginator).
      */
     #[Route('/devices/{id}/preview/live', name: 'app_device_live_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, 'device')]
     public function liveDevice(Device $device, #[MapQueryParameter] bool $fragment = false): Response
     {
-        $live = $this->liveDisplay->forDevice($device);
-
-        // Comme l'écran : un rafraîchissement en échec garde ce qui est affiché.
-        if ($fragment && $live->feedUnavailable) {
-            return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-
-        return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', [
-            'device' => $device,
-            'screens' => $live->screens,
-            'refresh_url' => $this->generateUrl('app_device_live_preview', ['id' => $device->getId(), 'fragment' => 1]),
-            'state_message' => $live->stateMessage,
-            'offline' => $live->feedUnavailable,
-        ]);
+        return $this->renderLiveDisplay(
+            $device,
+            $this->liveDisplay->forDevice($device),
+            $fragment,
+            $this->generateUrl('app_device_live_preview', ['id' => $device->getId(), 'fragment' => 1]),
+        );
     }
 
     /**

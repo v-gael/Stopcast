@@ -14,20 +14,20 @@ use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
+use App\Tests\Support\DisplayTestTrait;
 use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class DisplayPreviewTest extends WebTestCase
 {
     use AppLogsTrait;
+    use DisplayTestTrait;
     use Factories;
     use ResetDatabase;
     use WebTestTrait;
@@ -205,8 +205,8 @@ final class DisplayPreviewTest extends WebTestCase
 
     public function testLivePreviewRotatesTheRealPassagesOfTheActiveConfigurations(): void
     {
-        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
-        $this->configure('Masquée', 'MAIRIE', position: 1, active: false, route: 'L7');
+        $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
+        $this->configure('Masquée', 'MAIRIE', position: 1, active: false, routeShortName: 'L7');
 
         $crawler = $this->client->request('GET', $this->liveDevicePreview());
 
@@ -232,8 +232,8 @@ final class DisplayPreviewTest extends WebTestCase
 
     public function testLivePreviewOfADisabledDeviceShowsTheDisabledScreen(): void
     {
-        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
-        $this->disableDevice();
+        $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
+        $this->disableDevice($this->device);
 
         $crawler = $this->client->request('GET', $this->liveDevicePreview());
 
@@ -244,8 +244,8 @@ final class DisplayPreviewTest extends WebTestCase
 
     public function testLivePreviewFailingForTheFeedBehavesLikeTheScreen(): void
     {
-        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
+        $this->failRealtimeFeed();
         $this->client->disableReboot();
         $logs = $this->appLogs();
 
@@ -348,9 +348,9 @@ final class DisplayPreviewTest extends WebTestCase
     }
 
     /**
-     * @param string|null $route ligne desservant le quai : le flux simulé (RealtimeFeedMock) y annonce deux passages
+     * @param string|null $routeShortName numéro d'une ligne desservant le quai : le flux simulé (RealtimeFeedMock) y annonce deux passages
      */
-    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true, bool $deprecated = false, ?string $route = null): DisplayConfiguration
+    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true, bool $deprecated = false, ?string $routeShortName = null): DisplayConfiguration
     {
         $entityManager = $this->entityManager();
         $device = $entityManager->find(Device::class, $this->device->getId());
@@ -361,8 +361,8 @@ final class DisplayPreviewTest extends WebTestCase
             $quay->markDeprecated();
         }
 
-        if (null !== $route) {
-            $servingRoute = new Route('R'.$route, $route, '0076BF', 'FFFFFF');
+        if (null !== $routeShortName) {
+            $servingRoute = new Route('R'.$routeShortName, $routeShortName, '0076BF', 'FFFFFF');
             $quay->addRoute($servingRoute);
             $entityManager->persist($servingRoute);
         }
@@ -374,16 +374,6 @@ final class DisplayPreviewTest extends WebTestCase
         $entityManager->clear();
 
         return $configuration;
-    }
-
-    private function disableDevice(): void
-    {
-        $entityManager = $this->entityManager();
-        $device = $entityManager->find(Device::class, $this->device->getId());
-        self::assertInstanceOf(Device::class, $device);
-        $device->setActive(false);
-        $entityManager->flush();
-        $entityManager->clear();
     }
 
     private function changeCadences(int $screenDuration, int $refreshInterval): void

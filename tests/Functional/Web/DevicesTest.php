@@ -408,6 +408,7 @@ final class DevicesTest extends WebTestCase
         self::assertSame((string) Device::DEFAULT_SCREEN_DURATION, $bench->attr('data-device-bench-saved-duration-value'));
         self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
         self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSelectorTextContains('[data-sample-notice]', 'Exemple');
         self::assertSame('/devices', $crawler->selectLink('Annuler')->attr('href'));
     }
 

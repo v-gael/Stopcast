@@ -24,22 +24,21 @@ final readonly class LiveDisplay
     }
 
     /**
-     * Un dispositif désactivé donne l'écran « Écran désactivé », sans lire le
-     * flux. Un flux en échec est journalisé et donne un état sans écran.
+     * Un dispositif désactivé ne lit pas le flux. Un flux en échec est
+     * journalisé (RealtimeFeedFailureLogger).
      */
-    public function forDevice(Device $device): LiveScreens
+    public function forDevice(Device $device): LiveDisplayState
     {
         if (!$device->isActive()) {
-            return new LiveScreens([], 'Écran désactivé', feedUnavailable: false);
+            return LiveDisplayState::disabled();
         }
 
         try {
-            return new LiveScreens($this->screenPaginator->paginate($this->displayAssembler->forDevice($device)), null, feedUnavailable: false);
+            return LiveDisplayState::screens($this->screenPaginator->paginate($this->displayAssembler->forDevice($device)));
         } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $failure) {
             $this->feedFailureLogger->log($failure);
 
-            // Message vide : l'écran « indisponible » remplace les écrans.
-            return new LiveScreens([], '', feedUnavailable: true);
+            return LiveDisplayState::feedUnavailable();
         }
     }
 }

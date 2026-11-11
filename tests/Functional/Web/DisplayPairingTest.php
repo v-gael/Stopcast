@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
+use App\Tests\Support\DisplayTestTrait;
 use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
@@ -38,6 +39,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class DisplayPairingTest extends WebTestCase
 {
     use AppLogsTrait;
+    use DisplayTestTrait;
     use Factories;
     use QueryCountTrait;
     use RealtimeFeedTrait;
@@ -334,10 +336,7 @@ final class DisplayPairingTest extends WebTestCase
     public function testDisabledDeviceShowsADisabledScreenAndKeepsItsCookie(): void
     {
         $this->pairedScreen();
-        $device = $this->storedDevice($this->device);
-        $device->setActive(false);
-
-        $this->entityManager->flush();
+        $this->disableDevice($this->device);
 
         $crawler = $this->client->request('GET', '/display');
 
@@ -354,7 +353,7 @@ final class DisplayPairingTest extends WebTestCase
 
     public function testUnreadableFeedFailsTheRefreshAndKeepsThePageAlive(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->failRealtimeFeed();
         $this->pairedScreen();
         $logs = $this->appLogs();
 
@@ -407,7 +406,7 @@ final class DisplayPairingTest extends WebTestCase
 
     public function testRefreshFailingForTheFeedStillRecordsTheContact(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->failRealtimeFeed();
         $this->pairedScreen();
 
         $this->client->request('GET', '/display?fragment=1');

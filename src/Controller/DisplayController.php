@@ -34,6 +34,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  */
 final class DisplayController extends AbstractController
 {
+    use LiveDisplayRendering;
+
     public function __construct(
         private readonly ScreenPairing $screenPairing,
         private readonly DisplayCookies $displayCookies,
@@ -55,21 +57,12 @@ final class DisplayController extends AbstractController
             return $fragment ? new Response(null, Response::HTTP_UNAUTHORIZED) : $this->pairingPage($request);
         }
 
-        $live = $liveDisplay->forDevice($screen->device);
-
-        // Le rafraîchissement échoue : l'écran garde ce qu'il affichait. Au
-        // premier chargement, l'écran « indisponible » réessaie à la cadence du dispositif.
-        if ($fragment && $live->feedUnavailable) {
-            return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-
-        return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', [
-            'device' => $screen->device,
-            'screens' => $live->screens,
-            'refresh_url' => $this->generateUrl('app_display', ['fragment' => 1]),
-            'state_message' => $live->stateMessage,
-            'offline' => $live->feedUnavailable,
-        ]);
+        return $this->renderLiveDisplay(
+            $screen->device,
+            $liveDisplay->forDevice($screen->device),
+            $fragment,
+            $this->generateUrl('app_display', ['fragment' => 1]),
+        );
     }
 
     /**
