@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\DeviceStatus;
+use App\Enum\NothingToShowReason;
 use App\Repository\DeviceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -236,7 +237,7 @@ class Device
             !$this->hasPairedScreen() => DeviceStatus::Unpaired,
             !$this->lastSeenAt instanceof \DateTimeImmutable => DeviceStatus::NeverSeen,
             $this->lastSeenAt < $now->modify('-'.self::OFFLINE_AFTER) => DeviceStatus::Offline,
-            [] === $this->getDisplayedConfigurations() => DeviceStatus::NothingToShow,
+            $this->nothingToShowReason() instanceof NothingToShowReason => DeviceStatus::NothingToShow,
             $this->countConfigurationsWithDeprecatedQuay() > 0 => DeviceStatus::QuayGone,
             default => DeviceStatus::Online,
         };
@@ -318,8 +319,23 @@ class Device
     }
 
     /**
-     * Configurations que l'écran fait tourner : les actives dont le quai n'a
-     * pas disparu du dernier import, dans l'ordre de rotation.
+     * Pourquoi le dispositif n'a aucun quai à afficher, ou null s'il en a un.
+     */
+    public function nothingToShowReason(): ?NothingToShowReason
+    {
+        return match (true) {
+            $this->displayConfigurations->isEmpty() => NothingToShowReason::NoQuay,
+            [] === $this->getActiveDisplayConfigurations() => NothingToShowReason::AllHidden,
+            [] === $this->getDisplayedConfigurations() => NothingToShowReason::AllQuaysGone,
+            default => null,
+        };
+    }
+
+    /**
+     * Configurations qui ont des passages à montrer : les actives dont le quai
+     * n'a pas disparu du dernier import, dans l'ordre de rotation. L'aperçu ne
+     * fait tourner qu'elles ; l'écran réel montre aussi les autres actives,
+     * sans passage.
      *
      * @return list<DisplayConfiguration>
      */

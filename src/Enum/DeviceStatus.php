@@ -43,4 +43,17 @@ enum DeviceStatus
             self::Online => 'En ligne',
         };
     }
+
+    /**
+     * Tonalité de la pastille : neutral, warning, danger ou success.
+     */
+    public function tone(): string
+    {
+        return match ($this) {
+            self::Disabled, self::Unpaired => 'neutral',
+            self::NeverSeen, self::NothingToShow, self::QuayGone => 'warning',
+            self::Offline => 'danger',
+            self::Online => 'success',
+        };
+    }
 }

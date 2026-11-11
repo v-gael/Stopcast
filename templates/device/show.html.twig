@@ -20,7 +20,7 @@
 
         <twig:Card title="Dispositif" class="lg:col-span-2">
             {# Le contenu d'un composant ne voit pas les imports du gabarit. #}
-            {% import 'device/_status.html.twig' as state %}
+            {% import 'device/_status.html.twig' as status_macros %}
             <div class="flex flex-col gap-6 xl:flex-row">
                 <div class="min-w-0 flex-1">
                     {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
@@ -38,7 +38,7 @@
                             <dt class="font-medium text-slate-500">État</dt>
                             <dd class="mt-0.5">
                                 <span class="inline-flex cursor-help" title="{{ created }}" data-device-state>
-                                    {{ state.status(device) }}<span class="sr-only">, {{ created|lower }}</span>
+                                    {{ status_macros.status(device) }}<span class="sr-only">, {{ created|lower }}</span>
                                 </span>
                             </dd>
                         </div>
@@ -48,7 +48,7 @@
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Dernier contact</dt>
-                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ state.last_seen(device) }}</dd>
+                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ status_macros.last_seen(device) }}</dd>
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>

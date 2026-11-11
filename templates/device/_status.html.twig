@@ -7,18 +7,12 @@
 {# Pastille et libellé de l'état. #}
 {% macro status(device, class = '') %}
     {% set status = device_status(device) %}
-    {% set tone = {
-        Disabled: 'neutral', Unpaired: 'neutral',
-        NeverSeen: 'warning', NothingToShow: 'warning', QuayGone: 'warning',
-        Offline: 'danger',
-        Online: 'success',
-    }[status.name] %}
     {% set colors = {
         neutral: ['text-slate-600', 'bg-slate-400'],
         warning: ['text-amber-700', 'bg-amber-500'],
         danger: ['text-red-700', 'bg-red-600'],
         success: ['text-emerald-700', 'bg-emerald-500'],
-    }[tone] %}
+    }[status.tone] %}
     <span class="flex items-center gap-1.5 font-medium {{ colors[0] }} {{ class }}">
         <span class="size-2 shrink-0 rounded-full {{ colors[1] }}" aria-hidden="true"></span>
         <span data-device-status>{{ status.label }}</span>
@@ -37,13 +31,7 @@
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Offline -%}
         Dernier contact : {{ _self.last_seen(device) }}
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').NothingToShow -%}
-        {%- if device.displayConfigurations is empty -%}
-            Aucun quai configuré.
-        {%- elseif device.activeDisplayConfigurations is empty -%}
-            Tous les quais sont masqués.
-        {%- else -%}
-            Tous les quais affichés ont disparu du dernier import.
-        {%- endif -%}
+        {{ device.nothingToShowReason.explanation }}
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').QuayGone -%}
         {%- set gone = device.countConfigurationsWithDeprecatedQuay -%}
         {{ gone }} {{ gone > 1 ? 'quais ont disparu' : 'quai a disparu' }} du dernier import.

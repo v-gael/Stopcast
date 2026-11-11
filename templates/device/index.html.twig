@@ -1,6 +1,6 @@
 {% extends 'layout/space.html.twig' %}
 
-{% import 'device/_status.html.twig' as state %}
+{% import 'device/_status.html.twig' as status_macros %}
 
 {% block title %}Mes dispositifs · Stopcast{% endblock %}
 
@@ -38,9 +38,9 @@
                 <div class="p-4">
                     <div class="flex items-center justify-between gap-2">
                         <a href="{{ path('app_device_show', {id: device.id}) }}" class="truncate font-semibold text-slate-900 outline-none after:absolute after:inset-0 group-hover:text-amber-700">{{ device.label }}</a>
-                        {{ state.status(device, class: 'shrink-0 text-sm') }}
+                        {{ status_macros.status(device, class: 'shrink-0 text-sm') }}
                     </div>
-                    <p class="mt-1 text-sm text-slate-500" data-device-status-detail>{{ state.status_detail(device) }}</p>
+                    <p class="mt-1 text-sm text-slate-500" data-device-status-detail>{{ status_macros.status_detail(device) }}</p>
                 </div>
             </li>
         {% endfor %}
