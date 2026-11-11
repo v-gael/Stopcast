@@ -28,11 +28,12 @@
             <div class="flex flex-col gap-6 xl:flex-row">
                 <div class="min-w-0 flex-1">
                     {# La configuration enregistrée, même masquée, sur des passages d'exemple. #}
-                    <div class="mb-3">{{ include('display/_sample_notice.html.twig', with_context = false) }}</div>
-                    {{ include('display/_preview.html.twig', {
-                        preview_url: path('app_display_configuration_preview', {id: configuration.id}),
-                        preview_title: 'Aperçu de « ' ~ name ~ ' »',
-                    }, with_context = false) }}
+                    <twig:SampleFrame>
+                        {{ include('display/_preview.html.twig', {
+                            preview_url: path('app_display_configuration_preview', {id: configuration.id}),
+                            preview_title: 'Aperçu de « ' ~ name ~ ' »',
+                        }, with_context = false) }}
+                    </twig:SampleFrame>
                 </div>
 
                 <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">

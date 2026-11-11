@@ -193,7 +193,7 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
 
         self::assertSame([\sprintf('/display-configurations/%d/preview', $configuration->getId())], $crawler->filter('iframe')->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
-        self::assertSelectorTextContains('[data-sample-notice]', 'Exemple');
+        self::assertSelectorTextSame('[data-sample-notice]', "Exemple · l'écran affichera les passages du réseau");
     }
 
     public function testDevicePageShowsNoExampleNotice(): void
