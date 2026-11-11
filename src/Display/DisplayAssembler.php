@@ -59,13 +59,7 @@ final readonly class DisplayAssembler
      */
     public function sampleForDevice(Device $device): array
     {
-        return array_values(array_map(
-            $this->sampleForConfiguration(...),
-            array_filter(
-                $device->getActiveDisplayConfigurations(),
-                static fn (DisplayConfiguration $configuration): bool => $configuration->getQuay()->isActive(),
-            ),
-        ));
+        return array_map($this->sampleForConfiguration(...), $device->getDisplayedConfigurations());
     }
 
     /**

@@ -47,16 +47,18 @@ class DeviceRepository extends ServiceEntityRepository
 
     /**
      * Une page des dispositifs d'un compte, du plus récent au plus ancien, avec
-     * leurs configurations chargées. « $search » filtre sur le libellé, sans
-     * tenir compte de la casse ; le Paginator compte aussi le total filtré.
+     * leurs configurations et leurs quais chargés. « $search » filtre sur le
+     * libellé, sans tenir compte de la casse ; le Paginator compte aussi le
+     * total filtré.
      *
      * @return Paginator<Device>
      */
     public function findPageByOwner(User $owner, string $search, int $page, int $perPage): Paginator
     {
         $queryBuilder = $this->createQueryBuilder('d')
-            ->addSelect('c')
+            ->addSelect('c', 'q')
             ->leftJoin('d.displayConfigurations', 'c')
+            ->leftJoin('c.quay', 'q')
             ->andWhere('d.owner = :owner')
             ->setParameter('owner', $owner)
             ->orderBy('d.createdAt', 'DESC')
