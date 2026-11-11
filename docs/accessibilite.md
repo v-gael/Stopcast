@@ -99,8 +99,9 @@ La page d'affichage reprend les couleurs de l'ancien client Python (`assets/styl
 | Usage | Texte | Fond | Rapport | Seuil |
 |---|---|---|---|---|
 | Nom du quai, heure, délais, destinations, messages | blanc | `#05203c` | 16,43 | 4,5 |
-| Texte de l'en-tête | blanc | `#1b4872` | 9,47 | 4,5 |
 | En-têtes de colonnes (gras, 20 `--u`) | `#7baee2` | `#1b4872` | 4,06 | 3 (grand texte) |
+| Pastille d'une ligne sans couleur dans les données du réseau | blanc | `#1b4872` | 9,47 | 4,5 |
+| Consigne de l'écran d'appairage (gras, 14 `--u`) | `#7baee2` | `#05203c` | 7,04 | 4,5 |
 
 **Pastilles de ligne** : elles reprennent `route_color` et `route_text_color` du réseau telles quelles, comme les vrais panneaux et les plans du réseau, pour que chaque ligne se reconnaisse à sa couleur. C'est un écart assumé : calculé le 7 novembre 2026 sur les 61 lignes TCAT, en texte gras de 16 `--u` (seuil 4,5:1), 14 lignes sont en dessous, comme la ligne 1 (blanc sur `#009DE0`, 3,04:1) ou la 7 (blanc sur `#919294`, 3,11:1), et la 9A (blanc sur `#ED86A6`) descend à 2,45:1. Le numéro de ligne est aussi écrit, et la destination est en blanc sur le fond de l'écran : la couleur n'est pas le seul repère. Un choix automatique du texte noir ou blanc quand le contraste est trop faible pourra être décidé avec les thèmes d'affichage.
 

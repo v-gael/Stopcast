@@ -10,9 +10,10 @@ use Symfony\Component\Scheduler\ScheduleProviderInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
 /**
- * Planning des tâches de fond, consommé par le worker (transport
- * scheduler_default). Les tâches y entrent par #[AsCronTask] sur leur
- * commande : PurgeCommand, GtfsImportCommand et MailCheckCommand.
+ * Planning des tâches de fond, consommé par le worker de prod (transport
+ * scheduler_default ; celui de dev ne lit que async). Les tâches y entrent
+ * par #[AsCronTask] sur leur commande : PurgeCommand, GtfsImportCommand et
+ * MailCheckCommand.
  *
  * L'état du planning est gardé en cache : une exécution manquée (worker
  * arrêté, redéploiement) est rattrapée au redémarrage, la dernière seulement.
