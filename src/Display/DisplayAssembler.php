@@ -51,9 +51,10 @@ final readonly class DisplayAssembler
     }
 
     /**
-     * Mêmes écrans que forDevice, sur les passages d'exemple : pour l'aperçu,
-     * sans appel au flux temps réel. Un quai déprécié en est exclu : sans
-     * passage annoncé, cas courant, l'écran réel le saute.
+     * Écrans de forDevice, sur les passages d'exemple : pour l'aperçu, sans
+     * appel au flux temps réel. Un quai déprécié en est exclu : l'écran réel
+     * le garde, mais n'y annonce en général aucun passage (« Pas de passage
+     * prévu actuellement »), là où l'aperçu montrerait des passages d'exemple.
      *
      * @return list<DisplayItem>
      */
