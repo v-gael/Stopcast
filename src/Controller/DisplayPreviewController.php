@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Display\DisplayAssembler;
+use App\Display\LiveDisplay;
 use App\Display\ScreenPaginator;
 use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\Device;
@@ -20,8 +21,10 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Aperçu de la page d'affichage sur les passages d'exemple, réservé au
- * propriétaire du dispositif et affichable dans une iframe du site.
+ * Aperçu de la page d'affichage, réservé au propriétaire du dispositif et
+ * affichable dans une iframe du site : sur les passages d'exemple pour la
+ * liste des dispositifs et le formulaire d'une configuration, sur les passages
+ * réels, comme l'écran, pour la page d'un dispositif.
  *
  * « ?fragment=1 » ne rend que les écrans : la page les relit ainsi à chaque
  * rafraîchissement, sans se recharger.
@@ -31,11 +34,13 @@ final class DisplayPreviewController extends AbstractController
     public function __construct(
         private readonly DisplayAssembler $displayAssembler,
         private readonly ScreenPaginator $screenPaginator,
+        private readonly LiveDisplay $liveDisplay,
     ) {
     }
 
     /**
-     * Toute la rotation du dispositif : ses configurations actives.
+     * Toute la rotation du dispositif sur les passages d'exemple : ses
+     * configurations actives, sans les quais dépréciés.
      */
     #[Route('/devices/{id}/preview', name: 'app_device_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, 'device')]
@@ -50,7 +55,31 @@ final class DisplayPreviewController extends AbstractController
     }
 
     /**
-     * Une seule configuration, même masquée.
+     * Ce que montre l'écran du dispositif, sur les passages réels : écran
+     * désactivé, flux en panne et quais dépréciés compris.
+     */
+    #[Route('/devices/{id}/preview/live', name: 'app_device_live_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
+    #[IsGranted(DeviceVoter::VIEW, 'device')]
+    public function liveDevice(Device $device, #[MapQueryParameter] bool $fragment = false): Response
+    {
+        $live = $this->liveDisplay->forDevice($device);
+
+        // Comme l'écran : un rafraîchissement en échec garde ce qui est affiché.
+        if ($fragment && $live->feedUnavailable) {
+            return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', [
+            'device' => $device,
+            'screens' => $live->screens,
+            'refresh_url' => $this->generateUrl('app_device_live_preview', ['id' => $device->getId(), 'fragment' => 1]),
+            'state_message' => $live->stateMessage,
+            'offline' => $live->feedUnavailable,
+        ]);
+    }
+
+    /**
+     * Une seule configuration sur les passages d'exemple, même masquée.
      */
     #[Route('/display-configurations/{id}/preview', name: 'app_display_configuration_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, new Expression('args["configuration"].getDevice()'))]

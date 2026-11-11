@@ -23,9 +23,9 @@
             {% import 'device/_status.html.twig' as status_macros %}
             <div class="flex flex-col gap-6 xl:flex-row">
                 <div class="min-w-0 flex-1">
-                    {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
+                    {# Ce que l'écran montre, sur les passages réels : la liste des dispositifs garde ceux d'exemple. #}
                     {{ include('display/_preview.html.twig', {
-                        preview_url: path('app_device_preview', {id: device.id}),
+                        preview_url: path('app_device_live_preview', {id: device.id}),
                         preview_title: 'Aperçu de « ' ~ device.label ~ ' »',
                     }, with_context = false) }}
                 </div>

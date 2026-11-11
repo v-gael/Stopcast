@@ -8,21 +8,26 @@ use App\Display\ScreenPaginator;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
+use App\Entity\Route;
 use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\AppLogsTrait;
 use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Zenstruck\Foundry\Test\Factories;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class DisplayPreviewTest extends WebTestCase
 {
+    use AppLogsTrait;
     use Factories;
     use ResetDatabase;
     use WebTestTrait;
@@ -160,7 +165,7 @@ final class DisplayPreviewTest extends WebTestCase
         self::assertStringContainsString("frame-ancestors 'none'", (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
     }
 
-    public function testDevicePageFramesTheWholeRotationInOnePreview(): void
+    public function testDevicePageFramesTheWholeRotationInOneLivePreview(): void
     {
         $this->configure('Gare', 'GARE ROUTIERE');
         $this->configure('Masquée', 'MAIRIE', position: 1, active: false);
@@ -169,25 +174,103 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $this->device->getId()));
 
         $frames = $crawler->filter('iframe');
-        self::assertSame([$this->devicePreview()], $frames->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
+        self::assertSame([$this->liveDevicePreview()], $frames->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
         self::assertSame(['480', '320'], [$frames->attr('width'), $frames->attr('height')]);
         self::assertSame(\sprintf('Aperçu de « %s »', $this->device->getLabel()), $frames->attr('title'));
     }
 
-    public function testDevicePageWithoutActiveConfigurationFramesTheDevicePreview(): void
+    public function testDevicePageWithoutActiveConfigurationFramesTheLivePreview(): void
     {
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $this->device->getId()));
 
-        self::assertSame([$this->devicePreview()], $crawler->filter('iframe')->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
+        self::assertSame([$this->liveDevicePreview()], $crawler->filter('iframe')->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
     }
 
-    public function testConfigurationFormFramesItsPreview(): void
+    public function testConfigurationFormFramesItsPreviewMarkedAsAnExample(): void
     {
         $configuration = $this->configure('Gare', 'GARE ROUTIERE');
 
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
 
         self::assertSame([\sprintf('/display-configurations/%d/preview', $configuration->getId())], $crawler->filter('iframe')->each(static fn (Crawler $frame): ?string => $frame->attr('src')));
+        self::assertSelectorTextContains('[data-sample-notice]', 'Exemple');
+    }
+
+    public function testDevicePageShowsNoExampleNotice(): void
+    {
+        $this->client->request('GET', \sprintf('/devices/%d', $this->device->getId()));
+
+        self::assertSelectorNotExists('[data-sample-notice]');
+    }
+
+    public function testLivePreviewRotatesTheRealPassagesOfTheActiveConfigurations(): void
+    {
+        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
+        $this->configure('Masquée', 'MAIRIE', position: 1, active: false, route: 'L7');
+
+        $crawler = $this->client->request('GET', $this->liveDevicePreview());
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['GARE ROUTIERE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        // Les deux passages du flux simulé (RealtimeFeedMock), pas ceux d'exemple.
+        self::assertSame(['L4', 'L4'], $crawler->filter('.passage__route')->each(static fn (Crawler $route): string => $route->text()));
+        self::assertSame(['3 min', '12 min'], $crawler->filter('.passage__minutes')->each(static fn (Crawler $minutes): string => $minutes->text()));
+        self::assertSame($this->liveDevicePreview().'?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
+        self::assertNull($crawler->filter('body')->attr('data-display-offline'));
+    }
+
+    public function testLivePreviewShowsAQuayWithoutPassageLikeTheScreen(): void
+    {
+        $this->configure('Gare', 'GARE ROUTIERE');
+
+        $this->client->request('GET', $this->liveDevicePreview());
+
+        $crawler = $this->client->getCrawler();
+        self::assertCount(0, $crawler->filter('.passage'));
+        self::assertSame(['Pas de passage prévu actuellement'], $crawler->filter('.screen__message:not([hidden])')->each(static fn (Crawler $message): string => $message->text()));
+    }
+
+    public function testLivePreviewOfADisabledDeviceShowsTheDisabledScreen(): void
+    {
+        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
+        $this->disableDevice();
+
+        $crawler = $this->client->request('GET', $this->liveDevicePreview());
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('.passage'));
+        self::assertSelectorTextSame('.screen__message', 'Écran désactivé');
+    }
+
+    public function testLivePreviewFailingForTheFeedBehavesLikeTheScreen(): void
+    {
+        $this->configure('Gare', 'GARE ROUTIERE', route: 'L4');
+        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->client->disableReboot();
+        $logs = $this->appLogs();
+
+        // Le rafraîchissement échoue : l'aperçu garde ce qu'il affichait.
+        $this->client->request('GET', $this->liveDevicePreview().'?fragment=1');
+
+        self::assertResponseStatusCodeSame(503);
+        self::assertSame('', (string) $this->client->getResponse()->getContent());
+        self::assertTrue($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
+
+        // Premier chargement : l'écran « indisponible », qui réessaie.
+        $crawler = $this->client->request('GET', $this->liveDevicePreview());
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('', $crawler->filter('body')->attr('data-display-offline'));
+        self::assertCount(0, $crawler->filter('.passage'));
+        self::assertSelectorTextSame('.screen__message', 'Horaires temps réel indisponibles');
+    }
+
+    public function testLivePreviewCanBeFramedByTheSiteOnly(): void
+    {
+        $this->client->request('GET', $this->liveDevicePreview());
+
+        self::assertResponseHeaderSame('X-Frame-Options', 'SAMEORIGIN');
+        self::assertStringContainsString("frame-ancestors 'self'", (string) $this->client->getResponse()->headers->get('Content-Security-Policy'));
     }
 
     /**
@@ -197,6 +280,8 @@ final class DisplayPreviewTest extends WebTestCase
     {
         yield 'dispositif' => ['device'];
         yield 'dispositif, fragment' => ['device-fragment'];
+        yield 'dispositif, passages réels' => ['live'];
+        yield 'dispositif, passages réels, fragment' => ['live-fragment'];
         yield 'configuration' => ['configuration'];
     }
 
@@ -246,6 +331,8 @@ final class DisplayPreviewTest extends WebTestCase
         return match ($preview) {
             'device' => $this->devicePreview(),
             'device-fragment' => $this->devicePreview().'?fragment=1',
+            'live' => $this->liveDevicePreview(),
+            'live-fragment' => $this->liveDevicePreview().'?fragment=1',
             default => \sprintf('/display-configurations/%d/preview', $this->configure('Gare', 'GARE ROUTIERE')->getId()),
         };
     }
@@ -255,7 +342,15 @@ final class DisplayPreviewTest extends WebTestCase
         return \sprintf('/devices/%d/preview', $this->device->getId());
     }
 
-    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true, bool $deprecated = false): DisplayConfiguration
+    private function liveDevicePreview(): string
+    {
+        return \sprintf('/devices/%d/preview/live', $this->device->getId());
+    }
+
+    /**
+     * @param string|null $route ligne desservant le quai : le flux simulé (RealtimeFeedMock) y annonce deux passages
+     */
+    private function configure(?string $label, string $quayName, int $position = 0, bool $active = true, bool $deprecated = false, ?string $route = null): DisplayConfiguration
     {
         $entityManager = $this->entityManager();
         $device = $entityManager->find(Device::class, $this->device->getId());
@@ -266,6 +361,12 @@ final class DisplayPreviewTest extends WebTestCase
             $quay->markDeprecated();
         }
 
+        if (null !== $route) {
+            $servingRoute = new Route('R'.$route, $route, '0076BF', 'FFFFFF');
+            $quay->addRoute($servingRoute);
+            $entityManager->persist($servingRoute);
+        }
+
         $configuration = new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position)->setActive($active);
         $entityManager->persist($quay);
         $entityManager->persist($configuration);
@@ -273,6 +374,16 @@ final class DisplayPreviewTest extends WebTestCase
         $entityManager->clear();
 
         return $configuration;
+    }
+
+    private function disableDevice(): void
+    {
+        $entityManager = $this->entityManager();
+        $device = $entityManager->find(Device::class, $this->device->getId());
+        self::assertInstanceOf(Device::class, $device);
+        $device->setActive(false);
+        $entityManager->flush();
+        $entityManager->clear();
     }
 
     private function changeCadences(int $screenDuration, int $refreshInterval): void
