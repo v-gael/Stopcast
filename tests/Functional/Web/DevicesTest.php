@@ -60,6 +60,8 @@ final class DevicesTest extends WebTestCase
         self::assertSame(['Cuisine', 'Entrée', 'Salon'], $cards->each(static fn (Crawler $card): string => $card->filter('a')->text()));
         self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
         self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
+        // Passages d'exemple sans mention : un visiteur ne doit pas croire l'appli en panne.
+        self::assertSelectorNotExists('[data-sample-notice]');
     }
 
     /**
@@ -395,6 +397,7 @@ final class DevicesTest extends WebTestCase
         self::assertCount(2, $bench->filter('[data-device-bench-target="screen"][hidden]'));
         self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
         self::assertSame('durationInput', $crawler->filter('#device_screenDuration')->attr('data-device-bench-target'));
+        self::assertSelectorTextContains('[data-sample-notice]', 'Exemple');
     }
 
     public function testNewFormShowsTheTestScreenAtTheDefaultDuration(): void
@@ -405,6 +408,7 @@ final class DevicesTest extends WebTestCase
         self::assertSame((string) Device::DEFAULT_SCREEN_DURATION, $bench->attr('data-device-bench-saved-duration-value'));
         self::assertCount(3, $bench->filter('[data-device-bench-target="screen"]'));
         self::assertSame('labelInput', $crawler->filter('#device_label')->attr('data-device-bench-target'));
+        self::assertSelectorTextContains('[data-sample-notice]', 'Exemple');
         self::assertSame('/devices', $crawler->selectLink('Annuler')->attr('href'));
     }
 

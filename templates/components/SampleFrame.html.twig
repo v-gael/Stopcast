@@ -1,0 +1,13 @@
+{#
+ # Aperçu sur des passages fictifs, sur les pages de réglage : un bandeau soudé
+ # sous l'écran le dit. La liste des dispositifs n'en porte pas : un visiteur
+ # croirait l'appli en panne. Fond noir : les coins arrondis de l'écran
+ # (device_bench.css, hors des couches Tailwind) se fondent dans le cadre.
+ #}
+<div {{ attributes.defaults({class: 'max-w-[480px] overflow-hidden rounded-md bg-black ring-1 ring-amber-300 [&_iframe]:rounded-none [&_iframe]:border-0'}) }}>
+    {% block content %}{% endblock %}
+    <p class="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 text-sm text-amber-900" data-sample-notice>
+        <svg viewBox="0 0 20 20" fill="currentColor" class="size-4 shrink-0" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a1 1 0 0 0 0 2v3a1 1 0 0 0 1 1h1a1 1 0 1 0 0-2v-3a1 1 0 0 0-1-1H9Z" clip-rule="evenodd"/></svg>
+        <span><strong class="font-semibold">Exemple</strong> · l'écran affichera les passages du réseau</span>
+    </p>
+</div>

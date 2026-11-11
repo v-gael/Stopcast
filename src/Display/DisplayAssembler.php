@@ -52,9 +52,9 @@ final readonly class DisplayAssembler
 
     /**
      * Écrans de forDevice, sur les passages d'exemple : pour l'aperçu, sans
-     * appel au flux temps réel. Un quai déprécié en est exclu : l'écran réel
-     * le garde, mais n'y annonce en général aucun passage (« Pas de passage
-     * prévu actuellement »), là où l'aperçu montrerait des passages d'exemple.
+     * appel au flux temps réel. Un quai déprécié en est exclu : sur l'écran
+     * réel, il n'a en général plus de passage et sort donc de la rotation
+     * (ScreenPaginator), là où l'aperçu lui montrerait des passages d'exemple.
      *
      * @return list<DisplayItem>
      */
