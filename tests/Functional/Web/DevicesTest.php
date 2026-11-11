@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Web;
 
+use App\Controller\DeviceController;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
@@ -11,6 +12,7 @@ use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\QueryCountTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -25,6 +27,7 @@ final class DevicesTest extends WebTestCase
 {
     use ClockSensitiveTrait;
     use Factories;
+    use QueryCountTrait;
     use ResetDatabase;
 
     private const string NOW = '2026-10-30 14:52:00';
@@ -55,88 +58,92 @@ final class DevicesTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $cards = $crawler->filter('main [data-device-card]');
         self::assertSame(['Cuisine', 'Entrée', 'Salon'], $cards->each(static fn (Crawler $card): string => $card->filter('a')->text()));
-        self::assertSame(['Inactif', 'Actif', 'Actif'], $cards->each(static fn (Crawler $card): string => $card->filter('[data-device-state]')->text()));
-        self::assertStringContainsString('Aucun quai', $cards->eq(0)->text());
-        self::assertStringContainsString('Tout est masqué', $cards->eq(1)->text());
-        self::assertStringNotContainsString('Aucun quai', $cards->eq(2)->text());
-        self::assertStringNotContainsString('Tout est masqué', $cards->eq(2)->text());
         self::assertSame(\sprintf('/devices/%d/preview', $older->getId()), $cards->eq(2)->filter('iframe')->attr('src'));
         self::assertStringContainsString('grayscale', (string) $cards->eq(0)->filter('iframe')->attr('class'));
     }
 
-    public function testListShowsTheLastContactAndFlagsSilentOrUnpairedDevices(): void
+    /**
+     * Configurations : « affiché » ou « masqué », suivi de « disparu » si son
+     * quai a disparu du dernier import.
+     *
+     * @return iterable<string, array{?string, bool, bool, list<string>, string, string}>
+     */
+    public static function cardStatusCases(): iterable
+    {
+        yield 'désactivé' => ['-2 minutes', true, false, ['affiché'], 'Désactivé', "L'écran affiche « Écran désactivé »."];
+        yield 'sans écran' => [null, false, true, ['affiché'], 'Non appairé', 'Aucun écran appairé.'];
+        yield 'jamais vu' => [null, true, true, ['affiché'], 'Jamais connecté', "L'écran appairé n'a encore jamais donné de nouvelles."];
+        yield 'silencieux' => ['-20 minutes', true, true, ['affiché'], 'Hors ligne', 'Dernier contact : 30/10/2026 à 14:32'];
+        yield 'sans quai' => ['-2 minutes', true, true, [], 'Rien à afficher', 'Aucun quai configuré.'];
+        yield 'tout masqué' => ['-2 minutes', true, true, ['masqué'], 'Rien à afficher', 'Tous les quais sont masqués.'];
+        yield 'affichés disparus' => ['-2 minutes', true, true, ['affiché disparu', 'masqué'], 'Rien à afficher', 'Tous les quais affichés ont disparu du dernier import.'];
+        yield 'un masqué disparu' => ['-2 minutes', true, true, ['affiché', 'masqué disparu'], 'Quai disparu', '1 quai a disparu du dernier import.'];
+        yield 'deux disparus' => ['-2 minutes', true, true, ['affiché', 'affiché disparu', 'masqué disparu'], 'Quai disparu', '2 quais ont disparu du dernier import.'];
+        yield 'un quai' => ['-2 minutes', true, true, ['affiché', 'masqué'], 'En ligne', '1 quai en rotation.'];
+        yield 'deux quais' => ['-2 minutes', true, true, ['affiché', 'affiché'], 'En ligne', '2 quais en rotation.'];
+    }
+
+    /**
+     * @param list<string> $configurations
+     */
+    #[DataProvider('cardStatusCases')]
+    public function testCardSumsUpTheDeviceInOneStatus(?string $lastSeen, bool $paired, bool $active, array $configurations, string $status, string $detail): void
     {
         self::mockTime(self::NOW);
-        $this->deviceSeen('Vu à l’instant', '-2 minutes');
-        $this->deviceSeen('Silencieux', '-20 minutes');
-        $this->deviceSeen('Jamais vu', null);
-        DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Sans écran']);
-        $this->deviceSeen('Éteint et silencieux', '-20 minutes', active: false);
+        $device = $this->deviceSeen('Salon', $lastSeen, $paired, $active);
+        foreach ($configurations as $configuration) {
+            $this->configure($device, active: str_starts_with($configuration, 'affiché'), deprecated: str_ends_with($configuration, 'disparu'));
+        }
 
         $crawler = $this->client->request('GET', '/devices');
 
         self::assertResponseIsSuccessful();
-        $statuses = [];
-        $lastSeen = [];
-        foreach ($crawler->filter('main [data-device-card]') as $node) {
-            $card = new Crawler($node);
-            $label = $card->filter('a')->text();
-            $status = $card->filter('[data-device-status]');
-            $statuses[$label] = $status->count() > 0 ? $status->text() : null;
-            $lastSeen[$label] = $card->filter('[data-last-seen]')->text();
+        $card = $crawler->filter('main [data-device-card]');
+        self::assertSame($status, $card->filter('[data-device-status]')->text());
+        self::assertSame($detail, $card->filter('[data-device-status-detail]')->text());
+        self::assertCount(0, $card->filter('[data-last-seen]'));
+    }
+
+    public function testListLoadsTheQuaysOfAllCardsTogether(): void
+    {
+        // Un seul noyau : les requêtes se comptent sur le conteneur qui sert la page.
+        $this->client->disableReboot();
+        self::mockTime(self::NOW);
+        $this->configure($this->deviceSeen('Écran 1', '-2 minutes'), deprecated: true);
+        $oneDevice = $this->countQueries(fn () => $this->client->request('GET', '/devices'));
+
+        for ($number = 2; $number <= DeviceController::PER_PAGE; ++$number) {
+            $this->configure($this->deviceSeen('Écran '.$number, '-2 minutes'), deprecated: true);
         }
 
-        // Le plus récent d'abord.
-        self::assertSame([
-            'Éteint et silencieux' => null,
-            'Sans écran' => 'Non appairé',
-            'Jamais vu' => 'Hors ligne',
-            'Silencieux' => 'Hors ligne',
-            'Vu à l’instant' => null,
-        ], $statuses);
-        self::assertSame('Dernier contact : 30/10/2026 à 14:32', $lastSeen['Silencieux']);
-        self::assertSame('Dernier contact : Jamais', $lastSeen['Jamais vu']);
+        $fullPage = $this->countQueries(fn () => $this->client->request('GET', '/devices'));
+
+        self::assertSame($oneDevice, $fullPage);
     }
 
     /**
-     * @return iterable<string, array{?string, bool, ?string, string}>
+     * @return iterable<string, array{?string, bool, bool, string, string}>
      */
     public static function detailStatusCases(): iterable
     {
-        yield 'vu il y a 2 min' => ['-2 minutes', true, null, '30/10/2026 à 14:50'];
-        yield 'vu il y a 20 min' => ['-20 minutes', true, 'Hors ligne', '30/10/2026 à 14:32'];
-        yield 'jamais vu' => [null, true, 'Hors ligne', 'Jamais'];
-        // La fiche dit déjà « Aucun écran appairé ».
-        yield 'sans écran' => ['-20 minutes', false, null, '30/10/2026 à 14:32'];
+        yield 'vu il y a 2 min, sans quai' => ['-2 minutes', true, true, 'Rien à afficher', '30/10/2026 à 14:50'];
+        yield 'vu il y a 20 min' => ['-20 minutes', true, true, 'Hors ligne', '30/10/2026 à 14:32'];
+        yield 'jamais vu' => [null, true, true, 'Jamais connecté', 'Jamais'];
+        yield 'sans écran' => ['-20 minutes', false, true, 'Non appairé', '30/10/2026 à 14:32'];
+        yield 'désactivé' => ['-20 minutes', true, false, 'Désactivé', '30/10/2026 à 14:32'];
     }
 
     #[DataProvider('detailStatusCases')]
-    public function testDetailShowsTheLastContactAndFlagsASilentScreen(?string $lastSeen, bool $paired, ?string $status, string $shownLastSeen): void
+    public function testDetailShowsTheStatusAndTheLastContact(?string $lastSeen, bool $paired, bool $active, string $status, string $shownLastSeen): void
     {
         self::mockTime(self::NOW);
-        $device = $this->deviceSeen('Salon', $lastSeen, $paired);
+        $device = $this->deviceSeen('Salon', $lastSeen, $paired, $active);
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
 
         self::assertResponseIsSuccessful();
+        self::assertSame($status, $crawler->filter('main [data-device-status]')->text());
         self::assertSame($shownLastSeen, $crawler->filter('[data-last-seen]')->text());
-        $badge = $crawler->filter('main [data-device-status]');
-        self::assertSame($status, $badge->count() > 0 ? $badge->text() : null);
-        // Hors de l'état : ni son infobulle ni son texte pour les lecteurs d'écran.
-        self::assertCount(0, $crawler->filter('[data-device-state] [data-device-status]'));
-    }
-
-    public function testDisabledDetailHasNoStatusBadge(): void
-    {
-        self::mockTime(self::NOW);
-        $device = $this->deviceSeen('Salon', '-20 minutes');
-        $entityManager = $this->entityManager();
-        $entityManager->find(Device::class, $device->getId())?->setActive(false);
-        $entityManager->flush();
-
-        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-
-        self::assertCount(0, $crawler->filter('main [data-device-status]'));
     }
 
     public function testListAlwaysEndsWithTheAddBlock(): void
@@ -411,22 +418,17 @@ final class DevicesTest extends WebTestCase
         self::assertSame(\sprintf('/display-configurations/new?device=%d', $device->getId()), $crawler->selectLink('Ajouter un quai à Salon')->attr('href'));
     }
 
-    public function testDetailShowsTheStateWithTheCreationDateOnHover(): void
+    public function testDetailShowsTheStatusWithTheCreationDateOnHover(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $created = 'Créé le '.$device->getCreatedAt()->format('d/m/Y à H:i');
 
         $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+
         $state = $crawler->filter('[data-device-state]');
         self::assertSame($created, $state->attr('title'));
-        self::assertStringStartsWith('Actif', $state->text());
+        self::assertSame('Non appairé', $state->filter('[data-device-status]')->text());
         self::assertStringContainsString(mb_strtolower($created), $state->text());
-
-        $entityManager = $this->entityManager();
-        $entityManager->find(Device::class, $device->getId())?->setActive(false);
-        $entityManager->flush();
-        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
-        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
     }
 
     public function testDeviceCanBeDisabled(): void
@@ -442,7 +444,7 @@ final class DevicesTest extends WebTestCase
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $crawler = $this->client->followRedirect();
-        self::assertStringStartsWith('Inactif', $crawler->filter('[data-device-state]')->text());
+        self::assertSame('Désactivé', $crawler->filter('main [data-device-status]')->text());
         self::assertFalse($this->reload($device)?->isActive());
     }
 
@@ -540,13 +542,23 @@ final class DevicesTest extends WebTestCase
         return $crawler->filter('main [data-device-card]')->each(static fn (Crawler $card): string => $card->filter('a')->text());
     }
 
-    private function configure(Device $device, ?string $label = null, int $position = 0, bool $active = true): void
+    /**
+     * Ajoute une configuration au dispositif, sur un quai commun, ou sur un
+     * quai à lui disparu du dernier import si « $deprecated ».
+     */
+    private function configure(Device $device, ?string $label = null, int $position = 0, bool $active = true, bool $deprecated = false): void
     {
         $device = $this->reload($device);
         self::assertInstanceOf(Device::class, $device);
 
         $entityManager = $this->entityManager();
-        $quay = $entityManager->getRepository(Quay::class)->findOneBy([]) ?? new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1');
+        if ($deprecated) {
+            $id = bin2hex(random_bytes(4));
+            $quay = new Quay('S'.$id, 'ANCIEN ARRÊT', 38.5, -28.6, 'P'.$id)->markDeprecated();
+        } else {
+            $quay = $entityManager->getRepository(Quay::class)->findOneBy(['gtfsStopId' => 'S1']) ?? new Quay('S1', 'CENTRE VILLE', 38.5, -28.6, 'P1');
+        }
+
         $entityManager->persist($quay);
         $entityManager->persist(new DisplayConfiguration($device, $quay)->setLabel($label)->setPosition($position)->setActive($active));
         $entityManager->flush();

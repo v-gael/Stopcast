@@ -20,7 +20,7 @@
 
         <twig:Card title="Dispositif" class="lg:col-span-2">
             {# Le contenu d'un composant ne voit pas les imports du gabarit. #}
-            {% import 'device/_contact.html.twig' as contact %}
+            {% import 'device/_status.html.twig' as status_macros %}
             <div class="flex flex-col gap-6 xl:flex-row">
                 <div class="min-w-0 flex-1">
                     {# Toute la rotation, comme l'écran la montre, sur des passages d'exemple. #}
@@ -32,17 +32,14 @@
 
                 <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
                     <dl class="space-y-2 text-sm">
-                        {# L'état, et la date de création au survol (et pour les lecteurs d'écran). #}
+                        {# L'état, et la date de création au survol (et pour les lecteurs d'écran). Ce qui l'explique est dans les lignes suivantes et dans la colonne « Quais ». #}
                         {% set created = 'Créé le ' ~ device.createdAt|date('d/m/Y à H:i') %}
                         <div>
                             <dt class="font-medium text-slate-500">État</dt>
-                            {# Le badge reste hors de l'état : ni l'infobulle ni le texte des lecteurs d'écran ne le prennent. #}
-                            <dd class="mt-0.5 flex flex-wrap items-center gap-2">
-                                <span class="flex cursor-help items-center gap-1.5 font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" title="{{ created }}" data-device-state>
-                                    <span class="size-2 shrink-0 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
-                                    {{ device.active ? 'Actif' : 'Inactif' }}<span class="sr-only">, {{ created|lower }}</span>
+                            <dd class="mt-0.5">
+                                <span class="inline-flex cursor-help" title="{{ created }}" data-device-state>
+                                    {{ status_macros.status(device) }}<span class="sr-only">, {{ created|lower }}</span>
                                 </span>
-                                {{ contact.badge(device, with_unpaired: false) }}
                             </dd>
                         </div>
                         <div>
@@ -51,7 +48,7 @@
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Dernier contact</dt>
-                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ contact.last_seen(device) }}</dd>
+                            <dd class="mt-0.5 text-slate-900" data-last-seen>{{ status_macros.last_seen(device) }}</dd>
                         </div>
                         <div>
                             <dt class="font-medium text-slate-500">Durée d'affichage d'un écran</dt>

@@ -1,6 +1,6 @@
 {% extends 'layout/space.html.twig' %}
 
-{% import 'device/_contact.html.twig' as contact %}
+{% import 'device/_status.html.twig' as status_macros %}
 
 {% block title %}Mes dispositifs · Stopcast{% endblock %}
 
@@ -38,18 +38,9 @@
                 <div class="p-4">
                     <div class="flex items-center justify-between gap-2">
                         <a href="{{ path('app_device_show', {id: device.id}) }}" class="truncate font-semibold text-slate-900 outline-none after:absolute after:inset-0 group-hover:text-amber-700">{{ device.label }}</a>
-                        <span class="flex shrink-0 items-center gap-1.5 text-sm font-medium {{ device.active ? 'text-emerald-700' : 'text-red-700' }}" data-device-state>
-                            <span class="size-2 rounded-full {{ device.active ? 'bg-emerald-500' : 'bg-red-600' }}" aria-hidden="true"></span>
-                            {{ device.active ? 'Actif' : 'Inactif' }}
-                        </span>
+                        {{ status_macros.status(device, class: 'shrink-0 text-sm') }}
                     </div>
-                    <p class="mt-1 text-sm text-slate-500" data-last-seen>Dernier contact : {{ contact.last_seen(device) }}</p>
-                    {{ contact.badge(device, class: 'mt-2') }}
-                    {% if device.displayConfigurations is empty %}
-                        <twig:Badge variant="warning" class="mt-2">Aucun quai</twig:Badge>
-                    {% elseif device.activeDisplayConfigurations is empty %}
-                        <twig:Badge variant="warning" class="mt-2">Tout est masqué</twig:Badge>
-                    {% endif %}
+                    <p class="mt-1 text-sm text-slate-500" data-device-status-detail>{{ status_macros.status_detail(device) }}</p>
                 </div>
             </li>
         {% endfor %}

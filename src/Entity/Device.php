@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\DeviceStatus;
+use App\Enum\NothingToShowReason;
 use App\Repository\DeviceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -224,25 +225,22 @@ class Device
     }
 
     /**
-     * Ce qui demande l'attention du propriétaire : pas d'écran appairé, ou un
-     * écran sans dernier contact depuis plus de OFFLINE_AFTER (ou jamais).
-     * Rien pour un dispositif désactivé.
+     * État résumé du dispositif, le premier qui s'applique : désactivé, sans
+     * écran, écran jamais vu, écran sans dernier contact depuis plus de
+     * OFFLINE_AFTER, aucun quai à afficher, quai disparu du dernier import, et
+     * sinon en ligne.
      */
-    public function status(\DateTimeImmutable $now): ?DeviceStatus
+    public function status(\DateTimeImmutable $now): DeviceStatus
     {
-        if (!$this->active) {
-            return null;
-        }
-
-        if (!$this->hasPairedScreen()) {
-            return DeviceStatus::Unpaired;
-        }
-
-        if (!$this->lastSeenAt instanceof \DateTimeImmutable || $this->lastSeenAt < $now->modify('-'.self::OFFLINE_AFTER)) {
-            return DeviceStatus::Offline;
-        }
-
-        return null;
+        return match (true) {
+            !$this->active => DeviceStatus::Disabled,
+            !$this->hasPairedScreen() => DeviceStatus::Unpaired,
+            !$this->lastSeenAt instanceof \DateTimeImmutable => DeviceStatus::NeverSeen,
+            $this->lastSeenAt < $now->modify('-'.self::OFFLINE_AFTER) => DeviceStatus::Offline,
+            $this->nothingToShowReason() instanceof NothingToShowReason => DeviceStatus::NothingToShow,
+            $this->countConfigurationsWithDeprecatedQuay() > 0 => DeviceStatus::QuayGone,
+            default => DeviceStatus::Online,
+        };
     }
 
     public function isActive(): bool
@@ -318,6 +316,45 @@ class Device
             $this->getDisplayConfigurationsInRotationOrder(),
             static fn (DisplayConfiguration $configuration): bool => $configuration->isActive(),
         ));
+    }
+
+    /**
+     * Pourquoi le dispositif n'a aucun quai à afficher, ou null s'il en a un.
+     */
+    public function nothingToShowReason(): ?NothingToShowReason
+    {
+        return match (true) {
+            $this->displayConfigurations->isEmpty() => NothingToShowReason::NoQuay,
+            [] === $this->getActiveDisplayConfigurations() => NothingToShowReason::AllHidden,
+            [] === $this->getDisplayedConfigurations() => NothingToShowReason::AllQuaysGone,
+            default => null,
+        };
+    }
+
+    /**
+     * Configurations qui ont des passages à montrer : les actives dont le quai
+     * n'a pas disparu du dernier import, dans l'ordre de rotation. L'aperçu ne
+     * fait tourner qu'elles ; l'écran réel montre aussi les autres actives,
+     * sans passage.
+     *
+     * @return list<DisplayConfiguration>
+     */
+    public function getDisplayedConfigurations(): array
+    {
+        return array_values(array_filter(
+            $this->getActiveDisplayConfigurations(),
+            static fn (DisplayConfiguration $configuration): bool => $configuration->getQuay()->isActive(),
+        ));
+    }
+
+    /**
+     * Configurations, masquées comprises, dont le quai a disparu du dernier import.
+     */
+    public function countConfigurationsWithDeprecatedQuay(): int
+    {
+        return $this->displayConfigurations->filter(
+            static fn (DisplayConfiguration $configuration): bool => !$configuration->getQuay()->isActive(),
+        )->count();
     }
 
     public function addDisplayConfiguration(DisplayConfiguration $configuration): static
