@@ -329,7 +329,7 @@ Le même workflow fait échouer, par son check « Titre de PR » (`bin/check-pr`
 | `develop` | `main` | Exactement `chore(release): merge vX.Y.Z into develop`, `vX.Y.Z` étant un tag existant |
 | Toute autre | Toute autre | [Conventional Commits](https://www.conventionalcommits.org/) avec un type du dépôt (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`, `style`, `revert`, `perf`, `security`), ou `Revert "<titre conforme>"` posé par le bouton Revert de GitHub |
 
-Pour une `release/X.Y.Z` ou une `hotfix/X.Y.Z`, `X.Y.Z` est une version SemVer sans préfixe, le tag `vX.Y.Z` n'existe pas encore et la version dépasse le plus grand tag `v*` ; pour un hotfix, seul le patch monte. Sans aucun tag, toute version passe. Pour essayer un titre en local : `PR_BASE=main PR_HEAD=release/0.3.0 PR_TITLE='chore(release): v0.3.0' bin/check-pr < /dev/null` (les tags, un par ligne, sur l'entrée standard). Le check est requis par le ruleset de `main` et `develop` une fois celui-ci complété au passage en public.
+Pour une `release/X.Y.Z` ou une `hotfix/X.Y.Z`, `X.Y.Z` est une version SemVer sans préfixe, le tag `vX.Y.Z` n'existe pas encore et la version dépasse le plus grand tag `v*` ; pour un hotfix, seul le patch monte. Sans aucun tag, toute version passe. Pour essayer un titre en local : `PR_BASE=main PR_HEAD=release/0.3.0 PR_TITLE='chore(release): v0.3.0' bin/check-pr < /dev/null` (les tags, un par ligne, sur l'entrée standard). Le check est requis par les rulesets de `main` et `develop`.
 
 Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main`, et il y prend aussi `bin/check-pr` : une modification de l'un ou de l'autre n'agit qu'une fois mergée sur `main`.
 
