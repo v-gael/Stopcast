@@ -27,6 +27,7 @@ final class LegalPrivacyTest extends WebTestCase
         self::assertSelectorTextContains('main', 'v-gael');
         self::assertSelectorTextContains('main', 'contact@gaelv.com');
         self::assertSelectorTextContains('main', 'CNIL');
+        self::assertSelectorTextContains('main', "Aucun outil de mesure d'audience");
         self::assertSame('page', $this->footerNav($crawler)->selectLink('Confidentialité')->attr('aria-current'));
         self::assertSame([], $client->getResponse()->headers->getCookies());
     }
