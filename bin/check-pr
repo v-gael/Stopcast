@@ -1,0 +1,112 @@
+#!/bin/sh
+# Vérifie qu'une PR suit le cycle de release (docs/developpement.md,
+# « Conventions ») : titre, branche source et, pour une release ou un hotfix,
+# version. Le job « Titre de PR » de label-release-notes.yml l'appelle.
+#
+# Entrées : PR_TITLE, PR_BASE et PR_HEAD dans l'environnement (jamais sur la
+# ligne de commande : le titre vient de l'auteur de la PR), les tags du dépôt
+# sur l'entrée standard, un par ligne. Aucun accès réseau.
+# Sortie : 0 si la PR est conforme, 1 avec une ligne ::error:: qui donne la
+# règle attendue, 2 si une entrée manque.
+
+for name in PR_TITLE PR_BASE PR_HEAD; do
+    if [ -z "$(printenv "$name")" ]; then
+        echo "check-pr : $name manque dans l'environnement." >&2
+        exit 2
+    fi
+done
+
+export LC_ALL=C
+
+TYPES='feat|fix|docs|chore|refactor|test|build|ci|style|revert|perf|security'
+SEMVER='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+NEWLINE='
+'
+
+fail() {
+    printf '::error::%s\n' "$1"
+    exit 1
+}
+
+# Vrai si toute la chaîne $1 (une seule ligne) correspond à l'ERE $2.
+matches() {
+    case $1 in *"$NEWLINE"*) return 1 ;; esac
+    printf '%s\n' "$1" | grep -Eq "^($2)\$"
+}
+
+# Titre Conventional Commits, ou titre `Revert "<titre conforme>"` que pose le
+# bouton Revert de GitHub, éventuellement imbriqué.
+conventional() {
+    title=$1
+    while matches "$title" 'Revert ".*"'; do
+        title=${title#Revert \"}
+        title=${title%\"}
+    done
+    matches "$title" "($TYPES)(\\([^()]+\\))?!?: [^ ].*"
+}
+
+# Vrai si la version $1 est strictement plus grande que $2 (X.Y.Z).
+newer() {
+    [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)" = "$1" ]
+}
+
+tags=$(cat)
+
+has_tag() {
+    printf '%s\n' "$tags" | grep -Fqx "v$1"
+}
+
+# Plus grande version étiquetée vX.Y.Z, vide sans aucun tag ; les autres tags
+# (préversions, noms libres) sont ignorés.
+latest=$(printf '%s\n' "$tags" | grep -Ex "v$SEMVER" | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
+
+# Version d'une branche release/ ou hotfix/ : tag absent, plus grande que le
+# dernier tag et, pour un hotfix, seul le patch monte.
+check_version() {
+    version=$1
+    kind=$2
+    if has_tag "$version"; then
+        fail "Le tag v$version existe déjà : la branche $PR_HEAD doit porter une version plus grande que v$latest."
+    fi
+    [ -n "$latest" ] || return 0
+    if ! newer "$version" "$latest"; then
+        fail "La version $version doit être plus grande que v$latest, le dernier tag."
+    fi
+    if [ "$kind" = hotfix ] && [ "${version%.*}" != "${latest%.*}" ]; then
+        fail "Un hotfix part de v$latest, le dernier tag : seul le patch monte (hotfix/${latest%.*}.Z)."
+    fi
+}
+
+if [ "$PR_BASE" = main ]; then
+    case $PR_HEAD in
+        release/*)
+            version=${PR_HEAD#release/}
+            matches "$version" "$SEMVER" ||
+                fail "Une branche de release s'appelle release/X.Y.Z, version SemVer sans préfixe ni zéro initial (reçu : $PR_HEAD)."
+            [ "$PR_TITLE" = "chore(release): v$version" ] ||
+                fail "Une PR de $PR_HEAD vers main s'intitule exactement « chore(release): v$version »."
+            check_version "$version" release
+            ;;
+        hotfix/*)
+            version=${PR_HEAD#hotfix/}
+            matches "$version" "$SEMVER" ||
+                fail "Une branche de hotfix s'appelle hotfix/X.Y.Z, version SemVer sans préfixe ni zéro initial (reçu : $PR_HEAD)."
+            matches "$PR_TITLE" 'fix(\([^()]+\))?: [^ ].*' ||
+                fail "Une PR de hotfix vers main s'intitule « fix: … » ou « fix(<scope>): … », sans « ! » (le patch seul monte)."
+            check_version "$version" hotfix
+            ;;
+        *)
+            fail "Vers main, seules les branches release/X.Y.Z ou hotfix/X.Y.Z sont acceptées (reçu : $PR_HEAD)."
+            ;;
+    esac
+elif [ "$PR_BASE" = develop ] && [ "$PR_HEAD" = main ]; then
+    matches "$PR_TITLE" "chore\\(release\\): merge v$SEMVER into develop" ||
+        fail "Le retour de main vers develop s'intitule exactement « chore(release): merge vX.Y.Z into develop », vX.Y.Z étant le dernier tag."
+    version=${PR_TITLE#chore(release): merge v}
+    version=${version% into develop}
+    has_tag "$version" ||
+        fail "Le tag v$version n'existe pas : le titre du retour vers develop nomme la version publiée (dernier tag : v${latest:-aucun})."
+else
+    conventional "$PR_TITLE" ||
+        fail "Le titre suit Conventional Commits : « <type>(<scope>): <description> », scope facultatif, « ! » pour un changement incompatible ; types : $(echo "$TYPES" | sed 's/|/, /g'). Le bouton Revert de GitHub est accepté : « Revert \"<titre conforme>\" »."
+fi
