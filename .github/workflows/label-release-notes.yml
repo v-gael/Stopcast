@@ -1,19 +1,25 @@
 # Pose sur chaque PR le label qui la range dans les notes de release
-# (.github/release.yml), d'après le préfixe Conventional Commits de son titre.
+# (.github/release.yml), d'après le préfixe Conventional Commits de son titre,
+# et vérifie que la PR suit le cycle de release (bin/check-pr).
 # pull_request_target pour avoir le droit d'écrire aussi sur les PR de forks et
-# de Dependabot : ce workflow ne récupère jamais le code de la PR, et le titre
-# ne passe que par l'environnement.
+# de Dependabot : ce workflow ne récupère jamais le code de la PR, seulement
+# bin/check-pr depuis main, et titre et branches ne passent que par
+# l'environnement.
 name: Label de release
 
 on:
   pull_request_target:
-    types: [opened, edited, reopened]
+    # synchronize : le check « Titre de PR », requis par le ruleset, doit
+    # exister sur chaque nouveau commit de la PR.
+    types: [opened, edited, reopened, synchronize]
 
 permissions: {}
 
 jobs:
   label:
     name: Poser le label
+    # Un nouveau commit ne change pas le titre.
+    if: github.event.action != 'synchronize'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -46,3 +52,29 @@ jobs:
               gh api --method DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/$label" > /dev/null 2>&1 || true
             fi
           done
+
+  check:
+    # Nom stable : c'est celui du check requis par le ruleset.
+    name: Titre de PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # main explicitement, comme ce workflow : par défaut, le checkout de
+      # pull_request_target prendrait la base de la PR, develop le plus souvent.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: bin/check-pr
+          sparse-checkout-cone-mode: false
+      - name: Vérifier le titre, la branche et la version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" --jq '.[].ref | ltrimstr("refs/tags/")' |
+            bin/check-pr
