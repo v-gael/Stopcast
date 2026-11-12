@@ -2,7 +2,8 @@
 # Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
 # sert le formulaire de connexion, avec la vraie clé de site Turnstile hors
 # localhost (la prod locale garde la clé de test), la page d'affichage refuse un
-# rafraîchissement sans cookie d'écran, et /health dit que la base répond.
+# rafraîchissement sans cookie d'écran, /health dit que la base répond et
+# aucune réponse ne donne la version de PHP (en-tête X-Powered-By).
 # Lancé par le job `deploy` de `ci.yml` sur l'URL publique, après bin/deploy ;
 # se lance aussi à la main.
 #
@@ -103,6 +104,20 @@ case $base_url in
 esac
 check "Page d'affichage fermée sans cookie d'écran" '/display?fragment=1' 401
 check 'Base de données joignable' /health 200 '"status":"ok"'
+
+# Après les contrôles retentés : le tunnel joint déjà les nouveaux conteneurs.
+# L'en-tête X-Powered-By donnerait la version exacte de PHP (expose_php,
+# frankenphp/conf.d/20-app.prod.ini). Sans réponse HTTP, le contrôle échoue.
+headers=$(curl --silent --show-error --max-time 10 --output /dev/null --dump-header - "$base_url/" 2>&1) || true
+if ! printf '%s\n' "$headers" | grep -q '^HTTP/'; then
+    echo "Échec : version de PHP masquée (GET $base_url/) : pas de réponse HTTP (${headers:-réponse vide})." >&2
+    failed=1
+elif printf '%s\n' "$headers" | grep -qi '^x-powered-by:'; then
+    echo "Échec : version de PHP masquée (GET $base_url/) : la réponse porte l'en-tête X-Powered-By." >&2
+    failed=1
+else
+    echo "OK : version de PHP masquée (GET $base_url/ sans en-tête X-Powered-By)"
+fi
 
 if [ "$failed" -ne 0 ]; then
     echo "Contrôles après déploiement en échec sur $base_url." >&2

@@ -2,9 +2,10 @@
 # Vérifie l'image de prod en prod locale, sur l'hôte : ce que ni `make check`
 # ni la CI n'exécutent avant main. Construit l'image `local`, contrôle sa
 # taille, la déploie par bin/deploy (migrations comprises), contrôle les
-# conteneurs (utilisateur, capacités, fuseau, mode worker, écriture dans var/
-# et dans le journal des suppressions, outils et version de pg_dump de backup)
-# puis lance bin/smoke-test. Tous les contrôles tournent avant de conclure.
+# conteneurs (utilisateur, capacités, fuseau, version de PHP masquée, mode
+# worker, écriture dans var/ et dans le journal des suppressions, outils et
+# version de pg_dump de backup) puis lance bin/smoke-test. Tous les contrôles
+# tournent avant de conclure.
 # Arrête la prod locale à la fin (volumes gardés), sauf avec --keep.
 #
 # Usage : bin/prod-verify [--keep]   (make prod-verify)
@@ -130,6 +131,9 @@ if [ -n "$app" ]; then
     else
         fail 'app : frankenphp sans capacité de fichier cap_net_bind_service (port 80 sous www-data)'
     fi
+
+    expose_php=$(prod exec -T app php -r 'echo ini_get("expose_php") ? "On" : "Off";')
+    expect "$expose_php" Off 'app : version de PHP masquée (expose_php)' "app : expose_php à « $expose_php », Off attendu (en-tête X-Powered-By)"
 
     if prod logs app 2>/dev/null | grep -qE '"worker_threads":[1-9]'; then
         ok 'app : mode worker de FrankenPHP actif'
