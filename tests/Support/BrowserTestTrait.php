@@ -81,22 +81,32 @@ trait BrowserTestTrait
     /**
      * Dernière lecture de la console, après chaque test : une erreur arrivée
      * après le dernier contrôle (requête, contrôleur Stimulus, iframe) n'est
-     * pas perdue, ni reportée sur le test suivant. Panther a déjà pris sa
-     * capture d'échec (tearDown passe avant) : elle est prise ici.
+     * pas perdue. Panther a déjà pris sa capture d'échec (tearDown passe
+     * avant) : elle est prise ici.
+     *
+     * Puis le navigateur quitte la page : rien de ce qu'elle lancerait encore
+     * (préchargement de Turbo, requête en cours, minuteur, iframe) ne tombe
+     * sur la base que le test suivant réinitialise. La console est vidée de ce
+     * que ce départ a pu y laisser.
      */
     #[After]
     protected function assertNoBrowserErrorsAtTheEnd(): void
     {
-        if (!self::$pantherClient instanceof Client) {
+        $client = self::$pantherClient;
+        if (!$client instanceof Client) {
             return;
         }
 
         try {
-            $this->assertNoBrowserErrors(self::$pantherClient, 'fin du test');
+            $this->assertNoBrowserErrors($client, 'fin du test');
         } catch (AssertionFailedError $assertionFailedError) {
             ServerExtensionLegacy::takeScreenshots('failure', $this->toString());
 
             throw $assertionFailedError;
+        } finally {
+            $driver = $client->getWebDriver();
+            $driver->get('about:blank');
+            $driver->manage()->getLog('browser');
         }
     }
 
