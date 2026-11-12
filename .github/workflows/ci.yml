@@ -1,8 +1,10 @@
 name: CI
 
+# Pas de push sur develop : le ruleset n'y accepte qu'une PR à jour dont les
+# checks sont passés, donc le commit de merge a déjà été testé par la PR.
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
 
 permissions:
