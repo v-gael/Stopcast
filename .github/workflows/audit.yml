@@ -19,9 +19,11 @@ on:
 permissions:
   contents: read
 
+# Un nouveau push sur une PR annule son audit en cours. Le passage quotidien et
+# un lancement manuel ne s'annulent pas : ils partagent la ref main.
 concurrency:
   group: audit-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   audit:
@@ -66,9 +68,9 @@ jobs:
         run: bin/audit
 
   # Scan quotidien de la dernière release déployée (latest, posé par le job
-  # release de ci.yml) : une faille découverte après
-  # le déploiement fait échouer le job, pour la signaler, sans rien bloquer.
-  # Mêmes seuils que le scan du job `image` de ci.yml.
+  # release de ci.yml) : une faille découverte après le déploiement fait
+  # échouer le job, pour la signaler, sans rien bloquer. Mêmes seuils que le
+  # scan du job `image` de ci.yml.
   image:
     name: Failles de l'image publiée
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
