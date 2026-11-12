@@ -280,7 +280,7 @@ Valeurs par environnement :
 
 - Règles de code vérifiées en relecture, en plus de `make check` : [CODING_STANDARDS.md](../CODING_STANDARDS.md).
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
-- Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases. Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
+- Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases (`release/X.Y.Z`) et les correctifs urgents (`hotfix/X.Y.Z`, créée depuis `main`). Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
 - Quand `develop` avance pendant qu'une PR est ouverte, fusionner `develop` dans la branche en local, puis pousser : relancer un check de la PR ne suffit pas, il réutilise l'ancien commit de fusion avec `develop`.
 
 ### Publier une release
@@ -307,6 +307,10 @@ gh release create vX.Y.Z --verify-tag --title vX.Y.Z --generate-notes
 
 Le push du tag ajoute l'étiquette `vX.Y.Z` à l'image déjà publiée pour ce commit (`tag-image.yml`). Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
 
+```sh
+gh pr create --base develop --head main --title 'chore(release): merge vX.Y.Z into develop' --body 'Back-merge of vX.Y.Z.'
+```
+
 Les notes listent les PR mergées depuis la release précédente, rangées par `.github/release.yml` en Fonctionnalités, Corrections, Sécurité et Maintenance. GitHub ne les trie que par labels : `label-release-notes.yml` pose le label d'après le titre de chaque PR.
 
 | Titre de la PR | Label | Catégorie |
@@ -317,4 +321,32 @@ Les notes listent les PR mergées depuis la release précédente, rangées par `
 | `fix…` | `bug` | Corrections |
 | Le reste | Aucun | Maintenance |
 
-Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main` : une modification n'agit qu'une fois mergée sur `main`.
+Le même workflow fait échouer, par son check « Titre de PR » (`bin/check-pr`), une PR qui sort du cycle :
+
+| Base | Branche source | Titre exigé |
+|---|---|---|
+| `main` | `release/X.Y.Z` | Exactement `chore(release): vX.Y.Z` |
+| `main` | `hotfix/X.Y.Z` | `fix: …` ou `fix(<scope>): …`, sans `!` |
+| `main` | Toute autre | Refusée |
+| `develop` | `main` | Exactement `chore(release): merge vX.Y.Z into develop`, `vX.Y.Z` étant un tag existant |
+| Toute autre | Toute autre | [Conventional Commits](https://www.conventionalcommits.org/) avec un type du dépôt (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`, `style`, `revert`, `perf`, `security`), ou `Revert "<titre conforme>"` posé par le bouton Revert de GitHub |
+
+Pour une `release/X.Y.Z` ou une `hotfix/X.Y.Z`, `X.Y.Z` est une version SemVer sans préfixe, le tag `vX.Y.Z` n'existe pas encore et la version dépasse le plus grand tag `v*` ; pour un hotfix, seul le patch monte. Sans aucun tag, toute version passe. Pour essayer un titre en local : `PR_BASE=main PR_HEAD=release/0.3.0 PR_TITLE='chore(release): v0.3.0' bin/check-pr < /dev/null` (les tags, un par ligne, sur l'entrée standard). Le check est requis par le ruleset de `main` et `develop` une fois celui-ci complété au passage en public.
+
+Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main`, et il y prend aussi `bin/check-pr` : une modification de l'un ou de l'autre n'agit qu'une fois mergée sur `main`.
+
+### Corriger la prod en urgence
+
+Un correctif qui ne peut pas attendre la prochaine release part de `main`, pas de `develop`, pour ne livrer que lui. Sa version est le dernier tag, patch augmenté (`v0.2.1` → `0.2.2`) :
+
+```sh
+git fetch origin --tags
+git switch -c hotfix/X.Y.Z origin/main
+# correctif et commits
+git push -u origin hotfix/X.Y.Z
+gh pr create --base main --title 'fix: <description>' --body '<le problème en prod et le correctif>'
+```
+
+Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge, puis étiqueter et publier la release comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge.
+
+Si une `release/*` est ouverte pendant le hotfix, y fusionner `origin/main` puis pousser, pour que la CI de la PR de release reteste le tout : `git switch release/A.B.C && git fetch origin && git merge origin/main && git push`.
