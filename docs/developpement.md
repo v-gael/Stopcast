@@ -295,17 +295,15 @@ git push -u origin release/X.Y.Z
 gh pr create --base main --title 'chore(release): vX.Y.Z' --body '<résumé de la release>'
 ```
 
-La CI passée, merger la PR avec un commit de merge, puis étiqueter ce commit et publier la release :
+La CI passée, merger la PR avec un commit de merge : c'est le seul geste. La CI de `main` déploie, puis son job `release` lit la version dans le message du commit de merge (`bin/release-version`), pose le tag annoté `vX.Y.Z` sur ce commit, ajoute l'étiquette `vX.Y.Z` à son image sans la reconstruire et publie la release GitHub avec ses notes générées.
 
 ```sh
 gh pr merge --merge release/X.Y.Z
-git fetch origin
-git tag -a vX.Y.Z -m 'vX.Y.Z' origin/main
-git push origin vX.Y.Z
-gh release create vX.Y.Z --verify-tag --title vX.Y.Z --generate-notes
 ```
 
-Le push du tag ajoute l'étiquette `vX.Y.Z` à l'image déjà publiée pour ce commit (`tag-image.yml`). Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
+Si le job `release` échoue après un déploiement réussi, le relancer depuis l'onglet Actions (`gh run rerun <id> --failed`) : un tag déjà posé sur ce commit est gardé, l'étiquette d'image refaite, la release créée si elle manque. Si le tag existe sur un autre commit, le job échoue sans rien modifier. Pour remplacer les notes générées : `gh release edit vX.Y.Z --notes-file <fichier>`.
+
+Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
 
 ```sh
 gh pr create --base develop --head main --title 'chore(release): merge vX.Y.Z into develop' --body 'Back-merge of vX.Y.Z.'
@@ -347,6 +345,6 @@ git push -u origin hotfix/X.Y.Z
 gh pr create --base main --title 'fix: <description>' --body '<le problème en prod et le correctif>'
 ```
 
-Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge, puis étiqueter et publier la release comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge.
+Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge : la CI déploie, puis publie la release `vX.Y.Z` comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge.
 
 Si une `release/*` est ouverte pendant le hotfix, y fusionner `origin/main` puis pousser, pour que la CI de la PR de release reteste le tout : `git switch release/A.B.C && git fetch origin && git merge origin/main && git push`.
