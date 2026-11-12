@@ -1,0 +1,22 @@
+#!/bin/sh
+# Lit la version d'une release ou d'un hotfix mergé sur main : le job
+# « Release » de ci.yml l'appelle après le déploiement. Seule la première
+# ligne du message de commit compte, celle que GitHub écrit au merge d'une PR :
+# « Merge pull request #N from <owner>/release/X.Y.Z » (ou hotfix/X.Y.Z).
+# Les règles de version sont vérifiées avant le merge, par bin/check-pr.
+#
+# Entrée : le message de commit sur l'entrée standard. Aucun accès réseau.
+# Sortie : X.Y.Z et 0, ou une ligne ::error:: et 1.
+
+export LC_ALL=C
+
+SEMVER='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+
+first_line=$(head -n 1)
+
+if ! printf '%s\n' "$first_line" | grep -Eq "^Merge pull request #[0-9]+ from [^/ ]+/(release|hotfix)/$SEMVER\$"; then
+    printf '::error::%s\n' "Ce commit n'est pas le merge d'une branche release/X.Y.Z ou hotfix/X.Y.Z (première ligne : « $first_line ») : aucune release à publier. Main ne reçoit que des releases et des hotfix, par PR mergée avec un commit de merge."
+    exit 1
+fi
+
+printf '%s\n' "${first_line##*/}"
