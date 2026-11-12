@@ -1,5 +1,7 @@
 # Stopcast
 
+[![Statut de la CI](https://github.com/v-gael/Stopcast/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/v-gael/Stopcast/actions/workflows/ci.yml) [![PHPStan niveau 10](https://img.shields.io/badge/PHPStan-niveau%2010-brightgreen)](phpstan.dist.neon) [![Licence MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+
 Réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi, tablette…), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
 
 **En ligne :** [stopcast.gaelv.com](https://stopcast.gaelv.com)
