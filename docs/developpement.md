@@ -295,7 +295,7 @@ git push -u origin release/X.Y.Z
 gh pr create --base main --title 'chore(release): vX.Y.Z' --body '<résumé de la release>'
 ```
 
-La CI passée, merger la PR avec un commit de merge : c'est le seul geste. La CI de `main` déploie, puis son job `release` lit la version dans le message du commit de merge (`bin/release-version`), pose le tag annoté `vX.Y.Z` sur ce commit, ajoute l'étiquette `vX.Y.Z` à son image sans la reconstruire et publie la release GitHub avec ses notes générées.
+Sur une PR vers `main`, la CI construit aussi l'image de prod et la scanne avec Trivy, sans la publier (job « Image de production »). La CI passée, merger la PR avec un commit de merge : c'est le seul geste. La CI de `main` déploie, puis son job `release` lit la version dans le message du commit de merge (`bin/release-version`), pose le tag annoté `vX.Y.Z` sur ce commit, ajoute l'étiquette `vX.Y.Z` à son image sans la reconstruire et publie la release GitHub avec ses notes générées.
 
 ```sh
 gh pr merge --merge release/X.Y.Z
