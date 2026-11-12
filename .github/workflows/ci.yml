@@ -75,13 +75,16 @@ jobs:
           export PANTHER_CHROME_DRIVER_BINARY="$CHROMEWEBDRIVER/chromedriver"
           bin/check
 
-      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR).
-      - name: Captures des tests navigateur
+      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR)
+      # et log de test : le serveur de Panther y écrit la trace de ses erreurs.
+      - name: Captures et log des tests
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: panther-screenshots
-          path: var/panther/
+          name: test-failure
+          path: |
+            var/panther/
+            var/log/test.log
           if-no-files-found: ignore
 
   # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
