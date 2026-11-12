@@ -177,6 +177,8 @@ jobs:
     needs: image
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Secrets du déploiement : environnement limité à la branche main.
+    environment: production
     permissions:
       contents: read
       packages: read
@@ -227,7 +229,7 @@ jobs:
           PREVIOUS_TAG: ${{ steps.deploy.outputs.previous }}
         run: |
           if [ -z "$PRODUCTION_URL" ]; then
-            echo '::error::La variable PRODUCTION_URL (niveau dépôt) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
+            echo '::error::La variable PRODUCTION_URL (environnement production) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
             exit 1
           fi
           bin/smoke-test "$PRODUCTION_URL" && exit 0
