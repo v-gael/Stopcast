@@ -1,9 +1,17 @@
 name: Audit
 
+# Une faille n'apparaît qu'avec un changement des dépendances, que la PR qui le
+# porte fait auditer, ou avec une nouvelle alerte, que couvre le passage
+# quotidien. Filtré par chemins, ce check ne tourne pas sur les autres PR : il ne
+# doit jamais être requis par le ruleset, sinon il bloquerait leur merge.
 on:
-  push:
-    branches: [main, develop]
   pull_request:
+    paths:
+      - composer.json
+      - composer.lock
+      - importmap.php
+      - bin/audit
+      - .github/workflows/audit.yml
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
@@ -11,17 +19,26 @@ on:
 permissions:
   contents: read
 
+# Un nouveau push sur une PR annule son audit en cours. Le passage quotidien et
+# un lancement manuel ne s'annulent pas : ils partagent la ref main.
 concurrency:
   group: audit-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   audit:
-    name: Failles des dépendances
+    name: Failles des dépendances${{ matrix.ref && format(' ({0})', matrix.ref) || '' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Au passage quotidien et à la demande, main et develop : develop porte
+        # les dépendances de la prochaine release. Sur une PR, son propre code.
+        ref: ${{ fromJSON(github.event_name == 'pull_request' && '[""]' || '["main", "develop"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ matrix.ref }}
           persist-credentials: false
 
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -33,6 +50,16 @@ jobs:
           # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
           ini-values: date.timezone=Europe/Paris
 
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
@@ -40,9 +67,10 @@ jobs:
       - name: Audit
         run: bin/audit
 
-  # Scan quotidien de la dernière image publiée : une faille découverte après
-  # le déploiement fait échouer le job, pour la signaler, sans rien bloquer.
-  # Mêmes seuils que le scan du job `image` de ci.yml.
+  # Scan quotidien de la dernière release déployée (latest, posé par le job
+  # release de ci.yml) : une faille découverte après le déploiement fait
+  # échouer le job, pour la signaler, sans rien bloquer. Mêmes seuils que le
+  # scan du job `image` de ci.yml.
   image:
     name: Failles de l'image publiée
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -56,8 +84,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # Le paquet est privé tant que le dépôt l'est : Trivy lit les identifiants
-      # du registre laissés par docker login.
+      # Paquet public, mais Trivy lit les identifiants laissés par docker login :
+      # le scan ne dépend pas des limites des téléchargements anonymes.
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io

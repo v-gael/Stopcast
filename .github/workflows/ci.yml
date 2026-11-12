@@ -1,8 +1,10 @@
 name: CI
 
+# Pas de push sur develop : le ruleset n'y accepte qu'une PR à jour dont les
+# checks sont passés, donc le commit de merge a déjà été testé par la PR.
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -103,13 +105,13 @@ jobs:
       - name: Analyser les scripts et les workflows
         run: bin/check-scripts
 
-  # Release mergée sur main : construit l'image de prod, déjà validée par les
-  # deux jobs précédents, la scanne avec Trivy et la publie sur GHCR, étiquetée
-  # par le SHA du commit. Une faille CRITICAL ou HIGH corrigeable arrête le job
-  # avant le push : rien n'est publié ni déployé.
+  # Release mergée sur main : construit l'image de prod en même temps que les
+  # contrôles, la scanne avec Trivy et la publie sur GHCR, étiquetée par le SHA
+  # du commit seulement. Une faille CRITICAL ou HIGH corrigeable arrête le job
+  # avant le push : rien n'est publié ni déployé. Si un contrôle échoue,
+  # l'image publiée n'est ni déployée ni étiquetée latest.
   image:
     name: Image de production
-    needs: [quality, compose]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -157,9 +159,7 @@ jobs:
           target: prod
           platforms: linux/amd64
           push: true
-          tags: |
-            ghcr.io/v-gael/stopcast:${{ github.sha }}
-            ghcr.io/v-gael/stopcast:latest
+          tags: ghcr.io/v-gael/stopcast:${{ github.sha }}
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -172,9 +172,11 @@ jobs:
   # Procédure et secrets : docs/exploitation.md, « Déploiement ».
   deploy:
     name: Déploiement
-    needs: image
+    needs: [quality, compose, image]
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Secrets du déploiement : environnement limité à la branche main.
+    environment: production
     permissions:
       contents: read
       packages: read
@@ -225,7 +227,7 @@ jobs:
           PREVIOUS_TAG: ${{ steps.deploy.outputs.previous }}
         run: |
           if [ -z "$PRODUCTION_URL" ]; then
-            echo '::error::La variable PRODUCTION_URL (niveau dépôt) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
+            echo '::error::La variable PRODUCTION_URL (environnement production) est vide : voir docs/exploitation.md, « Secrets GitHub du déploiement ».'
             exit 1
           fi
           bin/smoke-test "$PRODUCTION_URL" && exit 0
@@ -243,8 +245,9 @@ jobs:
           exit 1
 
   # Release ou hotfix déployé : pose le tag vX.Y.Z sur le commit, ajoute cette
-  # étiquette à son image (celle qui vient d'être testée et déployée, sans la
-  # reconstruire) et publie la release GitHub avec ses notes générées. La
+  # étiquette et latest à son image (celle qui vient d'être testée et déployée,
+  # sans la reconstruire) et publie la release GitHub avec ses notes générées.
+  # latest désigne donc la dernière release déployée, que scanne audit.yml. La
   # version vient du message du commit de merge (bin/release-version).
   # Relancer le job après un échec partiel le reprend : un tag déjà posé sur ce
   # commit est gardé ; sur un autre commit, le job échoue sans rien toucher.
@@ -312,7 +315,7 @@ jobs:
       - name: Étiqueter l'image
         env:
           TAG: ${{ steps.version.outputs.tag }}
-        run: docker buildx imagetools create --tag "$IMAGE:$TAG" "$IMAGE:$GITHUB_SHA"
+        run: docker buildx imagetools create --tag "$IMAGE:$TAG" --tag "$IMAGE:latest" "$IMAGE:$GITHUB_SHA"
 
       - name: Publier la release
         env:

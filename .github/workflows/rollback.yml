@@ -1,6 +1,7 @@
 # Retour arrière : remet en production l'image déjà publiée d'un commit, sans
 # dump ni migration (le schéma ne fait qu'avancer). Lancé à la main, depuis
-# l'onglet Actions ou par `gh workflow run rollback.yml -f sha=<sha>`.
+# l'onglet Actions ou par `gh workflow run rollback.yml -f sha=<sha>`, sur la
+# branche main : l'environnement production n'en accepte pas d'autre.
 # Procédure, et restauration d'un dump si l'ancien code ne supporte pas le
 # nouveau schéma : docs/exploitation.md, « Retour arrière ».
 name: Retour arrière
@@ -21,6 +22,8 @@ jobs:
     name: Retour arrière
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Secrets du déploiement : environnement limité à la branche main.
+    environment: production
     permissions:
       contents: read
       packages: read
