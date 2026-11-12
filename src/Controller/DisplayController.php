@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Display\DisplayAssembler;
+use App\Display\LiveDisplay;
 use App\Display\Pairing\DisplayCookies;
 use App\Display\Pairing\PairedScreen;
 use App\Display\Pairing\PairingCode;
@@ -12,10 +12,7 @@ use App\Display\Pairing\PairingThrottled;
 use App\Display\Pairing\PendingPairing;
 use App\Display\Pairing\QrCodeSvg;
 use App\Display\Pairing\ScreenPairing;
-use App\Display\ScreenPaginator;
 use App\EventListener\FramedPageToolbarListener;
-use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
-use App\Monitoring\RealtimeFeedFailureLogger;
 use App\Security\DeviceUser;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,7 +23,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
  * Page d'affichage servie à l'écran d'un dispositif, authentifié par son
@@ -38,6 +34,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
  */
 final class DisplayController extends AbstractController
 {
+    use LiveDisplayRendering;
+
     public function __construct(
         private readonly ScreenPairing $screenPairing,
         private readonly DisplayCookies $displayCookies,
@@ -49,9 +47,7 @@ final class DisplayController extends AbstractController
     #[Route('/display', name: 'app_display', defaults: [FramedPageToolbarListener::WITHOUT_TOOLBAR => true], methods: ['GET'])]
     public function show(
         Request $request,
-        DisplayAssembler $displayAssembler,
-        ScreenPaginator $screenPaginator,
-        RealtimeFeedFailureLogger $feedFailureLogger,
+        LiveDisplay $liveDisplay,
         #[CurrentUser] ?UserInterface $user,
         #[MapQueryParameter] bool $fragment = false,
     ): Response {
@@ -61,35 +57,12 @@ final class DisplayController extends AbstractController
             return $fragment ? new Response(null, Response::HTTP_UNAUTHORIZED) : $this->pairingPage($request);
         }
 
-        $device = $screen->device;
-        $parameters = [
-            'device' => $device,
-            'screens' => [],
-            'refresh_url' => $this->generateUrl('app_display', ['fragment' => 1]),
-            'state_message' => null,
-            'offline' => false,
-        ];
-
-        if (!$device->isActive()) {
-            $parameters['state_message'] = 'Écran désactivé';
-        } else {
-            try {
-                $parameters['screens'] = $screenPaginator->paginate($displayAssembler->forDevice($device));
-            } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $failure) {
-                $feedFailureLogger->log($failure);
-
-                // Le rafraîchissement échoue : l'écran garde ce qu'il affichait.
-                if ($fragment) {
-                    return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
-                }
-
-                // Premier chargement : écran « indisponible » qui réessaie à la cadence du dispositif.
-                $parameters['state_message'] = '';
-                $parameters['offline'] = true;
-            }
-        }
-
-        return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', $parameters);
+        return $this->renderLiveDisplay(
+            $screen->device,
+            $liveDisplay->forDevice($screen->device),
+            $fragment,
+            $this->generateUrl('app_display', ['fragment' => 1]),
+        );
     }
 
     /**

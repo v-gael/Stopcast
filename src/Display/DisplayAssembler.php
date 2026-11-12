@@ -51,21 +51,16 @@ final readonly class DisplayAssembler
     }
 
     /**
-     * Mêmes écrans que forDevice, sur les passages d'exemple : pour l'aperçu,
-     * sans appel au flux temps réel. Un quai déprécié en est exclu : sans
-     * passage annoncé, cas courant, l'écran réel le saute.
+     * Écrans de forDevice, sur les passages d'exemple : pour l'aperçu, sans
+     * appel au flux temps réel. Un quai déprécié en est exclu : sur l'écran
+     * réel, il n'a en général plus de passage et sort donc de la rotation
+     * (ScreenPaginator), là où l'aperçu lui montrerait des passages d'exemple.
      *
      * @return list<DisplayItem>
      */
     public function sampleForDevice(Device $device): array
     {
-        return array_values(array_map(
-            $this->sampleForConfiguration(...),
-            array_filter(
-                $device->getActiveDisplayConfigurations(),
-                static fn (DisplayConfiguration $configuration): bool => $configuration->getQuay()->isActive(),
-            ),
-        ));
+        return array_map($this->sampleForConfiguration(...), $device->getDisplayedConfigurations());
     }
 
     /**

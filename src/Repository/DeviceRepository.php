@@ -21,11 +21,23 @@ class DeviceRepository extends ServiceEntityRepository
     }
 
     /**
-     * Le dispositif dont l'écran appairé détient ce secret, actif ou non.
+     * Le dispositif dont l'écran appairé détient ce secret, actif ou non, avec
+     * ses configurations et leurs quais : l'écran les lit à chaque
+     * rafraîchissement, en une seule requête quel que soit le nombre de quais.
      */
     public function findOneByScreenSecretHash(string $screenSecretHash): ?Device
     {
-        return $this->findOneBy(['screenSecretHash' => $screenSecretHash]);
+        /** @var Device|null $device */
+        $device = $this->createQueryBuilder('d')
+            ->addSelect('c', 'q')
+            ->leftJoin('d.displayConfigurations', 'c')
+            ->leftJoin('c.quay', 'q')
+            ->andWhere('d.screenSecretHash = :screenSecretHash')
+            ->setParameter('screenSecretHash', $screenSecretHash)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $device;
     }
 
     public function countByOwner(User $owner): int
@@ -35,16 +47,18 @@ class DeviceRepository extends ServiceEntityRepository
 
     /**
      * Une page des dispositifs d'un compte, du plus récent au plus ancien, avec
-     * leurs configurations chargées. « $search » filtre sur le libellé, sans
-     * tenir compte de la casse ; le Paginator compte aussi le total filtré.
+     * leurs configurations et leurs quais chargés. « $search » filtre sur le
+     * libellé, sans tenir compte de la casse ; le Paginator compte aussi le
+     * total filtré.
      *
      * @return Paginator<Device>
      */
     public function findPageByOwner(User $owner, string $search, int $page, int $perPage): Paginator
     {
         $queryBuilder = $this->createQueryBuilder('d')
-            ->addSelect('c')
+            ->addSelect('c', 'q')
             ->leftJoin('d.displayConfigurations', 'c')
+            ->leftJoin('c.quay', 'q')
             ->andWhere('d.owner = :owner')
             ->setParameter('owner', $owner)
             ->orderBy('d.createdAt', 'DESC')

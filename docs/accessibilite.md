@@ -12,8 +12,9 @@ Revue au regard du [WCAG 2.2](https://www.w3.org/TR/WCAG22/), niveau AA. Le RGAA
 | Connecté | mes dispositifs, ajout, fiche et modification d'un dispositif, configurations d'affichage (ajout, modification), mon compte, changement de mot de passe, suppression du compte | `device/`, `display_configuration/`, `account/` |
 | Administration | utilisateurs, invitation, modification d'un compte | `admin/user/` |
 | Communs | layouts, composants, thème de formulaire | `base.html.twig`, `layout/`, `components/`, `form/tailwind_layout.html.twig`, `assets/styles/app.css` |
+| Écran | page d'affichage, écran d'appairage | `display/`, `assets/styles/display.css` |
 
-La page d'affichage (`templates/display/`) n'a pas encore été revue : elle le sera pour les contrastes et la lisibilité seulement, puisqu'elle n'est pas interactive. Les emails (`templates/email/`) sont hors périmètre.
+La page d'affichage n'est revue que pour les contrastes et la lisibilité, puisqu'elle n'est pas interactive : voir « Page d'affichage » plus bas. Les emails (`templates/email/`) sont hors périmètre.
 
 ## Méthode
 
@@ -67,6 +68,7 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Badge avertissement | amber-800 `#973c00` | amber-50 `#fffbeb` | 6,84 | 4,5 |
 | Flash et encadré d'erreur | red-800 `#9f0712` | red-50 `#fef2f2` | 7,64 | 4,5 |
 | Erreur sous un champ | red-700 `#c10007` | blanc | 6,42 | 4,5 |
+| État d'un dispositif : neutre, avertissement, hors ligne, en ligne | slate-600 `#45556c`, amber-700 `#bb4d00`, red-700 `#c10007`, emerald-700 `#007a55` | blanc | 7,58, 5,03, 6,42, 5,37 | 4,5 |
 | Option active de Tom Select | slate-900 `#0f172b` | amber-50 `#fffbeb` | 17,19 | 4,5 |
 | En-tête de l'espace | blanc | slate-900 `#0f172b` | 17,83 | 4,5 |
 | Survol et focus dans l'en-tête de l'espace | amber-400 `#ffb900` | slate-900 `#0f172b` | 10,35 | 4,5 |
@@ -89,6 +91,19 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 | Anciens liens d'action (corrigés) | amber-600 `#e17100` | blanc | 3,20 | 4,5 |
 | Ancien survol du bouton danger (corrigé) | blanc | red-500 `#fb2c36` | 3,81 | 4,5 |
 | Anciennes bordures des champs (corrigées) | slate-300 `#cad5e2` | blanc | 1,49 | 3 |
+
+## Page d'affichage
+
+La page d'affichage reprend les couleurs de l'ancien client Python (`assets/styles/display.css`). Les tailles se mesurent en `--u`, qui vaut un pixel sur l'écran de référence de 480×320 et grandit avec l'écran : les seuils ci-dessous sont lus à cette taille, la plus petite.
+
+| Usage | Texte | Fond | Rapport | Seuil |
+|---|---|---|---|---|
+| Nom du quai, heure, délais, destinations, messages | blanc | `#05203c` | 16,43 | 4,5 |
+| En-têtes de colonnes (gras, 20 `--u`) | `#7baee2` | `#1b4872` | 4,06 | 3 (grand texte) |
+| Pastille d'une ligne sans couleur dans les données du réseau | blanc | `#1b4872` | 9,47 | 4,5 |
+| Consigne de l'écran d'appairage (gras, 14 `--u`) | `#7baee2` | `#05203c` | 7,04 | 4,5 |
+
+**Pastilles de ligne** : elles reprennent `route_color` et `route_text_color` du réseau telles quelles, comme les vrais panneaux et les plans du réseau, pour que chaque ligne se reconnaisse à sa couleur. C'est un écart assumé : calculé le 7 novembre 2026 sur les 61 lignes TCAT, en texte gras de 16 `--u` (seuil 4,5:1), 14 lignes sont en dessous, comme la ligne 1 (blanc sur `#009DE0`, 3,04:1) ou la 7 (blanc sur `#919294`, 3,11:1), et la 9A (blanc sur `#ED86A6`) descend à 2,45:1. Le numéro de ligne est aussi écrit, et la destination est en blanc sur le fond de l'écran : la couleur n'est pas le seul repère. Un choix automatique du texte noir ou blanc quand le contraste est trop faible pourra être décidé avec les thèmes d'affichage.
 
 ## Lighthouse
 

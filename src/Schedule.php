@@ -9,6 +9,15 @@ use Symfony\Component\Scheduler\Schedule as SymfonySchedule;
 use Symfony\Component\Scheduler\ScheduleProviderInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
+/**
+ * Planning des tâches de fond, consommé par le worker de prod (transport
+ * scheduler_default ; celui de dev ne lit que async). Les tâches y entrent
+ * par #[AsCronTask] sur leur commande : PurgeCommand, GtfsImportCommand et
+ * MailCheckCommand.
+ *
+ * L'état du planning est gardé en cache : une exécution manquée (worker
+ * arrêté, redéploiement) est rattrapée au redémarrage, la dernière seulement.
+ */
 #[AsSchedule]
 class Schedule implements ScheduleProviderInterface
 {
@@ -20,11 +29,7 @@ class Schedule implements ScheduleProviderInterface
     public function getSchedule(): SymfonySchedule
     {
         return new SymfonySchedule()
-            ->stateful($this->cache) // ensure missed tasks are executed
-            ->processOnlyLastMissedRun(true) // ensure only last missed task is run
-
-            // add your own tasks here
-            // see https://symfony.com/doc/current/scheduler.html#attaching-recurring-messages-to-a-schedule
-        ;
+            ->stateful($this->cache)
+            ->processOnlyLastMissedRun(true);
     }
 }

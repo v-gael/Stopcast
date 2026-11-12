@@ -11,6 +11,19 @@
 @plugin "@tailwindcss/forms";
 
 /*
+ * Police de la page d'affichage, pour le bloc « Nouvel écran » de la liste des
+ * dispositifs, dessiné comme un écran. Le navigateur ne la télécharge que sur
+ * une page qui s'en sert. Licence : assets/fonts/OFL.txt.
+ */
+@font-face {
+    font-family: "Roboto Condensed";
+    src: url("../fonts/RobotoCondensed-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/*
  * Focus clavier visible et contrasté sur tout élément interactif qui n'a pas
  * le sien : amber-700 fait 5:1 sur le blanc et le slate-50 des pages.
  */

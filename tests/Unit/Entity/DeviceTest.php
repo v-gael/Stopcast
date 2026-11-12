@@ -76,21 +76,36 @@ final class DeviceTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{?string, bool, bool, ?DeviceStatus}>
+     * Configurations : « affiché » ou « masqué », suivi de « disparu » si son
+     * quai a disparu du dernier import.
+     *
+     * @return iterable<string, array{?string, bool, bool, list<string>, DeviceStatus}>
      */
     public static function statusCases(): iterable
     {
-        yield 'vu il y a 2 min' => ['-2 minutes', true, true, null];
-        yield 'vu il y a 15 min pile' => ['-15 minutes', true, true, null];
-        yield 'vu il y a 20 min' => ['-20 minutes', true, true, DeviceStatus::Offline];
-        yield 'jamais vu' => [null, true, true, DeviceStatus::Offline];
-        yield 'sans écran' => ['-20 minutes', false, true, DeviceStatus::Unpaired];
-        yield 'désactivé et silencieux' => ['-20 minutes', true, false, null];
-        yield 'désactivé sans écran' => [null, false, false, null];
+        $quay = ['affiché'];
+        yield 'vu il y a 2 min' => ['-2 minutes', true, true, $quay, DeviceStatus::Online];
+        yield 'vu il y a 15 min pile' => ['-15 minutes', true, true, $quay, DeviceStatus::Online];
+        yield 'vu il y a 20 min' => ['-20 minutes', true, true, $quay, DeviceStatus::Offline];
+        yield 'jamais vu' => [null, true, true, $quay, DeviceStatus::NeverSeen];
+        yield 'sans écran' => ['-2 minutes', false, true, $quay, DeviceStatus::Unpaired];
+        yield 'sans écran ni contact' => [null, false, true, [], DeviceStatus::Unpaired];
+        yield 'désactivé et silencieux' => ['-20 minutes', true, false, [], DeviceStatus::Disabled];
+        yield 'désactivé sans écran' => [null, false, false, $quay, DeviceStatus::Disabled];
+        yield 'silencieux sans quai' => ['-20 minutes', true, true, [], DeviceStatus::Offline];
+        yield 'sans quai' => ['-2 minutes', true, true, [], DeviceStatus::NothingToShow];
+        yield 'tout masqué' => ['-2 minutes', true, true, ['masqué', 'masqué'], DeviceStatus::NothingToShow];
+        yield 'tous les affichés disparus' => ['-2 minutes', true, true, ['affiché disparu', 'masqué'], DeviceStatus::NothingToShow];
+        yield 'un affiché disparu' => ['-2 minutes', true, true, ['affiché disparu', 'affiché'], DeviceStatus::QuayGone];
+        yield 'un masqué disparu' => ['-2 minutes', true, true, ['affiché', 'masqué disparu'], DeviceStatus::QuayGone];
+        yield 'un affiché, un masqué' => ['-2 minutes', true, true, ['affiché', 'masqué'], DeviceStatus::Online];
     }
 
+    /**
+     * @param list<string> $configurations
+     */
     #[DataProvider('statusCases')]
-    public function testStatusFlagsAMissingOrSilentScreenOfAnActiveDevice(?string $lastSeen, bool $paired, bool $active, ?DeviceStatus $status): void
+    public function testStatusSumsUpTheDeviceByPriority(?string $lastSeen, bool $paired, bool $active, array $configurations, DeviceStatus $status): void
     {
         $now = new \DateTimeImmutable('2026-10-30 14:32:00');
         $device = new Device($this->owner(), 'A')->setActive($active);
@@ -100,6 +115,15 @@ final class DeviceTest extends TestCase
 
         if (null !== $lastSeen) {
             $device->recordContact($now->modify($lastSeen));
+        }
+
+        foreach ($configurations as $index => $configuration) {
+            $quay = new Quay('S'.$index, 'CENTRE VILLE', 38.5, -28.6, 'P'.$index);
+            if (str_ends_with($configuration, 'disparu')) {
+                $quay->markDeprecated();
+            }
+
+            $device->addDisplayConfiguration(new DisplayConfiguration($device, $quay)->setActive(str_starts_with($configuration, 'affiché')));
         }
 
         self::assertSame($status, $device->status($now));

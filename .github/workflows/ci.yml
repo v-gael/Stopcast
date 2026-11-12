@@ -75,13 +75,16 @@ jobs:
           export PANTHER_CHROME_DRIVER_BINARY="$CHROMEWEBDRIVER/chromedriver"
           bin/check
 
-      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR).
-      - name: Captures des tests navigateur
+      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR)
+      # et log de test : le serveur de Panther y écrit la trace de ses erreurs.
+      - name: Captures et log des tests
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: panther-screenshots
-          path: var/panther/
+          name: test-failure
+          path: |
+            var/panther/
+            var/log/test.log
           if-no-files-found: ignore
 
   # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
@@ -238,3 +241,85 @@ jobs:
               ;;
           esac
           exit 1
+
+  # Release ou hotfix déployé : pose le tag vX.Y.Z sur le commit, ajoute cette
+  # étiquette à son image (celle qui vient d'être testée et déployée, sans la
+  # reconstruire) et publie la release GitHub avec ses notes générées. La
+  # version vient du message du commit de merge (bin/release-version).
+  # Relancer le job après un échec partiel le reprend : un tag déjà posé sur ce
+  # commit est gardé ; sur un autre commit, le job échoue sans rien toucher.
+  # Procédure : docs/developpement.md, « Publier une release ».
+  release:
+    name: Release
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE: ghcr.io/v-gael/stopcast
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: bin/release-version
+          sparse-checkout-cone-mode: false
+
+      - name: Lire la version
+        id: version
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if ! version=$(printf '%s\n' "$MESSAGE" | bin/release-version); then
+            echo "$version"
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      # Par l'API plutôt que git push : aucun identifiant git ne reste sur le
+      # runner, et la création de la ref échoue d'elle-même si le tag existe.
+      - name: Poser le tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if ref=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" 2>/dev/null); then
+            sha=$(printf '%s' "$ref" | jq -r .object.sha)
+            if [ "$(printf '%s' "$ref" | jq -r .object.type)" = tag ]; then
+              sha=$(gh api "repos/$GH_REPO/git/tags/$sha" --jq .object.sha)
+            fi
+            if [ "$sha" != "$GITHUB_SHA" ]; then
+              echo "::error::Le tag $TAG existe déjà, sur le commit $sha et non sur $GITHUB_SHA : rien n'est modifié. Vérifier la version de la branche mergée."
+              exit 1
+            fi
+            echo "Tag $TAG déjà posé sur ce commit : reprise."
+            exit 0
+          fi
+          object=$(gh api --method POST "repos/$GH_REPO/git/tags" \
+            -f tag="$TAG" -f message="$TAG" -f object="$GITHUB_SHA" -f type=commit --jq .sha)
+          gh api --method POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$TAG" -f sha="$object" > /dev/null
+          echo "Tag $TAG posé sur $GITHUB_SHA."
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Étiqueter l'image
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: docker buildx imagetools create --tag "$IMAGE:$TAG" "$IMAGE:$GITHUB_SHA"
+
+      - name: Publier la release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG déjà publiée."
+            exit 0
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes

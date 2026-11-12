@@ -191,7 +191,7 @@ La CI (GitHub Actions) lance ces contrôles à chaque push sur `main` et `develo
 Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs aux tests de l'espace web (connexion, déconnexion, ligne de la liste des comptes, jeton d'un lien reçu par email, jeton CSRF qu'aucune page n'affiche) sont dans `tests/Support/WebTestTrait.php`, ceux des tests navigateur dans `tests/Support/BrowserTestTrait.php`.
 
 - Le champ `cf-turnstile-response` de la connexion et de « mot de passe oublié » est ajouté par le JavaScript du widget : BrowserKit ne l'envoie pas. Passer par `logIn()`, `requestPasswordReset()` ou `submitWithTurnstile()` de `WebTestTrait`. En test, `turnstile.client` répond avec `TurnstileSiteverifyMock` : seul `VALID_TOKEN` passe, tout autre jeton est refusé, sans appel réseau.
-- Le serveur web des tests navigateur (Panther) est un autre processus que le test : `loginUser()` et le remplacement d'un service du conteneur n'y ont aucun effet. Se connecter par le formulaire (`logInFromShowcase()`), et compter sur les simulations globales de l'environnement de test : `TurnstileSiteverifyMock` pour Turnstile, `RealtimeFeedMock`, simulation du client HTTP par défaut, qui sert pour le flux GTFS-RT deux passages à venir à chaque quai de chaque ligne en base, et laisse partir sur le réseau toute autre URL, comme sans simulation (`importmap:install`, par exemple, tourne en environnement de test dans la CI) : un test qui veut une autre réponse remplace `http_client` dans le conteneur. Les données créées par le test (factories, entity manager) sont visibles du serveur, la base n'étant pas isolée dans une transaction. Une requête encore en cours à la fin d'un test (une recherche de l'autocomplétion, par exemple) peut tomber sur la base réinitialisée par le test suivant, qui lit alors son erreur dans la console : attendre la réponse avant de conclure.
+- Le serveur web des tests navigateur (Panther) est un autre processus que le test : `loginUser()` et le remplacement d'un service du conteneur n'y ont aucun effet. Se connecter par le formulaire (`logInFromShowcase()`), et compter sur les simulations globales de l'environnement de test : `TurnstileSiteverifyMock` pour Turnstile, `RealtimeFeedMock`, simulation du client HTTP par défaut, qui sert pour le flux GTFS-RT deux passages à venir à chaque quai de chaque ligne en base, et laisse partir sur le réseau toute autre URL, comme sans simulation (`importmap:install`, par exemple, tourne en environnement de test dans la CI) : un test qui veut une autre réponse remplace `http_client` dans le conteneur. Les données créées par le test (factories, entity manager) sont visibles du serveur, la base n'étant pas isolée dans une transaction. À la fin de chaque test, `BrowserTestTrait` lit une dernière fois la console, puis ouvre `about:blank` : rien de la page (préchargement des liens par Turbo, requête en cours, minuteur, iframe) ne tombe sur la base que le test suivant réinitialise. Une erreur arrivée après cette dernière lecture est donc perdue : attendre la réponse d'une requête à contrôler (une recherche de l'autocomplétion, par exemple) avant de conclure. En CI, un échec publie les captures de Panther et `var/log/test.log`, où figure la trace de toute erreur du serveur de test.
 - La navigation de l'espace contient un formulaire (« Se déconnecter », en POST) : viser le formulaire de la page avec `main form`, pas `form`, qui attrape d'abord celui du header.
 - Un jeton CSRF invalide sur une action `#[IsCsrfTokenValid]` lève `InvalidCsrfTokenException`, une exception d'authentification : la réponse est une redirection 302 vers la connexion (`http://localhost/`), pas un 403.
 - `loginUser()` réutilise la session du cookie en cours. Pour deux sessions distinctes (un compte et un administrateur, par exemple), vider le cookie jar (`getCookieJar()->clear()`) entre les deux connexions.
@@ -202,6 +202,7 @@ Comportements qu'on ne découvre qu'en lançant les tests. Les gestes communs au
 - Les tests des pages d'erreur (`ErrorPagesTest`) tournent avec un noyau sans debug, dont le conteneur (`var/cache/test/App_KernelTestContainer.php`) n'est jamais reconstruit : après un changement de configuration ou de service, vider le cache (`make cc`). Les templates, eux, sont relus (`twig.auto_reload` en test).
 - Les cookies de l'écran d'affichage sont `Secure` en HTTPS, comme en prod, et BrowserKit ne renvoie un cookie `Secure` qu'en HTTPS : créer le client avec `self::createClient(server: ['HTTPS' => 'on'])` (voir `DisplayPairingTest`).
 - Le conteneur de dev ne reconstruit que son cache de dev. Les caches de test et de prod (`var/cache/test`, `var/cache/prod`) peuvent dater d'avant l'ajout d'un bundle ou d'une config : un test qui devrait échouer reste vert, et une commande `--env=prod` répond « Container extension "…" is not registered ». Après un changement de bundle ou de config propre à un environnement, lancer `make cc` avant toute commande `--env=…` ou tout test qui en dépend : il supprime ces caches avec celui de dev.
+- Symfony juge son cache de dev à jour en comparant les dates des fichiers à la seconde près. Un `git switch` suivi d'un `git pull`, avec une page ouverte qui relance des requêtes (un aperçu, par exemple), peut recompiler le conteneur sur l'ancien code dans la même seconde que l'écriture du nouveau : le cache reste alors périmé, avec par exemple « Too few arguments to function …::__construct() ». Remède : `make cc`.
 - Un pool de cache `cache.adapter.array` est vidé à chaque requête (`kernel.reset`), même avec `disableReboot()`. Les demandes d'appairage (`display_pairing.cache`) restent donc sur disque en test : un appairage enchaîne plusieurs requêtes.
 - En test, le cookie de session s'appelle `MOCKSESSID` et son domaine vaut `''`, alors que `assertResponseNotHasCookie()` cherche par défaut un domaine `null` : l'assertion passe même quand une session s'ouvre. Pour vérifier qu'une page n'ouvre pas de session, vérifier qu'elle ne pose aucun cookie (`self::assertSame([], $client->getResponse()->headers->getCookies())`).
 - `UserFactory::new()->pending()` crée un compte en attente : la factory écrit le mot de passe directement, `setPassword()` refusant `null`.
@@ -279,7 +280,7 @@ Valeurs par environnement :
 
 - Règles de code vérifiées en relecture, en plus de `make check` : [CODING_STANDARDS.md](../CODING_STANDARDS.md).
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/), en anglais.
-- Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases. Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
+- Gitflow : branches créées depuis `develop`, mergées en `--no-ff` ; `main` ne reçoit que les releases (`release/X.Y.Z`) et les correctifs urgents (`hotfix/X.Y.Z`, créée depuis `main`). Le préfixe suit le type du commit principal : `feature/<nom>` pour une fonctionnalité, `fix/<nom>` pour une correction, `chore/<nom>` pour l'outillage et l'entretien.
 - Quand `develop` avance pendant qu'une PR est ouverte, fusionner `develop` dans la branche en local, puis pousser : relancer un check de la PR ne suffit pas, il réutilise l'ancien commit de fusion avec `develop`.
 
 ### Publier une release
@@ -294,17 +295,19 @@ git push -u origin release/X.Y.Z
 gh pr create --base main --title 'chore(release): vX.Y.Z' --body '<résumé de la release>'
 ```
 
-La CI passée, merger la PR avec un commit de merge, puis étiqueter ce commit et publier la release :
+La CI passée, merger la PR avec un commit de merge : c'est le seul geste. La CI de `main` déploie, puis son job `release` lit la version dans le message du commit de merge (`bin/release-version`), pose le tag annoté `vX.Y.Z` sur ce commit, ajoute l'étiquette `vX.Y.Z` à son image sans la reconstruire et publie la release GitHub avec ses notes générées.
 
 ```sh
 gh pr merge --merge release/X.Y.Z
-git fetch origin
-git tag -a vX.Y.Z -m 'vX.Y.Z' origin/main
-git push origin vX.Y.Z
-gh release create vX.Y.Z --verify-tag --title vX.Y.Z --generate-notes
 ```
 
-Le push du tag ajoute l'étiquette `vX.Y.Z` à l'image déjà publiée pour ce commit (`tag-image.yml`). Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
+Si le job `release` échoue après un déploiement réussi, le relancer depuis l'onglet Actions (`gh run rerun <id> --failed`) : un tag déjà posé sur ce commit est gardé, l'étiquette d'image refaite, la release créée si elle manque. Si le tag existe sur un autre commit, le job échoue sans rien modifier. Pour remplacer les notes générées : `gh release edit vX.Y.Z --notes-file <fichier>`.
+
+Si la branche de release a reçu des commits, les ramener ensuite dans `develop` par une PR de `main` vers `develop`, mergée avec un commit de merge. Sinon, il n'y a rien à ramener.
+
+```sh
+gh pr create --base develop --head main --title 'chore(release): merge vX.Y.Z into develop' --body 'Back-merge of vX.Y.Z.'
+```
 
 Les notes listent les PR mergées depuis la release précédente, rangées par `.github/release.yml` en Fonctionnalités, Corrections, Sécurité et Maintenance. GitHub ne les trie que par labels : `label-release-notes.yml` pose le label d'après le titre de chaque PR.
 
@@ -316,4 +319,32 @@ Les notes listent les PR mergées depuis la release précédente, rangées par `
 | `fix…` | `bug` | Corrections |
 | Le reste | Aucun | Maintenance |
 
-Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main` : une modification n'agit qu'une fois mergée sur `main`.
+Le même workflow fait échouer, par son check « Titre de PR » (`bin/check-pr`), une PR qui sort du cycle :
+
+| Base | Branche source | Titre exigé |
+|---|---|---|
+| `main` | `release/X.Y.Z` | Exactement `chore(release): vX.Y.Z` |
+| `main` | `hotfix/X.Y.Z` | `fix: …` ou `fix(<scope>): …`, sans `!` |
+| `main` | Toute autre | Refusée |
+| `develop` | `main` | Exactement `chore(release): merge vX.Y.Z into develop`, `vX.Y.Z` étant un tag existant |
+| Toute autre | Toute autre | [Conventional Commits](https://www.conventionalcommits.org/) avec un type du dépôt (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`, `style`, `revert`, `perf`, `security`), ou `Revert "<titre conforme>"` posé par le bouton Revert de GitHub |
+
+Pour une `release/X.Y.Z` ou une `hotfix/X.Y.Z`, `X.Y.Z` est une version SemVer sans préfixe, le tag `vX.Y.Z` n'existe pas encore et la version dépasse le plus grand tag `v*` ; pour un hotfix, seul le patch monte. Sans aucun tag, toute version passe. Pour essayer un titre en local : `PR_BASE=main PR_HEAD=release/0.3.0 PR_TITLE='chore(release): v0.3.0' bin/check-pr < /dev/null` (les tags, un par ligne, sur l'entrée standard). Le check est requis par le ruleset de `main` et `develop` une fois celui-ci complété au passage en public.
+
+Ce workflow se déclenche en `pull_request_target`, donc depuis sa version sur la branche par défaut, `main`, et il y prend aussi `bin/check-pr` : une modification de l'un ou de l'autre n'agit qu'une fois mergée sur `main`.
+
+### Corriger la prod en urgence
+
+Un correctif qui ne peut pas attendre la prochaine release part de `main`, pas de `develop`, pour ne livrer que lui. Sa version est le dernier tag, patch augmenté (`v0.2.1` → `0.2.2`) :
+
+```sh
+git fetch origin --tags
+git switch -c hotfix/X.Y.Z origin/main
+# correctif et commits
+git push -u origin hotfix/X.Y.Z
+gh pr create --base main --title 'fix: <description>' --body '<le problème en prod et le correctif>'
+```
+
+Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge : la CI déploie, puis publie la release `vX.Y.Z` comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge.
+
+Si une `release/*` est ouverte pendant le hotfix, y fusionner `origin/main` puis pousser, pour que la CI de la PR de release reteste le tout : `git switch release/A.B.C && git fetch origin && git merge origin/main && git push`.

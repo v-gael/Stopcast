@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
+use App\Tests\Support\DisplayTestTrait;
 use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
@@ -38,6 +39,7 @@ use Zenstruck\Foundry\Test\ResetDatabase;
 final class DisplayPairingTest extends WebTestCase
 {
     use AppLogsTrait;
+    use DisplayTestTrait;
     use Factories;
     use QueryCountTrait;
     use RealtimeFeedTrait;
@@ -334,10 +336,7 @@ final class DisplayPairingTest extends WebTestCase
     public function testDisabledDeviceShowsADisabledScreenAndKeepsItsCookie(): void
     {
         $this->pairedScreen();
-        $device = $this->storedDevice($this->device);
-        $device->setActive(false);
-
-        $this->entityManager->flush();
+        $this->disableDevice($this->device);
 
         $crawler = $this->client->request('GET', '/display');
 
@@ -354,7 +353,7 @@ final class DisplayPairingTest extends WebTestCase
 
     public function testUnreadableFeedFailsTheRefreshAndKeepsThePageAlive(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->failRealtimeFeed();
         $this->pairedScreen();
         $logs = $this->appLogs();
 
@@ -407,13 +406,27 @@ final class DisplayPairingTest extends WebTestCase
 
     public function testRefreshFailingForTheFeedStillRecordsTheContact(): void
     {
-        self::getContainer()->set('http_client', new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['http_code' => 500])));
+        $this->failRealtimeFeed();
         $this->pairedScreen();
 
         $this->client->request('GET', '/display?fragment=1');
 
         self::assertResponseStatusCodeSame(503);
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->storedDevice($this->device)->getLastSeenAt());
+    }
+
+    public function testFragmentQueryCountDoesNotGrowWithTheQuays(): void
+    {
+        $this->serveRealtimeFeed();
+        $this->pairedScreen();
+        // Premier rafraîchissement hors mesure : il enregistre le contact.
+        $this->client->request('GET', '/display?fragment=1');
+
+        $withOneQuay = $this->fragmentQueries();
+        $this->addQuays('S2', 'S3');
+        $withThreeQuays = $this->fragmentQueries();
+
+        self::assertSame($withOneQuay, $withThreeQuays);
     }
 
     public function testFragmentWithoutScreenCookieIsUnauthorized(): void
@@ -509,6 +522,35 @@ final class DisplayPairingTest extends WebTestCase
     private function deviceWrites(string $uri): int
     {
         return $this->countQueries(fn () => $this->client->request('GET', $uri), 'UPDATE device ');
+    }
+
+    /**
+     * Requêtes SQL d'un rafraîchissement de l'écran, qui doit réussir.
+     */
+    private function fragmentQueries(): int
+    {
+        $queries = $this->countQueries(fn () => $this->client->request('GET', '/display?fragment=1'));
+        self::assertResponseIsSuccessful();
+
+        return $queries;
+    }
+
+    /**
+     * Un quai affiché de plus sur le dispositif de test pour chacun de ces arrêts.
+     */
+    private function addQuays(string ...$stopIds): void
+    {
+        $device = $this->storedDevice($this->device);
+
+        foreach ($stopIds as $stopId) {
+            $quay = new Quay($stopId, 'QUAI '.$stopId, 38.5, -28.6, 'P'.$stopId);
+            $configuration = new DisplayConfiguration($device, $quay);
+            $device->addDisplayConfiguration($configuration);
+            $this->entityManager->persist($quay);
+            $this->entityManager->persist($configuration);
+        }
+
+        $this->entityManager->flush();
     }
 
     private function assertCodeRefused(): void

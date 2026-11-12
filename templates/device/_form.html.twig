@@ -24,6 +24,8 @@
 
     <twig:Card title="Aperçu de l'écran" class="lg:col-span-2">
         <p class="mb-3 truncate font-medium text-slate-900" data-device-bench-target="labelOutput">{{ device.label }}</p>
-        {{ include('device/_bench.html.twig') }}
+        <twig:SampleFrame>
+            {{ include('device/_bench.html.twig') }}
+        </twig:SampleFrame>
     </twig:Card>
 </div>

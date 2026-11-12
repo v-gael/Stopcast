@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Display;
+
+use App\Entity\Device;
+use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
+use App\Monitoring\RealtimeFeedFailureLogger;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
+
+/**
+ * Ce que l'écran d'un dispositif montre en ce moment, sur les passages réels :
+ * l'écran lui-même (/display) et l'aperçu de la page du dispositif passent par
+ * ici, pour montrer la même chose.
+ */
+final readonly class LiveDisplay
+{
+    public function __construct(
+        private DisplayAssembler $displayAssembler,
+        private ScreenPaginator $screenPaginator,
+        private RealtimeFeedFailureLogger $feedFailureLogger,
+    ) {
+    }
+
+    /**
+     * Un dispositif désactivé ne lit pas le flux. Un flux en échec est
+     * journalisé (RealtimeFeedFailureLogger).
+     */
+    public function forDevice(Device $device): LiveDisplayState
+    {
+        if (!$device->isActive()) {
+            return LiveDisplayState::disabled();
+        }
+
+        try {
+            return LiveDisplayState::screens($this->screenPaginator->paginate($this->displayAssembler->forDevice($device)));
+        } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $failure) {
+            $this->feedFailureLogger->log($failure);
+
+            return LiveDisplayState::feedUnavailable();
+        }
+    }
+}

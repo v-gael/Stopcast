@@ -1,0 +1,42 @@
+{# État résumé d'un dispositif et dernier contact de son écran, communs à la liste et à la fiche. #}
+
+{% macro last_seen(device) %}
+    {{- device.lastSeenAt ? device.lastSeenAt|date('d/m/Y à H:i') : 'Jamais' -}}
+{% endmacro %}
+
+{# Pastille et libellé de l'état. #}
+{% macro status(device, class = '') %}
+    {% set status = device_status(device) %}
+    {% set colors = {
+        neutral: ['text-slate-600', 'bg-slate-400'],
+        warning: ['text-amber-700', 'bg-amber-500'],
+        danger: ['text-red-700', 'bg-red-600'],
+        success: ['text-emerald-700', 'bg-emerald-500'],
+    }[status.tone] %}
+    <span class="flex items-center gap-1.5 font-medium {{ colors[0] }} {{ class }}">
+        <span class="size-2 shrink-0 rounded-full {{ colors[1] }}" aria-hidden="true"></span>
+        <span data-device-status>{{ status.label }}</span>
+    </span>
+{% endmacro %}
+
+{# Ce qui explique l'état, en une phrase. #}
+{% macro status_detail(device) %}
+    {% set status = device_status(device) %}
+    {%- if status is same as enum('App\\Enum\\DeviceStatus').Disabled -%}
+        L'écran affiche « Écran désactivé ».
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Unpaired -%}
+        Aucun écran appairé.
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').NeverSeen -%}
+        L'écran appairé n'a encore jamais donné de nouvelles.
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Offline -%}
+        Dernier contact : {{ _self.last_seen(device) }}
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').NothingToShow -%}
+        {{ device.nothingToShowReason.explanation }}
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').QuayGone -%}
+        {%- set gone = device.countConfigurationsWithDeprecatedQuay -%}
+        {{ gone }} {{ gone > 1 ? 'quais ont disparu' : 'quai a disparu' }} du dernier import.
+    {%- else -%}
+        {%- set shown = device.displayedConfigurations|length -%}
+        {{ shown }} {{ shown > 1 ? 'quais' : 'quai' }} en rotation.
+    {%- endif -%}
+{% endmacro %}
