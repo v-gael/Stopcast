@@ -47,12 +47,22 @@ class Trip
     #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
     private ?string $terminusStopId;
 
-    public function __construct(string $gtfsTripId, Route $route, ?string $headsign, ?string $terminusStopId = null)
+    /**
+     * stop_sequence de ce dernier arrêt. Sur une boucle, le quai de départ est
+     * aussi le terminus : seule la séquence distingue le départ de l'arrivée.
+     * Null si le trajet n'a aucun horaire, ou importé avant que la séquence
+     * soit enregistrée.
+     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $terminusStopSequence;
+
+    public function __construct(string $gtfsTripId, Route $route, ?string $headsign, ?string $terminusStopId = null, ?int $terminusStopSequence = null)
     {
         $this->gtfsTripId = $gtfsTripId;
         $this->route = $route;
         $this->headsign = $headsign;
         $this->terminusStopId = $terminusStopId;
+        $this->terminusStopSequence = $terminusStopSequence;
     }
 
     public function getId(): ?int
@@ -78,5 +88,10 @@ class Trip
     public function getTerminusStopId(): ?string
     {
         return $this->terminusStopId;
+    }
+
+    public function getTerminusStopSequence(): ?int
+    {
+        return $this->terminusStopSequence;
     }
 }

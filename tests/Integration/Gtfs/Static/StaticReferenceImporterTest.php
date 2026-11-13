@@ -63,9 +63,15 @@ final class StaticReferenceImporterTest extends KernelTestCase
     {
         $this->importFeed();
 
+        $trips = $this->tripsOf(['T1', 'T3', 'T5', 'UNKNOWN']);
+
         self::assertSame(
             ['T1' => 'S1', 'T3' => 'S2', 'T5' => null],
-            array_map(static fn (array $trip): ?string => $trip['terminusStopId'], $this->tripsOf(['T1', 'T3', 'T5', 'UNKNOWN'])),
+            array_map(static fn (array $trip): ?string => $trip['terminusStopId'], $trips),
+        );
+        self::assertSame(
+            ['T1' => 1, 'T3' => 1, 'T5' => null],
+            array_map(static fn (array $trip): ?int => $trip['terminusStopSequence'], $trips),
         );
     }
 
@@ -225,7 +231,7 @@ final class StaticReferenceImporterTest extends KernelTestCase
     /**
      * @param string[] $gtfsTripIds
      *
-     * @return array<string, array{headsign: string|null, terminusStopId: string|null}>
+     * @return array<string, array{headsign: string|null, terminusStopId: string|null, terminusStopSequence: int|null}>
      */
     private function tripsOf(array $gtfsTripIds): array
     {

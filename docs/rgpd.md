@@ -127,6 +127,6 @@ Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026. Une inform
 
 [Have I Been Pwned](https://haveibeenpwned.com/API/v3#PwnedPasswords) (Pwned Passwords) est interrogé par k-anonymat lors du choix d'un mot de passe : seuls les 5 premiers caractères de l'empreinte SHA-1 du mot de passe sont envoyés, la comparaison se fait sur le serveur de Stopcast. Aucune donnée personnelle n'est transmise : ce n'est pas un sous-traitant.
 
-## Non décidé
+## Mesure d'audience
 
-La mesure d'audience n'est pas décidée ; ce registre et la page seront mis à jour le jour où elle l'est.
+Aucun outil de mesure d'audience : ni script, ni traceur, ni cookie, donc rien à consentir. La fréquentation se lit dans les statistiques agrégées de la zone Cloudflare (requêtes, visiteurs uniques, pays), issues du trafic que Cloudflare traite déjà comme proxy : aucun traitement ni sous-traitant de plus.

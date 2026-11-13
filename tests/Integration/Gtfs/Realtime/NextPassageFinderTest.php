@@ -53,6 +53,11 @@ final class NextPassageFinderTest extends KernelTestCase
         $entityManager->persist(new Trip('T2', $route, 'ZONE INDUSTRIELLE', 'S9'));
         $entityManager->persist(new Trip('T3', $route, 'CENTRE VILLE', 'S1'));
         $entityManager->persist(new Trip('T5', $route, null));
+        // Boucle : part de S1 (séquence 1) et y revient (séquence 19).
+        $entityManager->persist(new Trip('T6', $route, 'BOUCLE', 'S1', 19));
+        $entityManager->persist(new Trip('T7', $route, 'CENTRE VILLE', 'S1', 6));
+        // Boucle importée avant l'enregistrement de la séquence du terminus.
+        $entityManager->persist(new Trip('T8', $route, 'BOUCLE', 'S1'));
         $entityManager->flush();
     }
 
@@ -157,6 +162,72 @@ final class NextPassageFinderTest extends KernelTestCase
 
         self::assertSame(['CENTRE VILLE'], $this->headsignsOf($passages));
         self::assertCount(1, $passages);
+    }
+
+    public function testCircularTripDepartureFromItsTerminusQuayIsShown(): void
+    {
+        $passages = $this->passagesAtQuay([$this->tripUpdate('T6', [$this->departureAt('S1', 5, sequence: 1)])]);
+
+        self::assertSame(['BOUCLE'], $this->headsignsOf($passages));
+    }
+
+    public function testCircularTripArrivalAtItsTerminusQuayIsNotShown(): void
+    {
+        // Trajet en cours : seule l'arrivée au quai d'origine reste dans le flux.
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T6', [$this->departureAt('S2', 2, sequence: 10), $this->departureAt('S1', 5, sequence: 19)]),
+        ]);
+
+        self::assertSame([], $passages);
+    }
+
+    public function testCircularTripPublishedWithDepartureAndArrivalIsShownOnce(): void
+    {
+        // Relevé au moment du départ : le quai d'origine figure en séquences 1 et 19.
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T6', [$this->departureAt('S1', 1, sequence: 1), $this->departureAt('S1', 29, sequence: 19)]),
+        ]);
+
+        self::assertSame([self::at(1)], $this->timestampsOf($passages));
+    }
+
+    public function testCircularTripWhoseDepartureIsGoneShowsNothingAtItsTerminusQuay(): void
+    {
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T6', [$this->departureAt('S1', -1, sequence: 1), $this->departureAt('S1', 27, sequence: 19)]),
+        ]);
+
+        self::assertSame([], $passages);
+    }
+
+    public function testPassageAtTheTerminusQuayWithoutSequenceInTheFeedIsNotShown(): void
+    {
+        $passages = $this->passagesAtQuay([$this->tripUpdate('T6', [$this->departureAt('S1', 5)])]);
+
+        self::assertSame([], $passages);
+    }
+
+    public function testPassageAtTheTerminusQuayOfATripWithoutStoredSequenceIsNotShown(): void
+    {
+        $passages = $this->passagesAtQuay([$this->tripUpdate('T8', [$this->departureAt('S1', 5, sequence: 1)])]);
+
+        self::assertSame([], $passages);
+    }
+
+    public function testTripEndingAtTheQuayWithSequenceIsNotShown(): void
+    {
+        $passages = $this->passagesAtQuay([$this->tripUpdate('T7', [$this->departureAt('S1', 5, sequence: 6)])]);
+
+        self::assertSame([], $passages);
+    }
+
+    public function testQuayRepeatedConsecutivelyInATripIsShownOnce(): void
+    {
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T1', [$this->departureAt('S1', 5, sequence: 3), $this->departureAt('S1', 6, sequence: 4)]),
+        ]);
+
+        self::assertSame([self::at(5)], $this->timestampsOf($passages));
     }
 
     public function testTripWithoutKnownTerminusIsShown(): void
@@ -364,11 +435,13 @@ final class NextPassageFinderTest extends KernelTestCase
                 ->setStopTimeUpdate($stopTimeUpdates));
     }
 
-    private function departureAt(string $stopId, int $minutes): StopTimeUpdate
+    private function departureAt(string $stopId, int $minutes, ?int $sequence = null): StopTimeUpdate
     {
-        return new StopTimeUpdate()
+        $stopTimeUpdate = new StopTimeUpdate()
             ->setStopId($stopId)
             ->setDeparture(new StopTimeEvent()->setTime(self::at($minutes)));
+
+        return null === $sequence ? $stopTimeUpdate : $stopTimeUpdate->setStopSequence($sequence);
     }
 
     /**

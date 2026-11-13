@@ -19,12 +19,13 @@ class TripRepository extends ServiceEntityRepository
     }
 
     /**
-     * Destination et terminus des trajets connus parmi ceux demandés, en une
-     * seule requête. Les trajets inconnus sont absents du résultat.
+     * Destination et terminus (quai et séquence) des trajets connus parmi ceux
+     * demandés, en une seule requête. Les trajets inconnus sont absents du
+     * résultat.
      *
      * @param string[] $gtfsTripIds
      *
-     * @return array<string, array{headsign: string|null, terminusStopId: string|null}> indexé par trip_id
+     * @return array<string, array{headsign: string|null, terminusStopId: string|null, terminusStopSequence: int|null}> indexé par trip_id
      */
     public function findHeadsignsAndTerminiByGtfsTripIds(array $gtfsTripIds): array
     {
@@ -32,9 +33,9 @@ class TripRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{gtfsTripId: string, headsign: string|null, terminusStopId: string|null}> $rows */
+        /** @var list<array{gtfsTripId: string, headsign: string|null, terminusStopId: string|null, terminusStopSequence: int|null}> $rows */
         $rows = $this->createQueryBuilder('t')
-            ->select('t.gtfsTripId', 't.headsign', 't.terminusStopId')
+            ->select('t.gtfsTripId', 't.headsign', 't.terminusStopId', 't.terminusStopSequence')
             ->where('t.gtfsTripId IN (:gtfsTripIds)')
             ->setParameter('gtfsTripIds', array_values(array_unique($gtfsTripIds)))
             ->getQuery()
@@ -42,7 +43,11 @@ class TripRepository extends ServiceEntityRepository
 
         $trips = [];
         foreach ($rows as $row) {
-            $trips[$row['gtfsTripId']] = ['headsign' => $row['headsign'], 'terminusStopId' => $row['terminusStopId']];
+            $trips[$row['gtfsTripId']] = [
+                'headsign' => $row['headsign'],
+                'terminusStopId' => $row['terminusStopId'],
+                'terminusStopSequence' => $row['terminusStopSequence'],
+            ];
         }
 
         return $trips;

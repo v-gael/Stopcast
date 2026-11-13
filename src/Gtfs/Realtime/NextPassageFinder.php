@@ -149,7 +149,7 @@ final readonly class NextPassageFinder
 
             // Filtré avant la limite, pour ne pas prendre la place d'un passage
             // affichable. Trajet ou terminus inconnu : le passage reste affiché.
-            if ($candidate['stopId'] === ($trip['terminusStopId'] ?? null)) {
+            if (null !== $trip && $this->endsItsTrip($candidate, $trip)) {
                 continue;
             }
 
@@ -162,6 +162,28 @@ final readonly class NextPassageFinder
         }
 
         return $passages;
+    }
+
+    /**
+     * Le passage est-il l'arrivée de son trajet au terminus ? Sur une boucle,
+     * le quai de départ est aussi le terminus : seule la séquence distingue
+     * le départ, affiché, de l'arrivée. Sans séquence, dans le flux ou en
+     * base, tout passage au quai terminus est masqué.
+     *
+     * @param array{stopId: string, stopSequence: int|null}                      $candidate
+     * @param array{terminusStopId: string|null, terminusStopSequence: int|null} $trip
+     */
+    private function endsItsTrip(array $candidate, array $trip): bool
+    {
+        if ($candidate['stopId'] !== $trip['terminusStopId']) {
+            return false;
+        }
+
+        if (null === $candidate['stopSequence'] || null === $trip['terminusStopSequence']) {
+            return true;
+        }
+
+        return $candidate['stopSequence'] === $trip['terminusStopSequence'];
     }
 
     /**
