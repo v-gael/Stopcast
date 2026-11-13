@@ -31,7 +31,7 @@ final class StaticFeedReader
             $this->validate($zip);
 
             $trips = $this->readTrips($zip);
-            [$terminusStopIds, $quayRouteLinks] = $this->readStopTimes($zip, $trips);
+            [$terminusByTripId, $quayRouteLinks] = $this->readStopTimes($zip, $trips);
 
             $parsedTrips = [];
             foreach ($trips as $gtfsTripId => $trip) {
@@ -39,7 +39,8 @@ final class StaticFeedReader
                     gtfsTripId: (string) $gtfsTripId,
                     gtfsRouteId: $trip['routeId'],
                     headsign: $trip['headsign'],
-                    terminusStopId: $terminusStopIds[$gtfsTripId] ?? null,
+                    terminusStopId: $terminusByTripId[$gtfsTripId]['stopId'] ?? null,
+                    terminusStopSequence: $terminusByTripId[$gtfsTripId]['stopSequence'] ?? null,
                 );
             }
 
@@ -138,19 +139,19 @@ final class StaticFeedReader
 
     /**
      * Un seul passage sur stop_times.txt pour en tirer :
-     * - le terminus de chaque trajet (arrêt du plus grand stop_sequence),
-     *   où ses passages ne sont pas affichés ;
+     * - le terminus de chaque trajet (arrêt du plus grand stop_sequence, et
+     *   cette séquence), où ses passages ne sont pas affichés ;
      * - les lignes qui desservent chaque quai et leurs destinations
      *   distinctes. Un trajet sans destination lie sa ligne au quai sans
      *   ajouter de destination.
      *
      * @param array<string, array{routeId: string, headsign: string|null}> $trips
      *
-     * @return array{array<string, string>, list<ParsedQuayRouteLink>} terminus indexés par trip_id, liens quai ↔ ligne
+     * @return array{array<string, array{stopSequence: int, stopId: string}>, list<ParsedQuayRouteLink>} terminus indexés par trip_id, liens quai ↔ ligne
      */
     private function readStopTimes(\ZipArchive $zip, array $trips): array
     {
-        // trip_id => [stop_sequence, stop_id] du plus grand stop_sequence vu.
+        // trip_id => stop_sequence et stop_id du plus grand stop_sequence vu.
         // stop_times.txt n'est pas forcément trié : comparaison numérique.
         $lastStopByTripId = [];
         // "stopId|routeId" => Set des destinations distinctes
@@ -166,8 +167,8 @@ final class StaticFeedReader
 
             $sequence = (int) $row['stop_sequence'];
 
-            if ($sequence >= ($lastStopByTripId[$row['trip_id']][0] ?? \PHP_INT_MIN)) {
-                $lastStopByTripId[$row['trip_id']] = [$sequence, $row['stop_id']];
+            if ($sequence >= ($lastStopByTripId[$row['trip_id']]['stopSequence'] ?? \PHP_INT_MIN)) {
+                $lastStopByTripId[$row['trip_id']] = ['stopSequence' => $sequence, 'stopId' => $row['stop_id']];
             }
 
             $key = $row['stop_id'].'|'.$trip['routeId'];
@@ -189,10 +190,7 @@ final class StaticFeedReader
             );
         }
 
-        return [
-            array_map(static fn (array $lastStop): string => $lastStop[1], $lastStopByTripId),
-            $quayRouteLinks,
-        ];
+        return [$lastStopByTripId, $quayRouteLinks];
     }
 
     /**
