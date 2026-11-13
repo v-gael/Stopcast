@@ -107,11 +107,12 @@ final readonly class TripUpdatesFeed
     /**
      * Passages à venir lus dans le flux, avant tout croisement avec la base :
      * ni trajet supprimé du service, ni arrêt sauté, ni passage dont l'heure
-     * est passée. Un même trajet ne compte qu'un passage par quai.
+     * est passée. Un même trajet ne compte qu'un passage par quai. La
+     * stop_sequence du passage est null si le flux ne la donne pas.
      *
      * @param array<string, mixed>|null $stopIds quais demandés, en clés ; null pour tous
      *
-     * @return list<array{stopId: string, routeId: string, tripId: string, expectedAt: \DateTimeImmutable}>
+     * @return list<array{stopId: string, stopSequence: int|null, routeId: string, tripId: string, expectedAt: \DateTimeImmutable}>
      */
     public function upcomingStopTimes(FeedMessage $feed, ?array $stopIds = null): array
     {
@@ -172,6 +173,7 @@ final readonly class TripUpdatesFeed
 
                 $stopTimes[] = [
                     'stopId' => $stopTimeStopId,
+                    'stopSequence' => $stopTimeUpdate->hasStopSequence() ? $stopTimeUpdate->getStopSequence() : null,
                     'routeId' => $routeId,
                     'tripId' => $tripId,
                     'expectedAt' => $expectedAt,

@@ -124,7 +124,10 @@ final class StaticFeedReaderTest extends TestCase
 
     public function testFindsTheTerminusOfEachTripByNumericStopSequence(): void
     {
-        self::assertSame('S3', $this->read('UnorderedStopSequences')->trips[0]->terminusStopId);
+        $trip = $this->read('UnorderedStopSequences')->trips[0];
+
+        self::assertSame('S3', $trip->terminusStopId);
+        self::assertSame(10, $trip->terminusStopSequence);
     }
 
     public function testLeavesTerminusNullWhenTripHasNoStopTimes(): void
@@ -133,6 +136,7 @@ final class StaticFeedReaderTest extends TestCase
 
         self::assertSame('T5', $trips[3]->gtfsTripId);
         self::assertNull($trips[3]->terminusStopId);
+        self::assertNull($trips[3]->terminusStopSequence);
     }
 
     public function testToleratesMissingHeadsignColumn(): void

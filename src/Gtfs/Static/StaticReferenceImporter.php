@@ -354,7 +354,7 @@ final readonly class StaticReferenceImporter
             $route = $this->entityManager->getReference(Route::class, $routeId);
             \assert($route instanceof Route);
 
-            $this->entityManager->persist(new Trip($parsedTrip->gtfsTripId, $route, $parsedTrip->headsign, $parsedTrip->terminusStopId));
+            $this->entityManager->persist(new Trip($parsedTrip->gtfsTripId, $route, $parsedTrip->headsign, $parsedTrip->terminusStopId, $parsedTrip->terminusStopSequence));
 
             if (0 === ++$pending % self::TRIP_BATCH_SIZE) {
                 $this->entityManager->flush();
