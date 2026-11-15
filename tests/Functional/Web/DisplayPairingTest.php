@@ -264,6 +264,7 @@ final class DisplayPairingTest extends WebTestCase
         $this->serveRealtimeFeed();
         $this->pairedScreen();
         $this->clock->sleep(86400);
+        $this->refreshPassageIndex();
 
         $this->client->request('GET', '/display?fragment=1');
 
@@ -351,9 +352,9 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSelectorTextSame('.screen__message', 'Écran désactivé');
     }
 
-    public function testUnreadableFeedFailsTheRefreshAndKeepsThePageAlive(): void
+    public function testMissingPassageIndexFailsTheRefreshAndKeepsThePageAlive(): void
     {
-        $this->failRealtimeFeed();
+        $this->removePassageIndex();
         $this->pairedScreen();
         $logs = $this->appLogs();
 
@@ -361,8 +362,8 @@ final class DisplayPairingTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(503);
         self::assertSame('', (string) $this->client->getResponse()->getContent());
-        self::assertTrue($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
-        self::assertTrue($logs->hasErrorThatContains('GTFS-RT feed unavailable.'));
+        // Une panne du flux est journalisée par realtime-worker, pas par chaque écran.
+        self::assertFalse($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
 
         $crawler = $this->client->request('GET', '/display');
 
@@ -394,19 +395,32 @@ final class DisplayPairingTest extends WebTestCase
         self::assertEquals($updatedAt, $stored->getUpdatedAt());
 
         $this->clock->sleep(4 * 60);
+        $this->refreshPassageIndex();
         self::assertSame(0, $this->deviceWrites('/display?fragment=1'));
         self::assertResponseIsSuccessful();
         self::assertEquals(new \DateTimeImmutable(self::NOW), $this->storedDevice($this->device)->getLastSeenAt());
 
         $this->clock->sleep(2 * 60);
+        $this->refreshPassageIndex();
         self::assertSame(1, $this->deviceWrites('/display?fragment=1'));
         self::assertResponseIsSuccessful();
         self::assertEquals(new \DateTimeImmutable(self::NOW)->modify('+6 minutes'), $this->storedDevice($this->device)->getLastSeenAt());
     }
 
-    public function testRefreshFailingForTheFeedStillRecordsTheContact(): void
+    public function testPassageIndexOlderThanTheMaximumAgeFailsTheRefresh(): void
     {
-        $this->failRealtimeFeed();
+        $this->serveRealtimeFeed();
+        $this->pairedScreen();
+
+        $this->clock->sleep(301);
+        $this->client->request('GET', '/display?fragment=1');
+
+        self::assertResponseStatusCodeSame(503);
+    }
+
+    public function testRefreshWithoutPassageIndexStillRecordsTheContact(): void
+    {
+        $this->removePassageIndex();
         $this->pairedScreen();
 
         $this->client->request('GET', '/display?fragment=1');
@@ -565,16 +579,18 @@ final class DisplayPairingTest extends WebTestCase
     }
 
     /**
-     * Le flux temps réel annonce un passage de la ligne 1 dans 5 minutes au quai S1.
+     * Le flux temps réel annonce un passage de la ligne 1 dans 5 minutes au
+     * quai S1, et l'index des passages en est rafraîchi.
      */
     private function serveRealtimeFeed(): void
     {
-        // Daté de l'horloge du test à chaque requête : un flux à l'heure fixée
-        // serait périmé une fois l'horloge avancée.
+        // Daté de l'horloge du test à chaque téléchargement : un flux à l'heure
+        // fixée serait périmé une fois l'horloge avancée.
         self::getContainer()->set('http_client', new MockHttpClient(fn (): MockResponse => self::feedResponse([
             new FeedEntity()->setTripUpdate(new TripUpdate()
                 ->setTrip(new TripDescriptor()->setTripId('T1')->setRouteId('R1'))
                 ->setStopTimeUpdate([new StopTimeUpdate()->setStopId('S1')->setDeparture(new StopTimeEvent()->setTime(self::at(5)))])),
         ], $this->clock->now()->getTimestamp())));
+        $this->refreshPassageIndex();
     }
 }

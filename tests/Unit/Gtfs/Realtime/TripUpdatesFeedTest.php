@@ -8,6 +8,7 @@ use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
 use App\Gtfs\Realtime\TripUpdatesFeed;
 use App\Tests\Support\RealtimeFeedMessageTrait;
 use Google\Transit\Realtime\FeedEntity;
+use Google\Transit\Realtime\FeedMessage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -19,7 +20,7 @@ final class TripUpdatesFeedTest extends TestCase
 
     public function testAFreshFeedIsReturned(): void
     {
-        $feed = $this->feed()->parse(self::serializedFeed([new FeedEntity(), new FeedEntity()], self::at(-1)));
+        $feed = $this->freshFeed(self::serializedFeed([new FeedEntity(), new FeedEntity()], self::at(-1)));
 
         self::assertCount(2, $feed->getEntity());
     }
@@ -29,12 +30,12 @@ final class TripUpdatesFeedTest extends TestCase
         $this->expectException(InvalidGtfsRealtimeFeedException::class);
         $this->expectExceptionMessage('Flux GTFS-RT périmé : "https://gtfs-rt.test/trip-updates" (âge 301 s, maximum 300 s).');
 
-        $this->feed()->parse(self::serializedFeed([], self::at(0) - 301));
+        $this->freshFeed(self::serializedFeed([], self::at(0) - 301));
     }
 
     public function testAFeedExactlyAtTheMaximumAgeIsStillFresh(): void
     {
-        $feed = $this->feed()->parse(self::serializedFeed([new FeedEntity()], self::at(0) - 300));
+        $feed = $this->freshFeed(self::serializedFeed([new FeedEntity()], self::at(0) - 300));
 
         self::assertCount(1, $feed->getEntity());
     }
@@ -42,7 +43,7 @@ final class TripUpdatesFeedTest extends TestCase
     #[DataProvider('timestampsCountedAsFresh')]
     public function testAFeedWithoutAUsableTimestampIsFresh(int $headerTimestamp): void
     {
-        $feed = $this->feed()->parse(self::serializedFeed([new FeedEntity()], $headerTimestamp));
+        $feed = $this->freshFeed(self::serializedFeed([new FeedEntity()], $headerTimestamp));
 
         self::assertCount(1, $feed->getEntity());
     }
@@ -54,6 +55,18 @@ final class TripUpdatesFeedTest extends TestCase
     {
         yield 'timestamp absent (0)' => [0];
         yield 'timestamp dans le futur' => [self::at(10)];
+    }
+
+    /**
+     * Un corps décodé, s'il est frais.
+     */
+    private function freshFeed(string $raw): FeedMessage
+    {
+        $tripUpdatesFeed = $this->feed();
+        $feed = $tripUpdatesFeed->decode($raw);
+        $tripUpdatesFeed->assertFresh(TripUpdatesFeed::timestampOf($feed));
+
+        return $feed;
     }
 
     private function feed(): TripUpdatesFeed

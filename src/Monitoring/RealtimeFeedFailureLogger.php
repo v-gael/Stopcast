@@ -11,13 +11,13 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Signale à l'exploitation que le flux temps réel est injoignable, illisible
- * ou périmé : un warning à chaque échec, et un error (remonté à Sentry) au
- * plus une fois par quart d'heure, pour ne pas épuiser son quota quand tous
- * les écrans échouent à chaque rafraîchissement.
+ * ou périmé, à chaque rafraîchissement de l'index par realtime-worker
+ * (PassageIndexRefresher) : un warning à chaque échec, et un error (remonté à
+ * Sentry) au plus une fois par quart d'heure, pour ne pas épuiser son quota
+ * pendant une longue panne.
  *
- * L'heure du dernier error est partagée entre les requêtes par le pool du
- * flux ; perdue (cache vidé, redéploiement), elle coûte au pire un error de
- * plus.
+ * L'heure du dernier error est gardée dans le pool realtime.cache (Redis) ;
+ * perdue (Redis vidé), elle coûte au pire un error de plus.
  */
 final readonly class RealtimeFeedFailureLogger
 {
@@ -29,7 +29,7 @@ final readonly class RealtimeFeedFailureLogger
 
     public function __construct(
         private LoggerInterface $logger,
-        #[Autowire(service: 'gtfs_realtime.cache')]
+        #[Autowire(service: 'realtime.cache')]
         private CacheItemPoolInterface $cache,
         private ClockInterface $clock,
     ) {

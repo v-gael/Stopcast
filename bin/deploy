@@ -106,7 +106,7 @@ echo "Version à déployer : $IMAGE_TAG"
 # d'un commit et ne change jamais : une image déjà là n'est pas retéléchargée
 # (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée).
 echo "==> Téléchargement de l'image"
-compose pull --policy missing --ignore-buildable app worker
+compose pull --policy missing --ignore-buildable app worker realtime-worker
 
 # Redis démarre avant app, qui en dépend. `up` ne le recrée que si son image ou
 # sa configuration change : un déploiement qui ne change que l'image de l'appli
@@ -170,12 +170,12 @@ if [ "$pending" -eq 1 ]; then
     compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 fi
 
-# `--wait` refuse un service sans healthcheck : worker et backup n'en ont pas
+# `--wait` refuse un service sans healthcheck : les workers et backup n'en ont pas
 # (pas de serveur web). On attend qu'app soit healthy, puis on les remplace.
 echo '==> Mise à jour des conteneurs'
 replacing=1
 compose up -d --wait --wait-timeout 300 --remove-orphans app
-compose up -d worker backup
+compose up -d worker realtime-worker backup
 
 printf '%s\n' "$IMAGE_TAG" > "$state_file"
 echo "Déployé : $IMAGE_TAG (version précédente : $previous)"

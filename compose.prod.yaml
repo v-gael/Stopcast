@@ -109,6 +109,36 @@ services:
       redis:
         condition: service_healthy
 
+  # Rafraîchit l'index des passages temps réel (planning realtime, voir
+  # PassageIndexRefresher), seul : l'import GTFS et les emails de worker ne le
+  # retardent jamais. Même image que app. Ne reçoit que ce que la tâche lit.
+  realtime-worker:
+    image: ghcr.io/v-gael/stopcast:${IMAGE_TAG:?IMAGE_TAG est requis}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      REDIS_URL: redis://${REDIS_PASSWORD:?REDIS_PASSWORD est requis}@redis:6379
+      GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
+      HEALTHCHECKS_REALTIME_URL: ${HEALTHCHECKS_REALTIME_URL:-}
+      DEFAULT_URI: ${DEFAULT_URI:-http://localhost}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
+    # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
+    healthcheck:
+      disable: true
+    # Sous www-data, comme app ; n'écoute sur aucun port.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command: ["php", "bin/console", "messenger:consume", "scheduler_realtime", "--time-limit=3600", "--memory-limit=128M"]
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # Sauvegarde nocturne (3 h 30) de la base et du journal des suppressions
   # vers restic (bin/backup, ops/backup.crontab). Même image que app ; seul
   # ce service reçoit les clés du dépôt. Planifiée par supercronic et non par
@@ -146,7 +176,7 @@ services:
         condition: service_healthy
 
   # Sur le réseau default de la pile seulement (pas edge), sans port publié :
-  # seuls app et worker le joignent. Pas recréé par un déploiement qui ne
+  # seuls app, worker et realtime-worker le joignent. Pas recréé par un déploiement qui ne
   # change que l'image de l'appli (bin/deploy).
   redis:
     logging: *logging

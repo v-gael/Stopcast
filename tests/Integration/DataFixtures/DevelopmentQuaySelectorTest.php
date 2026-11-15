@@ -8,6 +8,7 @@ use App\DataFixtures\DevelopmentQuaySelection;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
+use App\Gtfs\Realtime\PassageIndexRefresher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -117,6 +118,22 @@ final class DevelopmentQuaySelectorTest extends KernelTestCase
 
         self::assertSame(['S5', 'S4', 'S6'], $this->stopIdsOf($selection));
         self::assertNotNull($selection->fallbackReason);
+    }
+
+    public function testPassagesAreCountedBeyondWhatTheIndexKeepsPerQuay(): void
+    {
+        // Un et deux passages de plus que ce que l'index garde par quai.
+        $limit = $_SERVER['GTFS_REALTIME_NEXT_PASSAGES_LIMIT'];
+        self::assertIsNumeric($limit);
+        $kept = PassageIndexRefresher::INDEX_DEPTH_PER_LIMIT * (int) $limit;
+        $trips = [];
+        foreach (range(1, $kept + 2) as $i) {
+            $trips['TX'.$i] = $i <= $kept + 1 ? ['S1', 'S2'] : ['S2'];
+        }
+
+        $selection = $this->selectorWithFeed($trips)->select(2);
+
+        self::assertSame(['S2', 'S1'], $this->stopIdsOf($selection));
     }
 
     public function testUnavailableFeedFallsBackToTheMostServedQuays(): void

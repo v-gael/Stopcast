@@ -6,13 +6,17 @@ namespace App\DataFixtures;
 
 use App\Entity\Quay;
 use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
-use App\Gtfs\Realtime\NextPassageFinder;
+use App\Gtfs\Realtime\PassageIndexBuilder;
+use App\Gtfs\Realtime\TripUpdatesFeed;
 use App\Repository\QuayRepository;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
  * Choisit les quais de l'appareil de développement : ceux qui ont le plus de
  * passages dans le flux temps réel, pour que l'écran ait de quoi afficher.
+ * Les passages sont comptés sur la sortie complète du constructeur de l'index,
+ * appelé ici directement : ni l'index ni realtime-worker ne sont lus, et la
+ * limite par quai ne met pas à égalité les quais les plus chargés.
  *
  * La nuit ou si le flux est indisponible, complète avec les quais desservis
  * par le plus de lignes, sans faire échouer le chargement des fixtures.
@@ -20,7 +24,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
 final readonly class DevelopmentQuaySelector
 {
     public function __construct(
-        private NextPassageFinder $nextPassageFinder,
+        private PassageIndexBuilder $passageIndexBuilder,
+        private TripUpdatesFeed $tripUpdatesFeed,
         private QuayRepository $quayRepository,
     ) {
     }
@@ -28,7 +33,8 @@ final readonly class DevelopmentQuaySelector
     public function select(int $count): DevelopmentQuaySelection
     {
         try {
-            $passageCounts = $this->nextPassageFinder->countByStopId();
+            $index = $this->passageIndexBuilder->build();
+            $this->tripUpdatesFeed->assertIndexFresh($index);
         } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $exception) {
             return new DevelopmentQuaySelection(
                 $this->mostServed($count, []),
@@ -36,6 +42,7 @@ final readonly class DevelopmentQuaySelector
             );
         }
 
+        $passageCounts = array_map(\count(...), $index->passagesByStopId);
         $quays = $this->quayRepository->findActiveByGtfsStopIds(array_map(strval(...), array_keys($passageCounts)));
 
         usort($quays, static fn (Quay $a, Quay $b): int => [$passageCounts[$b->getGtfsStopId()], $a->getGtfsStopId()] <=> [$passageCounts[$a->getGtfsStopId()], $b->getGtfsStopId()]);
