@@ -29,21 +29,19 @@ use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Appairage d'un écran vu par l'écran : il affiche un code sur /display,
  * interroge /display/pairing, et reçoit son cookie une fois le code saisi.
  */
+#[ResetDatabase]
 final class DisplayPairingTest extends WebTestCase
 {
     use AppLogsTrait;
     use DisplayTestTrait;
-    use Factories;
     use QueryCountTrait;
     use RealtimeFeedTrait;
-    use ResetDatabase;
     use ScreenPairingTrait;
     use WebTestTrait;
 

@@ -11,13 +11,13 @@ use App\Tests\Support\HealthcheckPingsTrait;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class PurgeCommandTest extends KernelTestCase
 {
     use ContainerServiceTrait;
     use HealthcheckPingsTrait;
-    use ResetDatabase;
 
     private const string PING_URL = 'https://hc-ping.test/purge';
 

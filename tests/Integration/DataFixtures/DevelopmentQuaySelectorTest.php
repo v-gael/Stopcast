@@ -11,12 +11,12 @@ use App\Entity\Trip;
 use App\Gtfs\Realtime\PassageIndexRefresher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class DevelopmentQuaySelectorTest extends KernelTestCase
 {
     use DevelopmentQuaySelectorFactoryTrait;
-    use ResetDatabase;
 
     protected function setUp(): void
     {

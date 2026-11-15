@@ -13,19 +13,17 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Confirmation d'un changement d'email depuis le lien reçu à la nouvelle
  * adresse, et ses effets sur la connexion.
  */
+#[ResetDatabase]
 final class EmailChangeConfirmationTest extends WebTestCase
 {
     use ClockSensitiveTrait;
     use ContainerServiceTrait;
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';

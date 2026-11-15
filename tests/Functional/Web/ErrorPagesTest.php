@@ -10,19 +10,16 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Pages d'erreur de la prod : un noyau sans debug, comme en prod, rend les
  * templates de `templates/bundles/TwigBundle/Exception/` au lieu de la page
  * de debug.
  */
+#[ResetDatabase]
 final class ErrorPagesTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
-
     public function testUnknownUrlRendersTheNotFoundPage(): void
     {
         $client = $this->createProductionClient();

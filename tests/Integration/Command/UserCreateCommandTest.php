@@ -13,14 +13,11 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class UserCreateCommandTest extends KernelTestCase
 {
-    use Factories;
-    use ResetDatabase;
-
     private const string EMAIL = 'lea@example.com';
 
     private const string PASSWORD = 'un-mot-de-passe-solide-1';

@@ -12,18 +12,15 @@ use Symfony\Component\HttpKernel\DataCollector\LoggerDataCollector;
 use Symfony\Component\HttpKernel\Profiler\Profile;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\VarDumper\Cloner\Data;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Limite d'essais du mot de passe actuel, partagée entre le changement de mot
  * de passe et la suppression du compte : 5 essais faux par compte.
  */
+#[ResetDatabase]
 final class CurrentPasswordThrottlingTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
-
     private const string EMAIL = 'lea@example.com';
 
     private const string WRONG_PASSWORD = 'mauvais-mot-de-passe';

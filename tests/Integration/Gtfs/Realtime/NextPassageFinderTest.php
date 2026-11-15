@@ -30,18 +30,18 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * L'index des passages, rafraîchi par PassageIndexRefresher puis lu par
  * NextPassageFinder, comme realtime-worker et les écrans le font.
  */
+#[ResetDatabase]
 final class NextPassageFinderTest extends KernelTestCase
 {
     use HealthcheckPingsTrait;
     use QueryCountTrait;
     use RealtimeFeedTrait;
-    use ResetDatabase;
 
     private Quay $quay;
 

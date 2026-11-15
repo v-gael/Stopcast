@@ -11,17 +11,15 @@ use App\Factory\UserFactory;
 use App\Tests\Support\ScreenPairingTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Appairage d'un écran vu par le propriétaire : l'état de l'écran sur la
  * fiche du dispositif, la saisie du code et la dissociation.
  */
+#[ResetDatabase]
 final class DevicePairingTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use ScreenPairingTrait;
 
     private const string TOO_MANY_ATTEMPTS = "Trop d'essais. Réessayez plus tard.";

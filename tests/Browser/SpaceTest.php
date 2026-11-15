@@ -21,8 +21,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\PantherTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Espace connecté dans Chrome, parcouru comme un administrateur le ferait :
@@ -30,13 +29,12 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * (Turbo, aperçu, autocomplétion) fonctionne.
  */
 #[Group('browser')]
+#[ResetDatabase]
 final class SpaceTest extends PantherTestCase
 {
     use BrowserTestTrait;
     use ContainerServiceTrait;
     use DisplayTestTrait;
-    use Factories;
-    use ResetDatabase;
 
     private const string EMAIL = 'admin@example.com';
 

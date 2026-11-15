@@ -9,17 +9,15 @@ use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * IP du client derrière un proxy (TRUSTED_PROXIES), vue par la limite d'essais
  * à la connexion : 5 échecs par identifiant + IP.
  */
+#[ResetDatabase]
 final class TrustedProxiesTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';

@@ -12,16 +12,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 use function Zenstruck\Foundry\Persistence\refresh;
 
+#[ResetDatabase]
 final class AdminUsersTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
-
     private KernelBrowser $client;
 
     private User $admin;

@@ -19,12 +19,12 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class GtfsImportCommandTest extends KernelTestCase
 {
     use ContainerServiceTrait;
-    use ResetDatabase;
     use StaticFeedTrait;
 
     private const string PING_URL = 'https://hc-ping.test/gtfs';

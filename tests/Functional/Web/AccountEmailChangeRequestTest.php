@@ -9,16 +9,14 @@ use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Demande de changement d'email depuis « Mon compte ».
  */
+#[ResetDatabase]
 final class AccountEmailChangeRequestTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';

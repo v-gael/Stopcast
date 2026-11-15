@@ -21,15 +21,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class DisplayPreviewTest extends WebTestCase
 {
     use AppLogsTrait;
     use DisplayTestTrait;
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private KernelBrowser $client;
