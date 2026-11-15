@@ -16,14 +16,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\AbstractLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class AppFixturesTest extends KernelTestCase
 {
     use DevelopmentQuaySelectorFactoryTrait;
-    use Factories;
-    use ResetDatabase;
 
     /** @var list<string> */
     private array $logs = [];

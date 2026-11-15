@@ -8,17 +8,15 @@ use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Attribution des données GTFS exigée par la licence ODbL : producteur et
  * licence, sur une page publique plutôt que sur l'écran d'affichage.
  */
+#[ResetDatabase]
 final class DataSourcesTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     public function testDataSourcesPageCitesTheProducerAndTheLicence(): void

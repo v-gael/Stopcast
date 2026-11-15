@@ -13,14 +13,12 @@ use App\Factory\UserFactory;
 use App\Tests\Support\QueryCountTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class AccountDataExporterTest extends KernelTestCase
 {
-    use Factories;
     use QueryCountTrait;
-    use ResetDatabase;
 
     public function testDevicesConfigurationsAndQuaysAreLoadedInASingleQuery(): void
     {

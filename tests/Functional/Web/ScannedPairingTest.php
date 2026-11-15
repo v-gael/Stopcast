@@ -14,17 +14,15 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Appairage d'un écran par son QR code : le téléphone ouvre
  * /devices/pair?code=…, le propriétaire choisit le dispositif et appaire.
  */
+#[ResetDatabase]
 final class ScannedPairingTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use ScreenPairingTrait;
 
     private const string UNKNOWN_CODE = "Ce code est inconnu ou a expiré. Scannez le nouveau code affiché sur l'écran.";

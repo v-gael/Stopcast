@@ -28,20 +28,18 @@ use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 use Symfony\Component\Mime\Email;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 use function Symfony\Component\Clock\now;
 use function Zenstruck\Foundry\Persistence\repository;
 
+#[ResetDatabase]
 final class DataPurgerTest extends KernelTestCase
 {
     use AppLogsTrait;
     use ClockSensitiveTrait;
     use ContainerServiceTrait;
     use DeletionJournalTrait;
-    use Factories;
-    use ResetDatabase;
 
     private const string EMAIL = 'lea@example.com';
 

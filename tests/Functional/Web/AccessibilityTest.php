@@ -13,17 +13,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Points du WCAG 2.2 vérifiables dans le HTML rendu (voir docs/accessibilite.md) :
  * lien d'évitement, titres, champs reliés à leur libellé et à leurs erreurs.
  */
+#[ResetDatabase]
 final class AccessibilityTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private KernelBrowser $client;

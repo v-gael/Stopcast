@@ -19,18 +19,16 @@ use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Mailer\MailerInterface;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 use function Zenstruck\Foundry\Persistence\repository;
 
+#[ResetDatabase]
 final class AccountDeleterTest extends KernelTestCase
 {
     use ClockSensitiveTrait;
     use ContainerServiceTrait;
     use DeletionJournalTrait;
-    use Factories;
-    use ResetDatabase;
 
     protected function setUp(): void
     {
