@@ -10,6 +10,7 @@ use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
 use App\Enum\Role;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
@@ -47,7 +48,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         /** @var list<array{user: User, deviceCount: int|string}> $rows */
         $rows = $this->createQueryBuilder('u')
             ->select('u AS user', 'COUNT(d.id) AS deviceCount')
-            ->leftJoin(Device::class, 'd', 'WITH', 'd.owner = u')
+            ->leftJoin(Device::class, 'd', Join::ON, 'd.owner = u')
             ->groupBy('u.id')
             ->orderBy('u.createdAt', 'DESC')
             ->addOrderBy('u.id', 'DESC')
@@ -68,7 +69,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     {
         /** @var list<User> $users */
         $users = $this->createQueryBuilder('u')
-            ->leftJoin(ResetPasswordRequest::class, 'r', 'WITH', 'r.user = u')
+            ->leftJoin(ResetPasswordRequest::class, 'r', Join::ON, 'r.user = u')
             ->where('u.password IS NULL')
             ->groupBy('u.id')
             ->having('MAX(r.expiresAt) < :invitationExpiredBefore')
