@@ -61,8 +61,8 @@ class DeviceRepository extends ServiceEntityRepository
             ->leftJoin('c.quay', 'q')
             ->andWhere('d.owner = :owner')
             ->setParameter('owner', $owner)
-            ->orderBy('d.createdAt', 'DESC')
-            ->addOrderBy('d.id', 'DESC')
+            ->orderBy('d.createdAt', \SortDirection::Descending)
+            ->addOrderBy('d.id', \SortDirection::Descending)
             ->setFirstResult(($page - 1) * $perPage)
             ->setMaxResults($perPage);
 
@@ -93,8 +93,8 @@ class DeviceRepository extends ServiceEntityRepository
             ->leftJoin('c.quay', 'q')
             ->andWhere('d.owner = :owner')
             ->setParameter('owner', $owner)
-            ->orderBy('d.createdAt', 'ASC')
-            ->addOrderBy('d.id', 'ASC')
+            ->orderBy('d.createdAt', \SortDirection::Ascending)
+            ->addOrderBy('d.id', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
 

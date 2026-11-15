@@ -37,7 +37,7 @@ final class QuayAutocompleteField extends AbstractType
                 return [] === $destinations ? $quay->getName() : \sprintf('%s → %s', $quay->getName(), implode(', ', $destinations));
             },
             'query_builder' => static fn (Options $options): \Closure => static function (EntityRepository $repository) use ($options): QueryBuilder {
-                $queryBuilder = $repository->createQueryBuilder('quay')->orderBy('quay.name', 'ASC');
+                $queryBuilder = $repository->createQueryBuilder('quay')->orderBy('quay.name', \SortDirection::Ascending);
                 $extraOptions = $options['extra_options'];
                 $keptQuay = \is_array($extraOptions) ? ($extraOptions['kept_quay'] ?? null) : null;
 

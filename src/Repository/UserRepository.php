@@ -50,8 +50,8 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->select('u AS user', 'COUNT(d.id) AS deviceCount')
             ->leftJoin(Device::class, 'd', Join::ON, 'd.owner = u')
             ->groupBy('u.id')
-            ->orderBy('u.createdAt', 'DESC')
-            ->addOrderBy('u.id', 'DESC')
+            ->orderBy('u.createdAt', \SortDirection::Descending)
+            ->addOrderBy('u.id', \SortDirection::Descending)
             ->getQuery()
             ->getResult();
 

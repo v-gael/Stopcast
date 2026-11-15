@@ -58,8 +58,8 @@ class QuayRepository extends ServiceEntityRepository
             ->leftJoin('q.routes', 'r')
             ->andWhere('q.deprecatedAt IS NULL')
             ->groupBy('q.id')
-            ->orderBy('COUNT(r.id)', 'DESC')
-            ->addOrderBy('q.gtfsStopId', 'ASC')
+            ->orderBy('COUNT(r.id)', \SortDirection::Descending)
+            ->addOrderBy('q.gtfsStopId', \SortDirection::Ascending)
             ->setMaxResults($limit);
 
         if ([] !== $excludedGtfsStopIds) {
