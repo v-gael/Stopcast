@@ -24,6 +24,7 @@ RUN apk add --no-cache \
         iconv \
         intl \
         pdo_pgsql \
+        redis \
         zip
 
 # Fuseau horaire commun à toutes les stages.

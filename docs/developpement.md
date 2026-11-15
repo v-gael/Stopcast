@@ -25,6 +25,14 @@ La vitrine, avec le formulaire de connexion, est ensuite disponible sur `http://
 
 Les scripts de `bin/` se lancent depuis le dépôt (ou depuis l'image, comme `bin/deploy`). Ceux de `ops/` ne sont jamais lancés par le dépôt : le mainteneur les installe à la main sur le serveur, comme `ops/ci-deploy` ([exploitation.md](exploitation.md#installer-ou-mettre-à-jour-le-script-de-déploiement)).
 
+### Redis
+
+Le service `redis` porte l'état partagé par `app` et `worker`, comme en prod : la liste est dans [exploitation.md](exploitation.md#redis), la configuration dans `config/packages/cache.yaml`, `lock.yaml` et `framework.yaml` (sessions). `app` et `worker` le joignent par `REDIS_URL` (`redis://<mot de passe>@redis:6379`, mot de passe `!ChangeMe!`, comme la base : Compose ne lit pas `.env.local`), et attendent qu'il soit `healthy` pour démarrer. Son port est publié sur `127.0.0.1:6379` seulement, comme la base : `docker compose exec redis redis-cli` (le mot de passe vient de `REDISCLI_AUTH`), ou un client de l'IDE. Sans persistance : `make down` le vide.
+
+L'extension `redis` (phpredis) est dans l'image : après un `git pull` qui l'ajoute, `make build`.
+
+La suite de tests ne joint pas Redis : en test, `cache.app` est sur disque, les autres pools et les limiters en mémoire, le verrou en `flock`, les sessions simulées. Seul `RedisRateLimiterBurstTest` le joint, par `REDIS_URL` : vingt processus consomment en même temps un limiter limité à cinq, et le test vérifie que cinq passent exactement. Ce test assemble son limiter lui-même : `RateLimiterLockTest` vérifie, lui, que chaque limiter de `rate_limiter.yaml` et `login_throttling` déclare `lock_factory: lock.factory`. Il demande le service `redis` démarré en dev ; en CI, un service Redis sans mot de passe tourne sur `127.0.0.1:6379`, l'URL par défaut de `.env`.
+
 ## Comptes utilisateurs
 
 L'espace web demande un compte. Deux rôles : `ROLE_USER` gère ses dispositifs, `ROLE_ADMIN` gère en plus les comptes. Un administrateur crée les comptes par invitation (voir plus bas). Pour créer un compte sans passer par l'interface (premier administrateur, accès de secours) :
@@ -251,7 +259,7 @@ Comme en prod, `app` et `worker` tournent sous `www-data`, sans capacités Linux
 
 La prod locale sert l'appli en mode worker de FrankenPHP, comme la prod, alors que le dev reste en mode classique : tester en prod locale tout changement qui garde un état dans un service ([architecture.md](architecture.md#mode-worker-en-prod)). Les logs de `app` (`make prod-logs`) montrent au démarrage les workers lancés sur `public/index.php`.
 
-La prod locale lance aussi un `worker`. Comme en prod, `.env.prod.local` doit définir `MAILER_DSN`, `MAILER_FROM` et `MAILER_REPLY_TO`, sinon `compose.prod.yaml` refuse de démarrer ; `MAILER_DSN=null://null`, la valeur de `.env.prod.local.example`, n'envoie aucun mail. `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
+La prod locale lance aussi un `worker` et un `redis`. Comme en prod, `.env.prod.local` doit définir `REDIS_PASSWORD`, `MAILER_DSN`, `MAILER_FROM` et `MAILER_REPLY_TO`, sinon `compose.prod.yaml` refuse de démarrer ; `MAILER_DSN=null://null`, la valeur de `.env.prod.local.example`, n'envoie aucun mail. `make prod-logs` suit `app` et `worker`. La CI ne lance pas de worker.
 
 `make prod-verify` (`bin/prod-verify`) contrôle l'image de prod, ce que ni `make check` ni la CI ne font avant `main` : à lancer quand une modification touche le `Dockerfile`, un fichier Compose, `frankenphp/`, `bin/deploy` ou `ops/`. Il construit l'image `local`, vérifie sa taille (somme des couches, plafond `MAX_IMAGE_MB` en tête du script), la déploie par `bin/deploy` (migrations comprises), contrôle `app` et `worker` (`www-data`, capacités, `no-new-privileges`, fuseau, version de PHP masquée, mode worker, écriture dans `var/`, aucun redémarrage du `worker`), puis lance `bin/smoke-test http://localhost`. Il passe tous les contrôles avant de conclure et arrête la prod locale à la fin, volumes gardés ; `bin/prod-verify --keep` la laisse tourner pour inspecter. Comme `make prod-up`, il demande le dev arrêté.
 

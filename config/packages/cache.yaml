@@ -3,33 +3,36 @@ framework:
         # Unique name of your app: used to compute stable namespaces for cache keys.
         #prefix_seed: your_vendor_name/app_name
 
-        # The "app" cache stores to the filesystem by default.
-        # The data in this cache should persist between deploys.
-        # Other options include:
+        # cache.app (cache de résultats Doctrine, état du Scheduler) et les pools
+        # qui en héritent (dont cache.rate_limiter, compteurs des rate limiters
+        # et de login_throttling) sont sur Redis, partagé par app et worker. Redis
+        # indisponible : le cache journalise et répond sans cache, les sessions
+        # échouent, et les rate limiters aussi, parce que leur verrou Redis
+        # (lock.yaml) lève une erreur : sans verrou, ils laisseraient passer
+        # l'essai. Pas de repli sur le disque.
+        app: cache.adapter.redis
+        default_redis_provider: '%env(REDIS_URL)%'
 
-        # Redis
-        #app: cache.adapter.redis
-        #default_redis_provider: redis://localhost
-
-        # APCu (not recommended with heavy random-write workloads as memory fragmentation can cause perf issues)
-        #app: cache.adapter.apcu
-
-        # Namespaced pools use the above "app" backend by default
         pools:
             # Flux temps réel, partagé entre tous les dispositifs (voir NextPassageFinder).
-            gtfs_realtime.cache: null
+            # Reste sur le disque de chaque conteneur : seul app le lit.
+            gtfs_realtime.cache:
+                adapter: cache.adapter.filesystem
             # Demandes d'appairage des écrans, quelques minutes chacune (voir ScreenPairing).
-            # Sur disque en test aussi : un pool en mémoire est vidé à chaque
-            # requête, et un appairage en enchaîne plusieurs. Les clés sont
-            # aléatoires, rien ne déborde d'un test à l'autre.
+            # Sur disque en test (cache.app y est sur disque) : un pool en
+            # mémoire est vidé à chaque requête, et un appairage en enchaîne
+            # plusieurs. Les clés sont aléatoires, rien ne déborde d'un test à l'autre.
             display_pairing.cache: null
             # ETag et Last-Modified du dernier import GTFS statique réussi (voir
-            # StaticReferenceImporter). Perdu au redéploiement : au pire un import de plus.
+            # StaticReferenceImporter). Perdu au redémarrage de Redis : au pire un import de plus.
             gtfs_static.cache: null
 
 when@test:
     framework:
         cache:
+            # Sur disque, sans Redis : seuls les tests qui en ont besoin le
+            # joignent, par REDIS_URL (voir RedisRateLimiterBurstTest).
+            app: cache.adapter.filesystem
             pools:
                 # En mémoire : rien ne survit d'un test à l'autre.
                 gtfs_realtime.cache:

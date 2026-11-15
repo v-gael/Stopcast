@@ -4,6 +4,10 @@ framework:
 
     # Note that the session will be started ONLY if you read or write from it.
     session:
+        # Sessions sur Redis, partagées par tous les conteneurs app ; Redis
+        # indisponible, la session ne s'ouvre pas (pas de repli sur le disque).
+        # Une session expire au bout de gc_maxlifetime (RedisSessionHandler).
+        handler_id: '%env(REDIS_URL)%'
         # Cookie limité à la durée du navigateur ; la session expire après
         # 2 h d'inactivité. « Se souvenir de moi » prend le relais au-delà.
         cookie_lifetime: 0

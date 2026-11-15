@@ -7,8 +7,11 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-prod}
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # Pas de volume sur var/ : en prod et en CI, le cache compilé au build doit
     # venir de l'image. Un volume nommé ne se remplit depuis l'image qu'à sa
@@ -35,6 +38,36 @@ services:
       # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
+
+  # État partagé par app et les workers (docs/exploitation.md, « Redis »).
+  # Sans persistance (ni RDB ni AOF, pas de volume) : un redémarrage perd tout
+  # son contenu. noeviction : plein, Redis refuse les écritures au lieu
+  # d'effacer un compteur de limiter sans bruit.
+  # Le mot de passe passe par l'entrée standard de redis-server et par
+  # REDISCLI_AUTH (lu par redis-cli), jamais sur une ligne de commande visible
+  # dans `ps`.
+  redis:
+    image: redis:8-alpine
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-!ChangeMe!}
+    # exec : redis-server devient le processus 1 et reçoit le SIGTERM de Docker.
+    command:
+      - sh
+      - -c
+      - |
+        exec redis-server - --save '' --appendonly no --maxmemory 64mb --maxmemory-policy noeviction <<EOF
+        requirepass "$$REDISCLI_AUTH"
+        EOF
+    # Un peu au-dessus de maxmemory : Redis lui-même et sa fragmentation.
+    mem_limit: 96m
+    restart: unless-stopped
+    healthcheck:
+      # redis-cli sort en 0 même sur une erreur d'authentification.
+      test: ["CMD-SHELL", "redis-cli ping | grep -qx PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 # ###> symfony/mailer ###
 # Mailpit et le worker qui envoie les emails ne sont déclarés qu'en dev

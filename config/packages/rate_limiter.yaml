@@ -6,24 +6,24 @@ framework:
             policy: sliding_window
             limit: 5
             interval: '15 minutes'
-            # Pas de verrou : des envois simultanés peuvent dépasser la limite
-            # de quelques essais (limite connue, voir SECURITY.md).
-            lock_factory: null
+            # Verrou Redis (lock.yaml) : des envois simultanés ne dépassent
+            # pas la limite. Compteurs dans cache.rate_limiter, sur Redis.
+            lock_factory: lock.factory
         # Demandes de « mot de passe oublié », un compteur par adresse IP :
         # protège les boîtes de mails et le quota d'envoi.
         reset_password_request:
             policy: sliding_window
             limit: 5
             interval: '15 minutes'
-            # Pas de verrou, comme current_password.
-            lock_factory: null
+            # Verrou Redis, comme current_password.
+            lock_factory: lock.factory
         # Demandes de changement d'email, un compteur par compte : protège les
         # boîtes de mails et le quota d'envoi, et borne les tests d'adresses.
         email_change_request:
             policy: sliding_window
             limit: 3
             interval: '1 hour'
-            lock_factory: null
+            lock_factory: lock.factory
         # Codes d'appairage générés par les écrans, un compteur par adresse IP :
         # un écran non appairé en demande un par minute, la limite en laisse
         # passer deux derrière la même box (voir ScreenPairing).
@@ -31,13 +31,13 @@ framework:
             policy: sliding_window
             limit: 150
             interval: '1 hour'
-            lock_factory: null
+            lock_factory: lock.factory
         # Saisies fausses d'un code d'appairage, un compteur par compte.
         display_pairing_entry:
             policy: sliding_window
             limit: 5
             interval: '15 minutes'
-            lock_factory: null
+            lock_factory: lock.factory
 
 when@test:
     framework:
