@@ -7,6 +7,7 @@ namespace App\Gtfs\Realtime;
 use App\Dto\GtfsRt\NextPassage;
 use App\Repository\RouteRepository;
 use App\Repository\TripRepository;
+use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
@@ -31,12 +32,14 @@ final readonly class PassageIndexBuilder
         private TripUpdatesFeed $tripUpdatesFeed,
         private RouteRepository $routeRepository,
         private TripRepository $tripRepository,
+        private ClockInterface $clock,
     ) {
     }
 
     /**
      * Tous les passages à venir affichables, sans limite par quai. L'âge du
-     * flux n'est pas vérifié : l'index en garde le timestamp.
+     * flux n'est pas vérifié : l'index en garde le timestamp, et l'heure de
+     * sa construction pour un flux qui n'en a pas.
      *
      * @throws InvalidGtfsRealtimeFeedException flux illisible
      * @throws HttpClientExceptionInterface     téléchargement impossible
@@ -90,7 +93,9 @@ final readonly class PassageIndexBuilder
 
         unset($passages);
 
-        return new PassageIndex(TripUpdatesFeed::timestampOf($feed), $passagesByStopId);
+        $feedTimestamp = TripUpdatesFeed::timestampOf($feed);
+
+        return new PassageIndex(0 === $feedTimestamp ? null : $feedTimestamp, $this->clock->now()->getTimestamp(), $passagesByStopId);
     }
 
     /**

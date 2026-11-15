@@ -18,7 +18,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
  * jamais. Seul ce service télécharge le flux ; les écrans lisent l'index
  * (NextPassageFinder).
  *
- * L'index garde jusqu'à PASSAGES_PER_LIMIT fois GTFS_REALTIME_NEXT_PASSAGES_LIMIT
+ * L'index garde jusqu'à INDEX_DEPTH_PER_LIMIT fois GTFS_REALTIME_NEXT_PASSAGES_LIMIT
  * passages par quai : la limite reste remplie quand les premiers sont partis.
  *
  * Seul un flux qui se décode remplace l'index ; une panne le laisse en place
@@ -30,7 +30,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
 #[AsPeriodicTask(frequency: '%env(int:GTFS_REALTIME_REFRESH_INTERVAL)%', schedule: 'realtime')]
 final class PassageIndexRefresher
 {
-    public const int PASSAGES_PER_LIMIT = 3;
+    public const int INDEX_DEPTH_PER_LIMIT = 3;
 
     private const int PING_INTERVAL = 60;
 
@@ -60,10 +60,10 @@ final class PassageIndexRefresher
             return;
         }
 
-        $this->store->save($index->truncated(self::PASSAGES_PER_LIMIT * $this->limit));
+        $this->store->save($index->truncated(self::INDEX_DEPTH_PER_LIMIT * $this->limit));
 
         try {
-            $this->tripUpdatesFeed->assertFresh($index->feedTimestamp);
+            $this->tripUpdatesFeed->assertIndexFresh($index);
         } catch (InvalidGtfsRealtimeFeedException $invalidGtfsRealtimeFeedException) {
             $this->feedFailureLogger->log($invalidGtfsRealtimeFeedException);
 

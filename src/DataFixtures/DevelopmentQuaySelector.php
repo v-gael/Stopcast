@@ -34,7 +34,7 @@ final readonly class DevelopmentQuaySelector
     {
         try {
             $index = $this->passageIndexBuilder->build();
-            $this->tripUpdatesFeed->assertFresh($index->feedTimestamp);
+            $this->tripUpdatesFeed->assertIndexFresh($index);
         } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $exception) {
             return new DevelopmentQuaySelection(
                 $this->mostServed($count, []),

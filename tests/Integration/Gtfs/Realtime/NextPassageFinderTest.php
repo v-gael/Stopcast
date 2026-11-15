@@ -420,6 +420,24 @@ final class NextPassageFinderTest extends KernelTestCase
         $finder->forQuays([$this->quay]);
     }
 
+    public function testIndexOfAFeedWithoutTimestampAgesFromItsRefresh(): void
+    {
+        $clock = self::fixedClock();
+        $finder = $this->nextPassageFinder(new MockHttpClient(self::feedResponse([
+            $this->tripUpdate('T1', [$this->departureAt('S1', 10)]),
+        ], 0)), clock: $clock);
+
+        $clock->sleep(300);
+        self::assertCount(1, $finder->forQuays([$this->quay])['S1']);
+
+        $clock->sleep(1);
+
+        $this->expectException(InvalidGtfsRealtimeFeedException::class);
+        $this->expectExceptionMessage('périmé');
+
+        $finder->forQuays([$this->quay]);
+    }
+
     public function testStaleFeedReplacesTheIndexButIsRefusedLoggedAndNotPinged(): void
     {
         $clock = self::fixedClock();

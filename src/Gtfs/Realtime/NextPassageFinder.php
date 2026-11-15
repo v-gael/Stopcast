@@ -43,7 +43,7 @@ final readonly class NextPassageFinder
         }
 
         $index = $this->store->load() ?? throw InvalidGtfsRealtimeFeedException::notIndexed();
-        $this->tripUpdatesFeed->assertFresh($index->feedTimestamp);
+        $this->tripUpdatesFeed->assertIndexFresh($index);
 
         $now = $this->clock->now();
         $passagesByStopId = [];

@@ -76,7 +76,9 @@ trait RealtimeFeedTrait
         self::assertInstanceOf(RouteRepository::class, $routeRepository);
         self::assertInstanceOf(TripRepository::class, $tripRepository);
 
-        return new PassageIndexBuilder(self::tripUpdatesFeed($httpClient, $clock ?? self::fixedClock()), $routeRepository, $tripRepository);
+        $clock ??= self::fixedClock();
+
+        return new PassageIndexBuilder(self::tripUpdatesFeed($httpClient, $clock), $routeRepository, $tripRepository, $clock);
     }
 
     private static function tripUpdatesFeed(MockHttpClient $httpClient, MockClock $clock): TripUpdatesFeed

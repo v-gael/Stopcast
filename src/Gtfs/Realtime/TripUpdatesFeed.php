@@ -79,6 +79,17 @@ final readonly class TripUpdatesFeed
         }
     }
 
+    /**
+     * L'index est-il encore frais ? Mesuré sur le timestamp de son flux, ou
+     * à défaut sur l'heure de sa construction (PassageIndex::publishedAt).
+     *
+     * @throws InvalidGtfsRealtimeFeedException index périmé
+     */
+    public function assertIndexFresh(PassageIndex $index): void
+    {
+        $this->assertFresh($index->publishedAt());
+    }
+
     public function ageOf(FeedMessage $feed): FeedAge
     {
         return $this->ageAt(self::timestampOf($feed));

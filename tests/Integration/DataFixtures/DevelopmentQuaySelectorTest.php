@@ -8,6 +8,7 @@ use App\DataFixtures\DevelopmentQuaySelection;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
+use App\Gtfs\Realtime\PassageIndexRefresher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\Test\ResetDatabase;
@@ -121,10 +122,13 @@ final class DevelopmentQuaySelectorTest extends KernelTestCase
 
     public function testPassagesAreCountedBeyondWhatTheIndexKeepsPerQuay(): void
     {
-        // 16 et 17 passages : au-delà des 15 que l'index garde par quai.
+        // Un et deux passages de plus que ce que l'index garde par quai.
+        $limit = $_SERVER['GTFS_REALTIME_NEXT_PASSAGES_LIMIT'];
+        self::assertIsNumeric($limit);
+        $kept = PassageIndexRefresher::INDEX_DEPTH_PER_LIMIT * (int) $limit;
         $trips = [];
-        foreach (range(1, 17) as $i) {
-            $trips['TX'.$i] = $i <= 16 ? ['S1', 'S2'] : ['S2'];
+        foreach (range(1, $kept + 2) as $i) {
+            $trips['TX'.$i] = $i <= $kept + 1 ? ['S1', 'S2'] : ['S2'];
         }
 
         $selection = $this->selectorWithFeed($trips)->select(2);
