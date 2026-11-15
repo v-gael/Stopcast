@@ -53,6 +53,12 @@ trait DevelopmentQuaySelectorFactoryTrait
         $quayRepository = self::getContainer()->get(QuayRepository::class);
         self::assertInstanceOf(QuayRepository::class, $quayRepository);
 
-        return new DevelopmentQuaySelector($this->nextPassageFinder(new MockHttpClient($response)), $quayRepository);
+        $clock = self::fixedClock();
+
+        return new DevelopmentQuaySelector(
+            $this->passageIndexBuilder(new MockHttpClient($response), $clock),
+            self::tripUpdatesFeed(new MockHttpClient(), $clock),
+            $quayRepository,
+        );
     }
 }

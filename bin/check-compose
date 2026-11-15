@@ -43,23 +43,36 @@ else
     echo 'OK : la prod ne construit aucune image'
 fi
 
-# Une tâche planifiée tourne dans le worker : sans sa variable, elle lit la
-# valeur vide de .env et son ping ne part jamais, sans aucune erreur.
-variables=$(grep -rhoE "env: 'HEALTHCHECKS_[A-Z0-9_]+'" src/Command | sed "s/env: '//; s/'//" | sort -u)
-worker=$(sed -n '/^  worker:/,/^ \{0,2\}[a-z]/p' compose.prod.yaml)
+# Une tâche planifiée tourne dans le worker qui consomme son planning :
+# realtime-worker pour le planning realtime, worker pour les autres. Sans sa
+# variable, elle lit la valeur vide de .env et son ping ne part jamais, sans
+# aucune erreur.
+service_block() {
+    sed -n "/^  $1:/,/^ \{0,2\}[a-z]/p" compose.prod.yaml
+}
+files=$(grep -rlE "env: 'HEALTHCHECKS_[A-Z0-9_]+'" src)
 pings=0
-if [ -z "$variables" ]; then
-    printf 'Échec : aucune variable HEALTHCHECKS_* trouvée dans src/Command\n\n'
+if [ -z "$files" ]; then
+    printf 'Échec : aucune variable HEALTHCHECKS_* trouvée dans src\n\n'
     pings=1
 fi
-for variable in $variables; do
-    if ! printf '%s\n' "$worker" | grep -Fqx "      $variable: \${$variable:-}"; then
-        printf 'Échec : le worker de compose.prod.yaml ne reçoit pas %s, son ping ne partirait jamais\n\n' "$variable"
-        pings=1
+for file in $files; do
+    if grep -q "schedule: 'realtime'" "$file"; then
+        service=realtime-worker
+    else
+        service=worker
     fi
+    block=$(service_block "$service")
+    variables=$(grep -hoE "env: 'HEALTHCHECKS_[A-Z0-9_]+'" "$file" | sed "s/env: '//; s/'//" | sort -u)
+    for variable in $variables; do
+        if ! printf '%s\n' "$block" | grep -Fqx "      $variable: \${$variable:-}"; then
+            printf 'Échec : %s de compose.prod.yaml ne reçoit pas %s (%s), son ping ne partirait jamais\n\n' "$service" "$variable" "$file"
+            pings=1
+        fi
+    done
 done
 if [ "$pings" -eq 0 ]; then
-    echo 'OK : le worker reçoit les URL de ping des tâches planifiées'
+    echo 'OK : chaque worker reçoit les URL de ping de ses tâches planifiées'
 else
     status=1
 fi

@@ -14,10 +14,12 @@ framework:
         default_redis_provider: '%env(REDIS_URL)%'
 
         pools:
-            # Flux temps réel, partagé entre tous les dispositifs (voir NextPassageFinder).
-            # Reste sur le disque de chaque conteneur : seul app le lit.
-            gtfs_realtime.cache:
-                adapter: cache.adapter.filesystem
+            # Index des passages temps réel, écrit par realtime-worker et lu par
+            # app (voir PassageIndexRefresher), et heure du dernier error de
+            # RealtimeFeedFailureLogger. Sur disque en test (cache.app y est sur
+            # disque) : le serveur des tests navigateur, un autre processus, lit
+            # l'index qu'écrit le test.
+            realtime.cache: null
             # Demandes d'appairage des écrans, quelques minutes chacune (voir ScreenPairing).
             # Sur disque en test (cache.app y est sur disque) : un pool en
             # mémoire est vidé à chaque requête, et un appairage en enchaîne
@@ -35,8 +37,6 @@ when@test:
             app: cache.adapter.filesystem
             pools:
                 # En mémoire : rien ne survit d'un test à l'autre.
-                gtfs_realtime.cache:
-                    adapter: cache.adapter.array
                 gtfs_static.cache:
                     adapter: cache.adapter.array
                 # Tentatives de connexion (login_throttling) : sans quoi les

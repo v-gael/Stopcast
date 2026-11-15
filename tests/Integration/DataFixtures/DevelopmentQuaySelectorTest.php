@@ -119,6 +119,19 @@ final class DevelopmentQuaySelectorTest extends KernelTestCase
         self::assertNotNull($selection->fallbackReason);
     }
 
+    public function testPassagesAreCountedBeyondWhatTheIndexKeepsPerQuay(): void
+    {
+        // 16 et 17 passages : au-delà des 15 que l'index garde par quai.
+        $trips = [];
+        foreach (range(1, 17) as $i) {
+            $trips['TX'.$i] = $i <= 16 ? ['S1', 'S2'] : ['S2'];
+        }
+
+        $selection = $this->selectorWithFeed($trips)->select(2);
+
+        self::assertSame(['S2', 'S1'], $this->stopIdsOf($selection));
+    }
+
     public function testUnavailableFeedFallsBackToTheMostServedQuays(): void
     {
         $selection = $this->selectorWithUnavailableFeed()->select(3);

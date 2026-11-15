@@ -207,6 +207,7 @@ final class DisplayPreviewTest extends WebTestCase
     {
         $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
         $this->configure('Masquée', 'MAIRIE', position: 1, active: false, routeShortName: 'L7');
+        $this->refreshPassageIndex();
 
         $crawler = $this->client->request('GET', $this->liveDevicePreview());
 
@@ -222,6 +223,7 @@ final class DisplayPreviewTest extends WebTestCase
     public function testLivePreviewShowsAQuayWithoutPassageLikeTheScreen(): void
     {
         $this->configure('Gare', 'GARE ROUTIERE');
+        $this->refreshPassageIndex();
 
         $this->client->request('GET', $this->liveDevicePreview());
 
@@ -245,8 +247,7 @@ final class DisplayPreviewTest extends WebTestCase
     public function testLivePreviewFailingForTheFeedBehavesLikeTheScreen(): void
     {
         $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
-        $this->failRealtimeFeed();
-        $this->client->disableReboot();
+        $this->removePassageIndex();
         $logs = $this->appLogs();
 
         // Le rafraîchissement échoue : l'aperçu garde ce qu'il affichait.
@@ -254,7 +255,7 @@ final class DisplayPreviewTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(503);
         self::assertSame('', (string) $this->client->getResponse()->getContent());
-        self::assertTrue($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
+        self::assertFalse($logs->hasWarningThatContains('GTFS-RT feed unavailable.'));
 
         // Premier chargement : l'écran « indisponible », qui réessaie.
         $crawler = $this->client->request('GET', $this->liveDevicePreview());
