@@ -31,7 +31,7 @@ class DisplayConfigurationRepository extends ServiceEntityRepository
             ->andWhere('dc.device = :device')
             ->andWhere('dc.active = true')
             ->setParameter('device', $device)
-            ->orderBy('dc.position', 'ASC')
+            ->orderBy('dc.position', \SortDirection::Ascending)
             ->getQuery()
             ->getResult();
 
