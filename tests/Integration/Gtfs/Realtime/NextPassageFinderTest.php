@@ -304,7 +304,7 @@ final class NextPassageFinderTest extends KernelTestCase
         self::assertSame([], $finder->forQuays([]));
     }
 
-    public function testReadersNeverDownloadTheFeed(): void
+    public function testOnlyTheRefreshDownloadsTheFeed(): void
     {
         $httpClient = new MockHttpClient(self::feedResponse([$this->tripUpdate('T1', [$this->departureAt('S1', 5)])]));
         $finder = $this->nextPassageFinder($httpClient);
@@ -420,7 +420,7 @@ final class NextPassageFinderTest extends KernelTestCase
         $finder->forQuays([$this->quay]);
     }
 
-    public function testStaleFeedReplacesTheIndexIsRefusedAndLoggedWithoutPing(): void
+    public function testStaleFeedReplacesTheIndexButIsRefusedLoggedAndNotPinged(): void
     {
         $clock = self::fixedClock();
         $store = new PassageIndexStore(new ArrayAdapter());
@@ -445,7 +445,7 @@ final class NextPassageFinderTest extends KernelTestCase
     }
 
     #[DataProvider('failedDownloads')]
-    public function testFailedRefreshKeepsTheLastIndexAndIsLoggedOnce(MockResponse $failedDownload): void
+    public function testFailedRefreshKeepsTheLastIndexAndWarnsOnce(MockResponse $failedDownload): void
     {
         $clock = self::fixedClock();
         $store = new PassageIndexStore(new ArrayAdapter());

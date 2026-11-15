@@ -418,7 +418,7 @@ final class DisplayPairingTest extends WebTestCase
         self::assertResponseStatusCodeSame(503);
     }
 
-    public function testRefreshFailingForTheFeedStillRecordsTheContact(): void
+    public function testRefreshWithoutPassageIndexStillRecordsTheContact(): void
     {
         $this->removePassageIndex();
         $this->pairedScreen();

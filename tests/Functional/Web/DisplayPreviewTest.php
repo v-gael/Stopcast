@@ -244,7 +244,7 @@ final class DisplayPreviewTest extends WebTestCase
         self::assertSelectorTextSame('.screen__message', 'Écran désactivé');
     }
 
-    public function testLivePreviewFailingForTheFeedBehavesLikeTheScreen(): void
+    public function testLivePreviewWithoutPassageIndexBehavesLikeTheScreen(): void
     {
         $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
         $this->removePassageIndex();
