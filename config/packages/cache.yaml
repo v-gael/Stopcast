@@ -7,7 +7,9 @@ framework:
         # qui en héritent (dont cache.rate_limiter, compteurs des rate limiters
         # et de login_throttling) sont sur Redis, partagé par app et worker. Redis
         # indisponible : le cache journalise et répond sans cache, les sessions
-        # et les rate limiters échouent (pas de repli sur le disque).
+        # échouent, et les rate limiters aussi, parce que leur verrou Redis
+        # (lock.yaml) lève une erreur : sans verrou, ils laisseraient passer
+        # l'essai. Pas de repli sur le disque.
         app: cache.adapter.redis
         default_redis_provider: '%env(REDIS_URL)%'
 
@@ -29,7 +31,7 @@ when@test:
     framework:
         cache:
             # Sur disque, sans Redis : seuls les tests qui en ont besoin le
-            # joignent, par REDIS_URL (voir RateLimiterRedisBurstTest).
+            # joignent, par REDIS_URL (voir RedisRateLimiterBurstTest).
             app: cache.adapter.filesystem
             pools:
                 # En mémoire : rien ne survit d'un test à l'autre.

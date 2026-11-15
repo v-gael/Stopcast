@@ -27,7 +27,7 @@ Les scripts de `bin/` se lancent depuis le dépôt (ou depuis l'image, comme `bi
 
 ### Redis
 
-Le service `redis` porte les sessions, `cache.app` (cache de résultats Doctrine, état du Scheduler) et les pools qui en héritent (`display_pairing.cache`, `gtfs_static.cache`, `cache.rate_limiter`), ainsi que les verrous des rate limiters (`config/packages/lock.yaml`), comme en prod ([exploitation.md](exploitation.md#redis)). `app` et `worker` le joignent par `REDIS_URL` (`redis://<mot de passe>@redis:6379`, mot de passe `!ChangeMe!` sauf `REDIS_PASSWORD` dans `.env.local`), et attendent qu'il soit `healthy` pour démarrer. Son port est publié sur `127.0.0.1:6379` seulement, comme la base : `docker compose exec redis redis-cli` (le mot de passe vient de `REDISCLI_AUTH`), ou un client de l'IDE. Sans persistance : `make down` vide sessions, compteurs et cache.
+Le service `redis` porte les sessions, `cache.app` (cache de résultats Doctrine, état du Scheduler) et les pools qui en héritent (`display_pairing.cache`, `gtfs_static.cache`, `cache.rate_limiter`), ainsi que les verrous des rate limiters (`config/packages/lock.yaml`), comme en prod ([exploitation.md](exploitation.md#redis)). `app` et `worker` le joignent par `REDIS_URL` (`redis://<mot de passe>@redis:6379`, mot de passe `!ChangeMe!`, comme la base : Compose ne lit pas `.env.local`), et attendent qu'il soit `healthy` pour démarrer. Son port est publié sur `127.0.0.1:6379` seulement, comme la base : `docker compose exec redis redis-cli` (le mot de passe vient de `REDISCLI_AUTH`), ou un client de l'IDE. Sans persistance : `make down` vide sessions, compteurs et cache.
 
 L'extension `redis` (phpredis) est dans l'image : après un `git pull` qui l'ajoute, `make build`.
 

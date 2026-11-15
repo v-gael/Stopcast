@@ -34,7 +34,7 @@ Un compte ne peut demander que **3 changements d'email par heure** (fenêtre gli
 
 Derrière un proxy, l'adresse IP retenue est celle du client seulement si `TRUSTED_PROXIES` est configuré ; sinon, tous les visiteurs partagent l'adresse du proxy.
 
-Les compteurs de toutes les limites d'essais (connexion, mot de passe actuel, demandes, appairage des écrans plus bas) vivent dans Redis, partagés par tous les conteneurs, et chaque essai les met à jour sous un verrou Redis : des envois simultanés ne dépassent pas la limite. Redis indisponible, l'essai échoue en erreur au lieu de passer sans compteur ; un redémarrage de Redis, sans persistance, remet les compteurs à zéro.
+Les compteurs de toutes les limites d'essais (connexion, mot de passe actuel, demandes, appairage des écrans plus bas) vivent dans Redis, partagés par tous les conteneurs, et chaque essai les met à jour sous un verrou Redis : des envois simultanés ne dépassent pas la limite. Redis indisponible, l'essai échoue en erreur au lieu de passer sans compteur (c'est le verrou qui lève l'erreur : sans lui, un compteur illisible laisserait passer l'essai) ; un redémarrage de Redis, sans persistance, remet les compteurs à zéro.
 
 ## Appairage des écrans
 
