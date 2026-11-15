@@ -108,10 +108,9 @@ echo "Version à déployer : $IMAGE_TAG"
 echo "==> Téléchargement de l'image"
 compose pull --policy missing --ignore-buildable app worker
 
-# Redis (cache, sessions, rate limiters et verrous) démarre avant app, qui en
-# dépend. `up` ne le recrée que si son image ou sa configuration change : un
-# déploiement qui ne change que l'image de l'appli garde sessions, compteurs et
-# appairages en cours.
+# Redis démarre avant app, qui en dépend. `up` ne le recrée que si son image ou
+# sa configuration change : un déploiement qui ne change que l'image de l'appli
+# garde son contenu (docs/exploitation.md, « Redis »).
 echo '==> Redis'
 compose up -d --wait redis
 

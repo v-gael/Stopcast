@@ -39,10 +39,10 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
-  # Cache, sessions, rate limiters et verrous, partagés par app et les workers.
-  # Sans persistance (ni RDB ni AOF, pas de volume) : un redémarrage perd
-  # sessions, compteurs et appairages en cours. noeviction : plein, Redis
-  # refuse les écritures au lieu d'effacer un compteur de limiter sans bruit.
+  # État partagé par app et les workers (docs/exploitation.md, « Redis »).
+  # Sans persistance (ni RDB ni AOF, pas de volume) : un redémarrage perd tout
+  # son contenu. noeviction : plein, Redis refuse les écritures au lieu
+  # d'effacer un compteur de limiter sans bruit.
   # Le mot de passe passe par l'entrée standard de redis-server et par
   # REDISCLI_AUTH (lu par redis-cli), jamais sur une ligne de commande visible
   # dans `ps`.
