@@ -371,7 +371,8 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame('/display?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
         self::assertCount(0, $crawler->filter('.passage'));
         self::assertSelectorTextSame('.screen__message', 'Horaires temps réel indisponibles');
-        self::assertCount(1, $crawler->filter('.screen__message .screen__unavailable'));
+        self::assertCount(0, $crawler->filter('.screen__message img'));
+        self::assertCount(1, $crawler->filter('.screen__columns .screen__no-signal'));
     }
 
     public function testPairingScreenRecordsNoContact(): void
