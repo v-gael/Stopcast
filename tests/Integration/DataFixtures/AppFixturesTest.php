@@ -12,6 +12,7 @@ use App\Entity\Route;
 use App\Entity\Trip;
 use App\Entity\User;
 use App\Factory\UserFactory;
+use App\Repository\DeviceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\AbstractLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -61,6 +62,21 @@ final class AppFixturesTest extends KernelTestCase
         $this->load();
 
         self::assertSame(6, $this->entityManager()->getRepository(Device::class)->count());
+    }
+
+    public function testDevDeviceComesFirstInTheDeviceList(): void
+    {
+        $this->load();
+
+        $devUser = $this->entityManager()->getRepository(User::class)->findOneBy(['email' => AppFixtures::DEV_USER_EMAIL]);
+        self::assertInstanceOf(User::class, $devUser);
+        $deviceRepository = self::getContainer()->get(DeviceRepository::class);
+        self::assertInstanceOf(DeviceRepository::class, $deviceRepository);
+
+        $firstDevice = $deviceRepository->findPageByOwner($devUser, '', 1, 1)->getIterator()->current();
+
+        self::assertInstanceOf(Device::class, $firstDevice);
+        self::assertSame(AppFixtures::DEV_DEVICE_LABEL, $firstDevice->getLabel());
     }
 
     public function testReloadingReplacesDevicesAndKeepsTheImportedData(): void
