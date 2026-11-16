@@ -24,13 +24,13 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 trait WebTestTrait
 {
     /**
-     * Connexion depuis le formulaire de la vitrine, avec le jeton Turnstile
+     * Connexion depuis le panneau de l'en-tête de la vitrine, avec le jeton Turnstile
      * que le widget y aurait ajouté.
      */
     private function logIn(string $email, string $password, bool $rememberMe = false, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
     {
         $crawler = $this->browser()->request('GET', '/');
-        $form = $crawler->selectButton('Se connecter')->form([
+        $form = $crawler->filter('#connexion')->selectButton('Se connecter')->form([
             '_username' => $email,
             '_password' => $password,
         ]);

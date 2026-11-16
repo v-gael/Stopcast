@@ -8,9 +8,11 @@ use App\Entity\Device;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\ScreenPairingTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
@@ -20,11 +22,16 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class DevicePairingTest extends WebTestCase
 {
+    use MockClockTrait;
     use ScreenPairingTrait;
 
     private const string TOO_MANY_ATTEMPTS = "Trop d'essais. Réessayez plus tard.";
 
+    private const string WATCHED_STATE = '[data-device-state][data-controller~="frame-refresh"]';
+
     private KernelBrowser $client;
+
+    private MockClock $clock;
 
     private User $user;
 
@@ -36,6 +43,8 @@ final class DevicePairingTest extends WebTestCase
         // Le compteur d'essais et les demandes d'appairage doivent survivre
         // d'une requête à l'autre.
         $this->client->disableReboot();
+
+        $this->clock = $this->mockClock('2026-11-16 15:00:00');
 
         $this->user = UserFactory::createOne();
         $this->device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
@@ -169,6 +178,71 @@ final class DevicePairingTest extends WebTestCase
             $this->enterCode('ZZZ-ZZZ', $this->device);
             self::assertSelectorTextContains('#pair_screen', 'Ce code est inconnu ou a expiré.');
         }
+    }
+
+    public function testEnteredCodeShowsThePairingInProgressAndWatchesTheDevice(): void
+    {
+        $this->enterCode($this->displayedCode(), $this->device);
+        $this->client->followRedirect();
+
+        self::assertSelectorTextSame('[data-device-status]', 'Appairage en cours');
+        self::assertSelectorExists(self::WATCHED_STATE);
+    }
+
+    public function testScreenTakingItsPairingShowsItNeverConnectedAndKeepsWatching(): void
+    {
+        $this->pairAScreen();
+        $this->clock->sleep(100);
+
+        $this->client->request('GET', $this->showPath());
+
+        self::assertSelectorTextSame('[data-device-status]', 'Jamais connecté');
+        self::assertSelectorExists(self::WATCHED_STATE);
+    }
+
+    public function testFirstContactOfTheScreenStopsTheWatch(): void
+    {
+        $this->pairAScreen();
+        // Un écran appairé qui interroge encore l'appairage compte comme un contact.
+        $this->client->request('GET', '/display/pairing');
+
+        $this->client->request('GET', $this->showPath());
+
+        self::assertSelectorTextSame('[data-device-status]', 'Rien à afficher');
+        self::assertSelectorNotExists(self::WATCHED_STATE);
+    }
+
+    public function testScreenSilentForAMinuteAfterTheCodeShowsTheDeviceUnpairedAgain(): void
+    {
+        $this->enterCode($this->displayedCode(), $this->device);
+        $this->clock->sleep(60);
+
+        $this->client->request('GET', $this->showPath());
+
+        self::assertSelectorTextSame('[data-device-status]', 'Non appairé');
+        self::assertSelectorNotExists(self::WATCHED_STATE);
+    }
+
+    public function testScreenSilentForTwoMinutesAfterItsPairingIsNoLongerWatched(): void
+    {
+        $this->pairAScreen();
+        $this->clock->sleep(120);
+
+        $this->client->request('GET', $this->showPath());
+
+        self::assertSelectorTextSame('[data-device-status]', 'Jamais connecté');
+        self::assertSelectorNotExists(self::WATCHED_STATE);
+    }
+
+    public function testDisabledDeviceStaysDisabledWhileItsScreenIsPaired(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'active' => false]);
+
+        $this->enterCode($this->displayedCode(), $device);
+        $this->client->followRedirect();
+
+        self::assertSelectorTextSame('[data-device-status]', 'Désactivé');
+        self::assertSelectorNotExists(self::WATCHED_STATE);
     }
 
     /**

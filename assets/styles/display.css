@@ -200,8 +200,7 @@ body {
     gap: calc(2 * var(--u));
 }
 
-.screen__no-bus,
-.screen__unavailable {
+.screen__no-bus {
     width: calc(141 * var(--u));
     height: calc(141 * var(--u));
 }

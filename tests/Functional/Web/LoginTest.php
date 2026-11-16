@@ -52,6 +52,8 @@ final class LoginTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('#connexion [role="alert"]', 'Identifiants invalides.');
         self::assertSame(self::EMAIL, $crawler->filter('input[name="_username"]')->attr('value'));
+        // Le panneau de l'en-tête se rouvre seul sur l'erreur.
+        self::assertSame('true', $crawler->filter('#connexion')->attr('data-login-panel-open-value'));
 
         $this->client->request('GET', '/account');
         self::assertResponseRedirects('/');
@@ -110,7 +112,7 @@ final class LoginTest extends WebTestCase
     public function testLoginWithoutTurnstileTokenIsRefused(): void
     {
         $crawler = $this->client->request('GET', '/');
-        $this->client->submit($crawler->selectButton('Se connecter')->form([
+        $this->client->submit($crawler->filter('#connexion')->selectButton('Se connecter')->form([
             '_username' => self::EMAIL,
             '_password' => UserFactory::DEFAULT_PASSWORD,
         ]));
@@ -156,7 +158,8 @@ final class LoginTest extends WebTestCase
         $crawler = $this->client->request('GET', '/');
 
         self::assertCount(0, $crawler->filter('input[name="_password"]'));
-        self::assertSame('/devices', $crawler->selectLink('Ouvrir mon espace')->attr('href'));
+        self::assertCount(0, $crawler->filter('#connexion'));
+        self::assertSame('/devices', $crawler->filter('header')->selectLink('Ouvrir mon espace')->attr('href'));
     }
 
     public function testLogoutReturnsToTheShowcase(): void
@@ -193,11 +196,20 @@ final class LoginTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
-    public function testAnonymousVisitorIsSentToTheShowcase(): void
+    /**
+     * Renvoyé vers la vitrine, le visiteur y trouve le panneau de connexion ouvert.
+     */
+    public function testAnonymousVisitorIsSentToTheShowcaseWithTheLoginPanelOpen(): void
     {
         $this->client->request('GET', '/account');
 
         self::assertResponseRedirects('/');
+        $crawler = $this->client->followRedirect();
+        self::assertSame('true', $crawler->filter('#connexion')->attr('data-login-panel-open-value'));
+
+        // Une seule fois : revenir sur la vitrine ensuite ne le rouvre plus.
+        $crawler = $this->client->request('GET', '/');
+        self::assertSame('false', $crawler->filter('#connexion')->attr('data-login-panel-open-value'));
     }
 
     private function responseCookie(string $name): ?Cookie

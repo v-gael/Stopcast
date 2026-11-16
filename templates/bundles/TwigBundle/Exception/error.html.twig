@@ -4,6 +4,9 @@
  #}
 {% extends 'layout/public.html.twig' %}
 
+{# Une page d'erreur hors firewall (404 de routage) ne sait pas si le visiteur est connecté : pas de panneau de connexion. #}
+{% block header_actions %}{% endblock %}
+
 {% block title %}{{ block('heading') }} · Stopcast{% endblock %}
 
 {% block content %}

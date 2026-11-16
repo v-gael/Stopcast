@@ -9,6 +9,7 @@
     {% set status = device_status(device) %}
     {% set colors = {
         neutral: ['text-slate-600', 'bg-slate-400'],
+        info: ['text-blue-700', 'bg-blue-500'],
         warning: ['text-amber-700', 'bg-amber-500'],
         danger: ['text-red-700', 'bg-red-600'],
         success: ['text-emerald-700', 'bg-emerald-500'],
@@ -26,6 +27,8 @@
         L'écran affiche « Écran désactivé ».
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Unpaired -%}
         Aucun écran appairé.
+    {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Pairing -%}
+        L'écran récupère son appairage.
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').NeverSeen -%}
         L'écran appairé n'a encore jamais donné de nouvelles.
     {%- elseif status is same as enum('App\\Enum\\DeviceStatus').Offline -%}

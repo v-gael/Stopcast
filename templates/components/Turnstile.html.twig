@@ -1,2 +1,4 @@
-{# Hauteur du widget réservée (65 px) : le formulaire ne saute pas à son affichage. #}
-<div {{ attributes.defaults({class: 'mb-5 min-h-[65px]'}) }} data-controller="turnstile" data-turnstile-site-key-value="{{ siteKey }}"></div>
+{# Hauteur du widget réservée (65 px) : le formulaire ne saute pas à son affichage.
+ # « deferred » : le widget attend qu'un autre contrôleur lui donne le contrôleur turnstile (panneau de connexion, à son ouverture). #}
+{% set deferred = attributes.has('deferred') %}
+<div {{ attributes.without('deferred').defaults({class: 'mb-5 min-h-[65px]'}) }}{% if not deferred %} data-controller="turnstile"{% endif %} data-turnstile-site-key-value="{{ siteKey }}"></div>

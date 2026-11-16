@@ -9,6 +9,7 @@ use App\Display\Pairing\PairingConfirmation;
 use App\Display\Pairing\QrCodeSvg;
 use App\Display\Pairing\ScreenPairing;
 use App\Entity\Device;
+use App\Entity\DisplayConfiguration;
 use App\Entity\User;
 use App\Form\DeviceType;
 use App\Form\PairScreenType;
@@ -236,6 +237,41 @@ final class DeviceController extends AbstractController
     }
 
     /**
+     * Ordre de rotation envoyé par le glisser-déposer de la fiche : « order[] »
+     * reprend tous les identifiants de configuration du dispositif, dans le
+     * nouvel ordre. Un ordre qui ne correspond plus (changé dans un autre
+     * onglet) ne change rien : la fiche revient sur l'ordre enregistré. Le
+     * jeton CSRF est vérifié ici plutôt que par attribut : refusé, il ramène
+     * aussi sur la fiche avec un message, au lieu d'une page d'erreur rendue
+     * par Turbo à la place de la fiche.
+     */
+    #[Route('/{id}/rotation', name: 'app_device_reorder', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsGranted(DeviceVoter::EDIT, 'device')]
+    public function reorder(Request $request, Device $device, EntityManagerInterface $entityManager): Response
+    {
+        $payload = $request->getPayload();
+        $redirect = $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
+
+        if (!$this->isCsrfTokenValid('reorder-device-'.$device->getId(), $payload->getString('_token'))) {
+            $this->addFlash('error', "L'ordre n'a pas été enregistré : rechargez la page puis réessayez.");
+
+            return $redirect;
+        }
+
+        $order = $this->configurationsInOrder($device, $payload->all('order'));
+
+        if (null === $order || !$device->reorderDisplayConfigurations($order)) {
+            $this->addFlash('error', "L'ordre des quais a changé entre-temps : voici l'ordre enregistré.");
+
+            return $redirect;
+        }
+
+        $entityManager->flush();
+
+        return $redirect;
+    }
+
+    /**
      * L'écran appairé perd son accès et revient à l'écran d'appairage.
      */
     #[Route('/{id}/unpair', name: 'app_device_unpair', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
@@ -249,6 +285,37 @@ final class DeviceController extends AbstractController
         $this->addFlash('success', "L'écran a été dissocié : il affiche de nouveau un code d'appairage.");
 
         return $this->redirectToRoute('app_device_show', ['id' => $device->getId()], Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Les configurations du dispositif désignées par ces identifiants, dans
+     * leur ordre ; null si l'un d'eux n'en désigne aucune.
+     *
+     * @param array<mixed> $ids
+     *
+     * @return list<DisplayConfiguration>|null
+     */
+    private function configurationsInOrder(Device $device, array $ids): ?array
+    {
+        $byId = [];
+
+        foreach ($device->getDisplayConfigurations() as $configuration) {
+            $byId[(int) $configuration->getId()] = $configuration;
+        }
+
+        $order = [];
+
+        foreach ($ids as $id) {
+            $configuration = \is_string($id) || \is_int($id) ? $byId[(int) $id] ?? null : null;
+
+            if (null === $configuration) {
+                return null;
+            }
+
+            $order[] = $configuration;
+        }
+
+        return $order;
     }
 
     /**

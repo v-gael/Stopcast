@@ -73,6 +73,78 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
     }
 
+    /**
+     * Le glisser-déposer envoie toute la rotation, dans le nouvel ordre, par
+     * le formulaire d'ordre de la fiche.
+     */
+    public function testDroppingSavesTheWholeOrderServedToTheDevice(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $first = $this->configure($device, 'Premier');
+        $second = $this->configure($device, 'Deuxième');
+        $third = $this->configure($device, 'Troisième');
+
+        $this->postOrder($device, [$third, $first, $second]);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+    }
+
+    public function testOrderThatNoLongerMatchesTheRotationIsRefusedWithAMessage(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $first = $this->configure($device, 'Premier');
+        $second = $this->configure($device, 'Deuxième');
+        // Ajouté dans un autre onglet, après l'affichage de la fiche.
+        $this->configure($device, 'Troisième');
+
+        $this->postOrder($device, [$second, $first]);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', "L'ordre des quais a changé entre-temps");
+        self::assertSame(['PREMIER', 'DEUXIÈME', 'TROISIÈME'], $this->displayedQuays($device));
+    }
+
+    public function testOrderNamingAQuayOfAnotherDeviceIsRefused(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $first = $this->configure($device, 'Premier');
+        $this->configure($device, 'Deuxième');
+        $foreign = $this->configure(DeviceFactory::createOne(['owner' => $this->user]), 'Ailleurs');
+
+        $this->postOrder($device, [$foreign, $first]);
+
+        self::assertSame(['PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+    }
+
+    public function testAnotherUsersRotationIsForbiddenEvenToAnAdministrator(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $first = $this->configure($device, 'Premier');
+        $second = $this->configure($device, 'Deuxième');
+
+        $this->client->loginUser(UserFactory::createOne(['role' => Role::Admin]));
+        $this->client->request('POST', \sprintf('/devices/%d/rotation', $device->getId()), ['order' => [$second->getId(), $first->getId()]]);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame(0, $this->reload($first)->getPosition());
+    }
+
+    public function testOrderWithoutAValidCsrfTokenChangesNothingAndSaysSo(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $first = $this->configure($device, 'Premier');
+        $second = $this->configure($device, 'Deuxième');
+
+        $this->client->request('POST', \sprintf('/devices/%d/rotation', $device->getId()), ['order' => [$second->getId(), $first->getId()], '_token' => 'invalide']);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('[role="alert"]', "L'ordre n'a pas été enregistré");
+        self::assertSame(0, $this->reload($first)->getPosition());
+    }
+
     public function testDeprecatedQuayWithoutPassageLeavesTheRotation(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
@@ -553,6 +625,24 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertInstanceOf(DisplayConfiguration::class, $reloaded);
 
         return $reloaded;
+    }
+
+    /**
+     * Envoie cet ordre par le formulaire d'ordre de la fiche du dispositif,
+     * comme le fait le glisser-déposer.
+     *
+     * @param list<DisplayConfiguration> $configurations
+     */
+    private function postOrder(Device $device, array $configurations): void
+    {
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d', $device->getId()));
+        $form = $crawler->filter('form[data-rotation-sort-target="form"]');
+        self::assertCount(1, $form);
+
+        $this->client->request('POST', (string) $form->attr('action'), [
+            '_token' => $form->filter('input[name="_token"]')->attr('value'),
+            'order' => array_map(static fn (DisplayConfiguration $configuration): ?int => $configuration->getId(), $configurations),
+        ]);
     }
 
     private function configure(Device $device, string $label, ?Quay $quay = null): DisplayConfiguration

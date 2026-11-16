@@ -129,7 +129,8 @@ final class AccessibilityTest extends WebTestCase
         $crawler = $this->client->request('GET', strtr($path, ['%device%' => $device->getId(), '%user%' => $user->getId()]));
 
         self::assertResponseIsSuccessful();
-        $fields = $crawler->filter('main form')->filter('input:not([type="hidden"]), select, textarea');
+        // Le formulaire de connexion est dans le panneau de l'en-tête.
+        $fields = $crawler->filter('main form, header form')->filter('input:not([type="hidden"]), select, textarea');
         self::assertGreaterThan(0, $fields->count());
         $fields->each(static function (Crawler $field) use ($crawler): void {
             $id = (string) $field->attr('id');

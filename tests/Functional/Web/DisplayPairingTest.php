@@ -13,6 +13,7 @@ use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
 use App\Tests\Support\DisplayTestTrait;
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use App\Tests\Support\ScreenPairingTrait;
@@ -40,6 +41,7 @@ final class DisplayPairingTest extends WebTestCase
 {
     use AppLogsTrait;
     use DisplayTestTrait;
+    use MockClockTrait;
     use QueryCountTrait;
     use RealtimeFeedTrait;
     use ScreenPairingTrait;
@@ -65,8 +67,7 @@ final class DisplayPairingTest extends WebTestCase
         // survivre d'une requête à l'autre.
         $this->client->disableReboot();
 
-        $this->clock = new MockClock(self::NOW, date_default_timezone_get());
-        self::getContainer()->set('clock', $this->clock);
+        $this->clock = $this->mockClock(self::NOW);
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -370,7 +371,8 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame('/display?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
         self::assertCount(0, $crawler->filter('.passage'));
         self::assertSelectorTextSame('.screen__message', 'Horaires temps réel indisponibles');
-        self::assertCount(1, $crawler->filter('.screen__message .screen__unavailable'));
+        self::assertCount(0, $crawler->filter('.screen__message img'));
+        self::assertCount(1, $crawler->filter('.screen__columns .screen__no-signal'));
     }
 
     public function testPairingScreenRecordsNoContact(): void
