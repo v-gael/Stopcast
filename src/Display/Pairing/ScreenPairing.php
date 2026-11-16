@@ -37,6 +37,17 @@ final readonly class ScreenPairing
     /** Une demande que l'écran n'interroge plus est oubliée après ce délai, en secondes. */
     private const int REQUEST_IDLE_SECONDS = 600;
 
+    /**
+     * Après la saisie d'un code, le dispositif est « Appairage en cours » tant
+     * que l'écran n'a pas récupéré son appairage, au plus ce délai en secondes :
+     * l'écran interroge toutes les 5 secondes, s'il se tait plus longtemps il
+     * est sans doute parti. L'appairage aboutit quand même s'il revient.
+     */
+    private const int AWAITED_PAIRING_SECONDS = 60;
+
+    /** Délai pendant lequel on attend le premier contact d'un écran tout juste appairé, en secondes. */
+    private const int AWAITED_FIRST_CONTACT_SECONDS = 120;
+
     public function __construct(
         #[Target('display_pairing.cache')]
         private CacheItemPoolInterface $cache,
@@ -134,8 +145,31 @@ final readonly class ScreenPairing
 
         $this->cache->save($requestItem);
         $this->cache->deleteItems(array_map($this->codeKey(...), array_filter([$request->code, $request->previousCode])));
+        $this->recordProgress($device, PairingProgress::codeEntered($this->clock->now()->getTimestamp()));
 
         return PairingConfirmation::Confirmed;
+    }
+
+    /**
+     * Un code a été saisi pour ce dispositif il y a moins
+     * d'AWAITED_PAIRING_SECONDS, et l'écran n'a pas encore récupéré son
+     * appairage.
+     */
+    public function isAwaitingScreen(Device $device): bool
+    {
+        $progress = $this->progress($device);
+
+        return $progress instanceof PairingProgress && !$progress->screenPaired && $this->isWithin($progress->since, self::AWAITED_PAIRING_SECONDS);
+    }
+
+    /**
+     * L'écran a récupéré son appairage il y a moins d'AWAITED_FIRST_CONTACT_SECONDS.
+     */
+    public function isAwaitingFirstContact(Device $device): bool
+    {
+        $progress = $this->progress($device);
+
+        return $progress instanceof PairingProgress && $progress->screenPaired && $this->isWithin($progress->since, self::AWAITED_FIRST_CONTACT_SECONDS);
     }
 
     /**
@@ -157,8 +191,30 @@ final readonly class ScreenPairing
         $screenSecret = bin2hex(random_bytes(32));
         $device->pairScreen($screenSecret);
         $this->entityManager->flush();
+        $this->recordProgress($device, PairingProgress::screenPaired($this->clock->now()->getTimestamp()));
 
         return new PairedScreen($device, $screenSecret);
+    }
+
+    private function recordProgress(Device $device, PairingProgress $progress): void
+    {
+        $item = $this->cache->getItem($this->deviceKey($device));
+        $item->set($progress);
+        $item->expiresAfter(max(self::AWAITED_PAIRING_SECONDS, self::AWAITED_FIRST_CONTACT_SECONDS));
+
+        $this->cache->save($item);
+    }
+
+    private function progress(Device $device): ?PairingProgress
+    {
+        $progress = $this->cache->getItem($this->deviceKey($device))->get();
+
+        return $progress instanceof PairingProgress ? $progress : null;
+    }
+
+    private function isWithin(int $since, int $seconds): bool
+    {
+        return $this->clock->now()->getTimestamp() - $since < $seconds;
     }
 
     private function pending(string $requestSecret, PairingRequest $request): PendingPairing
@@ -210,5 +266,10 @@ final readonly class ScreenPairing
     private function codeKey(string $code): string
     {
         return 'code_'.$code;
+    }
+
+    private function deviceKey(Device $device): string
+    {
+        return 'device_'.$device->getId();
     }
 }

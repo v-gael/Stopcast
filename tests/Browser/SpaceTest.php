@@ -87,6 +87,29 @@ final class SpaceTest extends PantherTestCase
     }
 
     /**
+     * Après la saisie du code, la fiche suit l'appairage de l'écran sans
+     * recharger la page. L'écran est joué par des requêtes du même navigateur.
+     */
+    public function testDeviceStateFollowsThePairingOfTheScreen(): void
+    {
+        $code = $this->visitWithCleanConsole($this->client, '/display')->filter('.pairing__code')->text();
+        $crawler = $this->visitWithCleanConsole($this->client, $this->devicePath().'/pair');
+
+        $this->client->submit($crawler->selectButton('Appairer')->form(['pair_screen[code]' => $code]));
+        $this->client->waitForElementToContain('[data-device-status]', 'Appairage en cours');
+        $this->markWindow();
+
+        $this->client->executeScript("fetch('/display/pairing');");
+        $this->client->waitForElementToContain('[data-device-status]', 'Jamais connecté');
+
+        $this->client->executeScript("fetch('/display/pairing');");
+        $this->client->waitForElementToContain('[data-device-status]', 'En ligne');
+
+        self::assertTrue($this->windowIsMarked(), "Le suivi de l'appairage a rechargé la page au lieu du seul frame.");
+        $this->assertNoBrowserErrors($this->client, "suivi de l'appairage");
+    }
+
+    /**
      * Tom Select remplace le champ, ouvre ses options et porte son CSS.
      */
     public function testQuayAutocompleteOffersQuaysWithItsStyles(): void
