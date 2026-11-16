@@ -20,16 +20,16 @@
                 Stopcast réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit écran connecté (Raspberry Pi, tablette…), pour l'arrêt de bus de votre choix : savoir d'un coup d'œil, depuis chez soi, quand partir attraper son bus.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <twig:Button href="https://github.com/v-gael/Stopcast">Dépôt Stopcast (API)</twig:Button>
+                <twig:Button href="https://github.com/v-gael/Stopcast">Voir le code sur GitHub</twig:Button>
             </div>
         </div>
 
         <figure class="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:justify-center">
             <img src="{{ asset('images/demo.gif') }}" width="480" height="320" class="w-full max-w-sm rounded-lg shadow-lg"
-                 alt="Aperçu du panneau : deux arrêts avec leurs prochains passages, puis un arrêt sans passage prévu">
+                 alt="Page d'affichage : rotation entre les quais Patton, Beurnonville et Champagne, avec leurs prochains passages">
             <img src="{{ asset('images/afficheur-en-situation.jpg') }}" width="600" height="800" loading="lazy" class="w-40 rounded-lg shadow-lg sm:w-44"
                  alt="Photo de l'afficheur en situation : le panneau sur l'écran 3,5 pouces du Raspberry Pi">
-            <figcaption class="sr-only">À gauche, le rendu du client d'affichage. À droite, l'afficheur en situation.</figcaption>
+            <figcaption class="sr-only">À gauche, la page d'affichage servie par Stopcast. À droite, l'afficheur en situation.</figcaption>
         </figure>
     </section>
 
@@ -47,7 +47,7 @@
                 </li>
                 <li>
                     <twig:Card title="2. Flux temps réel" :titleLevel="3" class="h-full">
-                        <p class="text-slate-600">Le flux GTFS-RT donne l'heure attendue de chaque passage. Il est interrogé à la demande et mis en cache quelques secondes.</p>
+                        <p class="text-slate-600">Le flux GTFS-RT donne l'heure attendue de chaque passage. Stopcast le relit toutes les 20 secondes et range les passages par quai, prêts à être affichés.</p>
                     </twig:Card>
                 </li>
                 <li>
