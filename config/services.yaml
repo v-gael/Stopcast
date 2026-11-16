@@ -29,6 +29,10 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
+    # Client HTTP d'asset_mapper (importmap:audit, téléchargements jsDelivr) :
+    # github.client, authentifié auprès de l'API GitHub (framework.yaml).
+    asset_mapper.http_client: '@github.client'
+
 when@test:
     parameters:
         app.account_deletions_log: '%kernel.project_dir%/var/test/account-deletions.jsonl'
@@ -37,6 +41,7 @@ when@test:
         # tests/ n'est pas chargé comme services : mock_response_factory de
         # turnstile.client (framework.yaml) attend un id de service.
         App\Tests\Support\TurnstileSiteverifyMock: ~
+        App\Tests\Support\GithubApiMock: ~
         App\Tests\Support\RealtimeFeedMock:
             autowire: true
 

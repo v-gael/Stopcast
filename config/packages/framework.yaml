@@ -36,6 +36,14 @@ framework:
                 base_uri: 'https://api.pwnedpasswords.com'
                 timeout: 5
                 max_duration: 5
+            # Client d'asset_mapper (alias dans services.yaml) : importmap:audit
+            # s'authentifie auprès de l'API GitHub, au-delà de la limite anonyme
+            # de 60 requêtes par heure. Le scope réserve le jeton à
+            # api.github.com : les téléchargements jsDelivr partent sans lui.
+            # Jeton vide (hors CI) : requête anonyme.
+            github.client:
+                scope: '^https://api\.github\.com/'
+                auth_bearer: '%env(GITHUB_ADVISORIES_TOKEN)%'
 
     #esi: true
     #fragments: true
@@ -63,3 +71,6 @@ when@test:
                 # Aucun appel à Cloudflare : la réponse dépend du jeton envoyé.
                 turnstile.client:
                     mock_response_factory: App\Tests\Support\TurnstileSiteverifyMock
+                # Aucun appel à GitHub ni à jsDelivr : le mock garde les requêtes.
+                github.client:
+                    mock_response_factory: App\Tests\Support\GithubApiMock

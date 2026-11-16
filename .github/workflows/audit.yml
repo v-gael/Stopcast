@@ -63,9 +63,13 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      # Même audit que `make audit` en local.
+      # Même audit que `make audit` en local. Le jeton d'Actions authentifie
+      # importmap:audit auprès de l'API GitHub : anonyme, il partage la limite
+      # de l'adresse IP du runner (60 requêtes par heure).
       - name: Audit
         run: bin/audit
+        env:
+          GITHUB_ADVISORIES_TOKEN: ${{ github.token }}
 
   # Scan quotidien de la dernière release déployée (latest, posé par le job
   # release de ci.yml) : une faille découverte après le déploiement fait

@@ -22,10 +22,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Client HTTP par défaut simulé en test (mock_response_factory) : le flux
  * GTFS-RT (GTFS_REALTIME_TRIP_UPDATES_URL) sert, pour chaque ligne en base,
  * deux passages à venir à chacun de ses quais, à l'heure de l'horloge. Toute
- * autre URL part sur le réseau, comme sans simulation : importmap:install,
- * par exemple, tourne en environnement de test dans la CI. Sert les tests qui
- * ne remplacent pas http_client, dont les tests navigateur, dont le serveur
- * est un autre processus.
+ * autre URL part sur le réseau, comme sans simulation. Sert les tests qui ne
+ * remplacent pas http_client, dont les tests navigateur, dont le serveur est
+ * un autre processus.
  */
 final readonly class RealtimeFeedMock
 {
