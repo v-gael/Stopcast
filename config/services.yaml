@@ -29,8 +29,7 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    # Client HTTP d'asset_mapper (importmap:audit, téléchargements jsDelivr) :
-    # github.client, authentifié auprès de l'API GitHub (framework.yaml).
+    # Client HTTP d'asset_mapper : github.client (framework.yaml).
     asset_mapper.http_client: '@github.client'
 
 when@test:

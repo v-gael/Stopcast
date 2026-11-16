@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Client github.client simulé en test, celui d'asset_mapper : garde l'URL et
@@ -17,6 +15,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class GithubApiMock
 {
+    use NetworkResponseTrait;
+
     /**
      * Le jeton de GITHUB_ADVISORIES_TOKEN dans .env.test.
      */
@@ -24,22 +24,12 @@ final class GithubApiMock
 
     private const string API_URL = 'https://api.github.com/';
 
-    /**
-     * Client réel, hors conteneur.
-     */
-    private readonly HttpClientInterface $network;
-
     private bool $offline = false;
 
     /**
      * @var list<array{url: string, authorization: ?string}>
      */
     private array $requests = [];
-
-    public function __construct()
-    {
-        $this->network = HttpClient::create();
-    }
 
     /**
      * @param array<string, mixed> $options
@@ -58,12 +48,7 @@ final class GithubApiMock
             return new MockResponse('', ['http_code' => 404]);
         }
 
-        $response = $this->network->request($method, $url, $options);
-
-        return new MockResponse($response->getContent(false), [
-            'http_code' => $response->getStatusCode(),
-            'response_headers' => $response->getHeaders(false),
-        ]);
+        return $this->networkResponse($method, $url, $options);
     }
 
     /**

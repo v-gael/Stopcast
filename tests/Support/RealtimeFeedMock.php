@@ -14,9 +14,7 @@ use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Client HTTP par défaut simulé en test (mock_response_factory) : le flux
@@ -28,11 +26,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class RealtimeFeedMock
 {
-    /**
-     * Client réel, hors conteneur : le http_client du conteneur est cette
-     * simulation.
-     */
-    private HttpClientInterface $network;
+    use NetworkResponseTrait;
 
     /**
      * Minutes d'attente des passages servis à chaque quai.
@@ -45,7 +39,6 @@ final readonly class RealtimeFeedMock
         #[Autowire(env: 'GTFS_REALTIME_TRIP_UPDATES_URL')]
         private string $tripUpdatesUrl,
     ) {
-        $this->network = HttpClient::create();
     }
 
     /**
@@ -54,12 +47,7 @@ final readonly class RealtimeFeedMock
     public function __invoke(string $method, string $url, array $options): MockResponse
     {
         if ($url !== $this->tripUpdatesUrl) {
-            $response = $this->network->request($method, $url, $options);
-
-            return new MockResponse($response->getContent(false), [
-                'http_code' => $response->getStatusCode(),
-                'response_headers' => $response->getHeaders(false),
-            ]);
+            return $this->networkResponse($method, $url, $options);
         }
 
         $now = $this->clock->now()->getTimestamp();

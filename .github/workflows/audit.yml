@@ -63,9 +63,8 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      # Même audit que `make audit` en local. Le jeton d'Actions authentifie
-      # importmap:audit auprès de l'API GitHub : anonyme, il partage la limite
-      # de l'adresse IP du runner (60 requêtes par heure).
+      # Même audit que `make audit` en local, authentifié auprès de l'API
+      # GitHub (github.client, config/packages/framework.yaml).
       - name: Audit
         run: bin/audit
         env:
