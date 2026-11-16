@@ -116,4 +116,26 @@ trait BrowserTestTrait
             'return document.querySelector(\'input[name="cf-turnstile-response"]\')?.value ?? "";',
         ));
     }
+
+    /**
+     * Le Chrome de Panther, pour les gestes de souris et de clavier.
+     */
+    private function driver(Client $client): RemoteWebDriver
+    {
+        $driver = $client->getWebDriver();
+        self::assertInstanceOf(RemoteWebDriver::class, $driver);
+
+        return $driver;
+    }
+
+    /**
+     * Largeur arrondie, en pixels, du premier élément qui répond au sélecteur.
+     */
+    private function widthOf(Client $client, string $selector): int
+    {
+        $width = $client->executeScript(\sprintf('return Math.round(document.querySelector(%s).getBoundingClientRect().width);', json_encode($selector, \JSON_THROW_ON_ERROR)));
+        self::assertIsInt($width);
+
+        return $width;
+    }
 }

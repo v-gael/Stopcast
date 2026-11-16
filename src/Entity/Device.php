@@ -391,6 +391,30 @@ class Device
         return $this->moveDisplayConfiguration($configuration, 1);
     }
 
+    /**
+     * Met la rotation dans cet ordre et la renumérote à partir de 0. L'ordre
+     * doit reprendre chaque configuration du dispositif une fois exactement :
+     * sinon (rotation changée ailleurs entre-temps) rien ne change, et false.
+     *
+     * @param list<DisplayConfiguration> $configurations
+     */
+    public function reorderDisplayConfigurations(array $configurations): bool
+    {
+        $current = $this->displayConfigurations->toArray();
+        $identity = static fn (DisplayConfiguration $configuration): int => spl_object_id($configuration);
+
+        if (\count($configurations) !== \count($current)
+            || [] !== array_diff(array_map($identity, $current), array_map($identity, $configurations))) {
+            return false;
+        }
+
+        foreach ($configurations as $position => $configuration) {
+            $configuration->setPosition($position);
+        }
+
+        return true;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;

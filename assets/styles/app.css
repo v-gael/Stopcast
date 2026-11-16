@@ -112,3 +112,47 @@
         }
     }
 }
+
+/*
+ * Glisser-déposer des quais (contrôleur rotation-sort). Les flèches ne servent
+ * plus qu'au clavier : masquées, elles reviennent quand la ligne a le focus
+ * clavier. La ligne saisie suit le pointeur, une place vide marque l'endroit
+ * où elle sera posée.
+ */
+@layer components {
+    [data-rotation-sortable] [data-rotation-sort-target="item"] {
+        cursor: grab;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    /* Propriétés de sr-only écrites en clair : les tests servent app.css sans le compiler. */
+    [data-rotation-sortable] [data-rotation-sort-target="item"]:not(:has(:focus-visible)) [data-rotation-arrows] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
+    .rotation-lifted {
+        position: fixed;
+        z-index: 50;
+        pointer-events: none;
+        cursor: grabbing;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        outline: 1px solid var(--color-amber-300);
+    }
+
+    .rotation-slot {
+        border: 2px dashed var(--color-amber-300);
+        border-radius: var(--radius-md);
+        background: var(--color-amber-50);
+    }
+
+}

@@ -17,6 +17,7 @@ use App\Tests\Support\DisplayTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Facebook\WebDriver\WebDriver;
 use Facebook\WebDriver\WebDriverBy;
+use Facebook\WebDriver\WebDriverKeys;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\Client;
@@ -71,19 +72,51 @@ final class SpaceTest extends PantherTestCase
     }
 
     /**
-     * « Descendre » renvoie la page, que Turbo fusionne par morphing.
+     * Au clavier, les flèches masquées par le glisser-déposer reviennent avec
+     * le focus ; « Descendre » renvoie la page, que Turbo fusionne par morphing.
      */
-    public function testMovingAQuayMorphsTheDevicePage(): void
+    public function testMovingAQuayWithTheKeyboardMorphsTheDevicePage(): void
+    {
+        $this->visitWithCleanConsole($this->client, $this->devicePath());
+        self::assertSame(['MAIRIE', 'GARE'], $this->rotation());
+        $this->markWindow();
+        $button = 'main li:first-child button[title="Afficher plus tard dans la rotation"]';
+        $arrows = 'main li:first-child [data-rotation-arrows]';
+        self::assertSame(1, $this->widthOf($this->client, $arrows), 'Les flèches restent visibles à la souris.');
+
+        $this->client->executeScript(\sprintf('document.querySelector(%s).focus();', json_encode($button, \JSON_THROW_ON_ERROR)));
+        self::assertGreaterThan(1, $this->widthOf($this->client, $arrows), 'Les flèches ne reviennent pas au focus clavier.');
+        $this->driver($this->client)->getKeyboard()->pressKey(WebDriverKeys::ENTER);
+        $this->client->wait(10)->until(fn (): bool => ['GARE', 'MAIRIE'] === $this->rotation());
+
+        self::assertTrue($this->windowIsMarked(), "L'action a rechargé la page au lieu du morphing de Turbo.");
+        $this->assertNoBrowserErrors($this->client, 'morphing de la page du dispositif');
+    }
+
+    /**
+     * Glisser une ligne à la souris au-dessus de la première enregistre le
+     * nouvel ordre, que Turbo fusionne par morphing.
+     */
+    public function testDraggingAQuayReordersTheDevicePage(): void
     {
         $this->visitWithCleanConsole($this->client, $this->devicePath());
         self::assertSame(['MAIRIE', 'GARE'], $this->rotation());
         $this->markWindow();
 
-        $this->client->getWebDriver()->findElement(WebDriverBy::cssSelector('main li:first-child button[title="Afficher plus tard dans la rotation"]'))->click();
-        $this->client->wait(10)->until(fn (): bool => ['GARE', 'MAIRIE'] === $this->rotation());
+        $driver = $this->driver($this->client);
+        $rows = $driver->findElements(WebDriverBy::cssSelector('main [data-rotation-sort-target="item"] [data-label]'));
+        $driver->action()
+            ->clickAndHold($rows[1])
+            ->moveByOffset(0, -10)
+            ->moveByOffset(0, -30)
+            ->moveByOffset(0, -30)
+            ->release()
+            ->perform();
+        $this->client->wait(10)->until(fn (): bool => ['GARE', 'MAIRIE'] === $this->rotation() && 0 === \count($driver->findElements(WebDriverBy::cssSelector('main form[data-rotation-sort-target="form"] input[name="order[]"]'))));
 
-        self::assertTrue($this->windowIsMarked(), "L'action a rechargé la page au lieu du morphing de Turbo.");
-        $this->assertNoBrowserErrors($this->client, 'morphing de la page du dispositif');
+        self::assertTrue($this->windowIsMarked(), 'Le glisser-déposer a rechargé la page au lieu du morphing de Turbo.');
+        self::assertSame(1, $this->widthOf($this->client, 'main li:first-child [data-rotation-arrows]'), 'Le morphing a fait revenir les flèches.');
+        $this->assertNoBrowserErrors($this->client, 'glisser-déposer des quais');
     }
 
     /**

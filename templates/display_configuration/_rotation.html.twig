@@ -5,13 +5,19 @@
 {% if configurations is empty %}
     <p class="text-slate-600">Aucun quai : le dispositif n'a rien à afficher.</p>
 {% else %}
-    <ol class="divide-y divide-slate-200">
+    {# Glisser-déposer (contrôleur rotation-sort) : le formulaire d'ordre reçoit toute la rotation au dépôt. Sans JavaScript, les flèches. #}
+    <div data-controller="rotation-sort" data-action="turbo:submit-end->rotation-sort#submitEnd">
+    <form method="post" action="{{ path('app_device_reorder', {id: device.id}) }}" data-rotation-sort-target="form" hidden>
+        <input type="hidden" name="_token" value="{{ csrf_token('reorder-device-' ~ device.id) }}">
+    </form>
+    <ol class="relative divide-y divide-slate-200" data-rotation-sort-target="list">
         {% for configuration in configurations %}
             {% set name = configuration.label ?: configuration.quay.name %}
             {% set quay_deprecated = not configuration.quay.active %}
-            <li class="flex items-start gap-2 py-2{{ quay_deprecated ? ' quay-deprecated -mx-2 px-2' }}">
-                {# Flèches de rotation ; aux extrémités, un emplacement vide garde l'alignement. #}
-                <div class="flex shrink-0 flex-col gap-1">
+            <li class="flex items-start gap-2 bg-white py-2{{ quay_deprecated ? ' quay-deprecated -mx-2 px-2' }}"
+                data-rotation-sort-target="item" data-configuration-id="{{ configuration.id }}">
+                {# Flèches de rotation ; aux extrémités, un emplacement vide garde l'alignement. Avec le glisser-déposer, visibles au focus clavier seulement. #}
+                <div class="flex shrink-0 flex-col gap-1" data-rotation-arrows>
                     {% for move in [
                         {show: not loop.first, route: 'app_display_configuration_move_up', label: 'Monter', title: 'Afficher plus tôt dans la rotation', icon: 'M5 12.5l5-5 5 5'},
                         {show: not loop.last, route: 'app_display_configuration_move_down', label: 'Descendre', title: 'Afficher plus tard dans la rotation', icon: 'M5 7.5l5 5 5-5'},
@@ -66,6 +72,8 @@
             </li>
         {% endfor %}
     </ol>
+    <p class="mt-2 text-sm text-red-700" role="alert" data-rotation-sort-target="error" hidden>L'ordre n'a pas pu être enregistré : vérifiez la connexion puis réessayez.</p>
+    </div>
 {% endif %}
 <div class="mt-4">
     <twig:Button href="{{ path('app_display_configuration_new', {device: device.id}) }}" variant="secondary" class="w-full">Ajouter un quai<span class="sr-only"> à {{ device.label }}</span></twig:Button>

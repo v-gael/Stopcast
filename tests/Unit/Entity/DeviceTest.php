@@ -233,6 +233,51 @@ final class DeviceTest extends TestCase
         self::assertSame(['Premier' => 0, 'Troisième' => 1, 'Deuxième' => 2], $this->rotation($device));
     }
 
+    public function testReorderingFollowsTheGivenOrderMaskedOnesIncluded(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Masqué' => 3, 'Troisième' => 7]);
+
+        $reordered = $device->reorderDisplayConfigurations([
+            $this->find($device, 'Troisième'),
+            $this->find($device, 'Premier'),
+            $this->find($device, 'Masqué'),
+        ]);
+
+        self::assertTrue($reordered);
+        self::assertSame(['Troisième' => 0, 'Premier' => 1, 'Masqué' => 2], $this->rotation($device));
+    }
+
+    /**
+     * @return iterable<string, array{list<string|null>}>
+     */
+    public static function mismatchedOrders(): iterable
+    {
+        yield 'quai oublié' => [['Deuxième', 'Premier']];
+        yield 'quai en double' => [['Deuxième', 'Premier', 'Premier']];
+        yield "quai d'un autre dispositif" => [['Deuxième', 'Premier', null]];
+    }
+
+    /**
+     * Un ordre qui ne reprend pas exactement la rotation (changée ailleurs
+     * entre-temps) ne change rien. null : un quai d'un autre dispositif.
+     *
+     * @param list<string|null> $labels
+     */
+    #[DataProvider('mismatchedOrders')]
+    public function testReorderingWithAnOrderThatDoesNotMatchTheRotationChangesNothing(array $labels): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Deuxième' => 1, 'Troisième' => 2]);
+        $other = new Device($this->owner(), 'B');
+
+        $reordered = $device->reorderDisplayConfigurations(array_map(
+            fn (?string $label): DisplayConfiguration => null === $label ? $this->configuration($other, 'Ailleurs') : $this->find($device, $label),
+            $labels,
+        ));
+
+        self::assertFalse($reordered);
+        self::assertSame(['Premier' => 0, 'Deuxième' => 1, 'Troisième' => 2], $this->rotation($device));
+    }
+
     /**
      * @param array<string, int> $positions
      */
