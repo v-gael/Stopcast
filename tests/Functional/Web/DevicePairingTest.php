@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\ScreenPairingTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -21,6 +22,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class DevicePairingTest extends WebTestCase
 {
+    use MockClockTrait;
     use ScreenPairingTrait;
 
     private const string TOO_MANY_ATTEMPTS = "Trop d'essais. Réessayez plus tard.";
@@ -42,8 +44,7 @@ final class DevicePairingTest extends WebTestCase
         // d'une requête à l'autre.
         $this->client->disableReboot();
 
-        $this->clock = new MockClock('2026-11-16 15:00:00', date_default_timezone_get());
-        self::getContainer()->set('clock', $this->clock);
+        $this->clock = $this->mockClock('2026-11-16 15:00:00');
 
         $this->user = UserFactory::createOne();
         $this->device = DeviceFactory::createOne(['owner' => $this->user, 'label' => 'Salon']);
