@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\WebDriverBy;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\After;
 use Symfony\Component\Panther\Client;
@@ -62,15 +63,16 @@ trait BrowserTestTrait
     }
 
     /**
-     * Connexion depuis le formulaire de la vitrine, une fois que le widget
+     * Connexion depuis le panneau de l'en-tête de la vitrine, une fois que le widget
      * Turnstile (clé de test, jeton factice) a rempli son champ.
      */
     private function logInFromShowcase(Client $client, string $email, string $password): void
     {
         $crawler = $this->visitWithCleanConsole($client, '/');
+        $this->openLoginPanel($client);
         $this->waitForTurnstileToken($client);
 
-        $client->submit($crawler->selectButton('Se connecter')->form([
+        $client->submit($crawler->filter('#connexion')->selectButton('Se connecter')->form([
             '_username' => $email,
             '_password' => $password,
         ]));
@@ -108,6 +110,15 @@ trait BrowserTestTrait
             $driver->get('about:blank');
             $driver->manage()->getLog('browser');
         }
+    }
+
+    /**
+     * Clic sur « Se connecter » de l'en-tête : le panneau de connexion s'ouvre.
+     */
+    private function openLoginPanel(Client $client): void
+    {
+        $this->driver($client)->findElement(WebDriverBy::cssSelector('header button[popovertarget="connexion"]'))->click();
+        $client->wait(5)->until(static fn (RemoteWebDriver $driver): bool => true === $driver->executeScript('return document.getElementById("connexion").matches(":popover-open");'));
     }
 
     private function waitForTurnstileToken(Client $client): void

@@ -37,7 +37,7 @@ final class LegalNoticeTest extends WebTestCase
         $crawler = $client->request('GET', '/');
 
         self::assertSame('/mentions-legales', $this->footerNav($crawler)->selectLink('Mentions légales')->attr('href'));
-        self::assertSelectorTextContains('footer', 'Stopcast, projet open source sous licence MIT.');
+        self::assertSelectorTextContains('footer', 'Stopcast, projet open source sous licence MIT');
     }
 
     public function testSpaceFooterLinksToTheLegalNotice(): void

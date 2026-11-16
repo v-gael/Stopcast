@@ -1,5 +1,8 @@
 {% extends 'layout/public.html.twig' %}
 
+{# Ce parcours a son propre formulaire : pas de panneau de connexion dans l'en-tête. #}
+{% block header_actions %}{% endblock %}
+
 {% block title %}Nouveau mot de passe · Stopcast{% endblock %}
 
 {% block content %}

@@ -1,0 +1,58 @@
+{#
+ # En haut à droite de la vitrine : « Ouvrir mon espace » pour un compte connecté, sinon « Se connecter »,
+ # qui ouvre le panneau de connexion, un popover natif (Échap, clic dehors, sans JavaScript).
+ # Le contrôleur login-panel le rouvre après un échec ou un renvoi vers la connexion (« login_panel_open »,
+ # posé par HomeController), et ne crée le widget Turnstile qu'à la première ouverture.
+ # bin/smoke-test vérifie après chaque déploiement que l'accueil contient name="_password".
+ #}
+{% if is_granted('ROLE_USER') %}
+    <twig:Button href="{{ path('app_device_index') }}">Ouvrir mon espace<span aria-hidden="true"> →</span></twig:Button>
+{% else %}
+    {% set error = login_error|default(null) %}
+    <div class="relative">
+        <twig:Button type="button" popovertarget="connexion">Se connecter</twig:Button>
+        <div id="connexion" popover role="dialog" aria-labelledby="connexion-title"
+             data-controller="login-panel" data-login-panel-open-value="{{ login_panel_open|default(false) ? 'true' : 'false' }}"
+             data-action="toggle->login-panel#toggled"
+             class="login-panel w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-slate-200 bg-white p-5 text-left text-slate-900 shadow-xl">
+            {# Pas un titre : l'en-tête précède le h1 de la page. Le panneau est nommé par ce texte. #}
+            <p id="connexion-title" class="font-semibold">Espace de gestion</p>
+            <p class="mb-4 text-sm text-slate-600">Réservé aux comptes invités : gestion des dispositifs et de leurs quais.</p>
+
+            <form action="{{ path('app_login') }}" method="post">
+                {% if error %}
+                    <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+                        {{ error.messageKey|trans(error.messageData, 'security') }}
+                    </div>
+                {% endif %}
+
+                <div class="mb-4">
+                    <label for="login_email" class="block text-sm font-medium text-slate-800">Email</label>
+                    <input type="email" id="login_email" name="_username" value="{{ login_username|default('') }}" autocomplete="email" required autofocus
+                           class="mt-1 block w-full rounded-md border-slate-500 shadow-sm focus:border-amber-700 focus:ring-amber-700 sm:text-sm">
+                </div>
+
+                <div class="mb-4">
+                    <label for="login_password" class="block text-sm font-medium text-slate-800">Mot de passe</label>
+                    <input type="password" id="login_password" name="_password" autocomplete="current-password" required
+                           class="mt-1 block w-full rounded-md border-slate-500 shadow-sm focus:border-amber-700 focus:ring-amber-700 sm:text-sm">
+                </div>
+
+                <div class="mb-4 flex items-center">
+                    <input type="checkbox" id="login_remember_me" name="_remember_me"
+                           class="mr-2 rounded border-slate-500 text-amber-600 focus:ring-amber-700">
+                    <label for="login_remember_me" class="text-sm text-slate-800">Se souvenir de moi</label>
+                </div>
+
+                <twig:Turnstile deferred data-login-panel-target="captcha" />
+
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
+
+                <twig:Button type="submit" class="w-full">Se connecter</twig:Button>
+                <p class="mt-3 text-center">
+                    <a href="{{ path('app_forgot_password_request') }}" class="text-sm font-medium text-amber-700 underline hover:text-amber-800">Mot de passe oublié ?</a>
+                </p>
+            </form>
+        </div>
+    </div>
+{% endif %}

@@ -156,3 +156,19 @@
     }
 
 }
+
+/*
+ * Panneau de connexion de l'en-tête de la vitrine (layout/_login_panel.html.twig) :
+ * un popover, donc dans la couche du dessus, placé sous le bouton « Se connecter »,
+ * à droite de la colonne de 72rem (max-w-6xl) de l'en-tête.
+ */
+@layer components {
+    /* Absolu et non fixe : l'en-tête n'est pas collant, le panneau défile avec lui. */
+    .login-panel {
+        position: absolute;
+        inset: auto;
+        top: calc(var(--spacing) * 18);
+        right: max(calc(var(--spacing) * 3), calc((100vw - 72rem) / 2 + var(--spacing) * 6));
+        margin: 0;
+    }
+}
