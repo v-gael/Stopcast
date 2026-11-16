@@ -148,7 +148,7 @@ Les tests (CI GitHub, `make ci-run`) ne compilent pas la CSS. En environnement `
 
 - un compte administrateur de développement, recréé à chaque chargement : `admin@stopcast.local`, mot de passe `stopcast-admin`. Il possède tous les dispositifs de démo ;
 - 5 dispositifs aléatoires, chacun avec 2 à 4 quais tirés au hasard ;
-- un dispositif « Écran de développement », sur des quais qui ont des passages, pour essayer la page d'affichage.
+- un dispositif « Écran de développement », sur des quais qui ont des passages, pour essayer la page d'affichage, créé en dernier pour être en tête de la liste des dispositifs.
 
 Les 3 quais de l'écran de développement sont ceux qui ont le plus de passages dans le flux temps réel au moment du chargement, comptés comme les affiche la page d'affichage, sans limite par quai. Le flux est téléchargé et croisé avec la base par le constructeur de l'index, appelé directement : ni l'index ni `realtime-worker` ne sont lus, et `make fixtures` marche avant le premier rafraîchissement. Si le flux en donne moins de 3 (la nuit) ou s'il est indisponible, les quais desservis par le plus de lignes complètent la liste, et un avertissement le signale. Les quais ne changent pas ensuite : relancer `make fixtures` pour les recalculer.
 

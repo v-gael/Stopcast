@@ -48,7 +48,6 @@ final class AppFixtures extends Fixture
 
         $this->removeDevices($manager);
         $this->replaceDevUser($manager, $devUser);
-        $this->loadDevDevice($manager, new Device($devUser, self::DEV_DEVICE_LABEL));
 
         foreach (DeviceFactory::createMany(5, ['owner' => $devUser]) as $device) {
             $configCount = random_int(2, 4);
@@ -60,6 +59,9 @@ final class AppFixtures extends Fixture
                 ]);
             }
         }
+
+        // Créé en dernier : la liste des dispositifs commence par le plus récent.
+        $this->loadDevDevice($manager, new Device($devUser, self::DEV_DEVICE_LABEL));
     }
 
     private function removeDevices(ObjectManager $manager): void
