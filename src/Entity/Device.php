@@ -105,7 +105,8 @@ class Device
 
     /**
      * Dernière requête de l'écran appairé, à CONTACT_RECORD_INTERVAL près ; null tant que
-     * l'écran n'a jamais appelé. Dissocier ou réappairer la garde.
+     * l'écran n'a jamais appelé. Il est oublié quand l'écran est dissocié ou
+     * remplacé : il ne vaut que pour l'écran appairé.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSeenAt = null;
@@ -181,6 +182,7 @@ class Device
     public function pairScreen(#[\SensitiveParameter] string $secret): static
     {
         $this->screenSecretHash = self::hashScreenSecret($secret);
+        $this->lastSeenAt = null;
 
         return $this;
     }
@@ -188,6 +190,7 @@ class Device
     public function unpairScreen(): static
     {
         $this->screenSecretHash = null;
+        $this->lastSeenAt = null;
 
         return $this;
     }

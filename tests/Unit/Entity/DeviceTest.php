@@ -64,15 +64,28 @@ final class DeviceTest extends TestCase
         self::assertEquals($first->modify('+6 minutes'), $device->getLastSeenAt());
     }
 
-    public function testUnpairingOrPairingAgainKeepsTheLastContact(): void
+    public function testUnpairingForgetsTheLastContact(): void
     {
         $device = new Device($this->owner(), 'A')->pairScreen('premier');
-        $now = new \DateTimeImmutable('2026-10-30 14:32:00');
-        $device->recordContact($now);
+        $device->recordContact(new \DateTimeImmutable('2026-10-30 14:32:00'));
 
-        $device->unpairScreen()->pairScreen('second');
+        $device->unpairScreen();
 
-        self::assertEquals($now, $device->getLastSeenAt());
+        self::assertNull($device->getLastSeenAt());
+    }
+
+    /**
+     * Le nouvel écran n'a encore jamais donné de nouvelles : le dernier
+     * contact de l'ancien ne vaut pas pour lui.
+     */
+    public function testPairingAnotherScreenForgetsTheLastContact(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('premier');
+        $device->recordContact(new \DateTimeImmutable('2026-10-30 14:32:00'));
+
+        $device->pairScreen('second');
+
+        self::assertNull($device->getLastSeenAt());
     }
 
     /**
