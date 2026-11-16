@@ -33,10 +33,10 @@ flowchart LR
     subgraph Back["Backend Symfony · Docker"]
         I["Import<br/>app:gtfs:import"] --> DB[("PostgreSQL<br/>Quay · Route · Trip")]
         DB --> A["GET /display"]
-        C[("Cache partagé<br/>20 s")] --> A
+        C[("Index par quai<br/>(Redis)")] --> A
     end
     ST -- "à chaque changement d'horaires" --> I
-    RT -- "à la demande" --> C
+    RT -- "toutes les 20 s<br/>(realtime-worker)" --> C
     A -- "HTML, rafraîchi 1×/min<br/>(cookie de l'écran)" --> D["Dispositif<br/>(navigateur d'un écran : Raspberry Pi, tablette…)"]
 ```
 
@@ -84,7 +84,7 @@ make up && make migrate && make import
 
 En production depuis novembre 2026 sur [stopcast.gaelv.com](https://stopcast.gaelv.com), pour mon propre usage ; les comptes y sont créés sur invitation.
 
-- **Affichage** : import du référentiel GTFS, planifié en prod, et flux temps réel en cache partagé ; page d'affichage appairée par code, avec son aperçu en direct dans l'espace web.
+- **Affichage** : import du référentiel GTFS, planifié en prod, et flux temps réel indexé par quai en tâche de fond ; page d'affichage appairée par code, avec son aperçu en direct dans l'espace web.
 - **Espace web** : dispositifs et configurations d'affichage (choix des quais, ordre de rotation), comptes sur invitation, administration des comptes, emails transactionnels ; connexion protégée par captcha, limites d'essais et refus des mots de passe ayant fuité.
 - **Données personnelles** : export des données, suppression de son compte, purges automatiques selon les durées de conservation ([registre](docs/rgpd.md)).
 - **Exploitation** : déploiement continu avec retour arrière, sauvegardes chiffrées hors du serveur, supervision et suivi des erreurs.
