@@ -1,0 +1,9 @@
+framework:
+    # Verrous des rate limiters (rate_limiter.yaml, login_throttling), sur le
+    # Redis partagé par app et worker.
+    lock: '%env(REDIS_URL)%'
+
+when@test:
+    framework:
+        # Limiters en mémoire en test : un verrou local suffit, sans Redis.
+        lock: flock

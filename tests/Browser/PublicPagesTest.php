@@ -12,19 +12,17 @@ use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\PantherTestCase;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelper;
 use SymfonyCasts\Bundle\ResetPassword\ResetPasswordHelperInterface;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Pages publiques dans Chrome, sans session : aucune erreur de console ni
  * violation CSP.
  */
 #[Group('browser')]
+#[ResetDatabase]
 final class PublicPagesTest extends PantherTestCase
 {
     use BrowserTestTrait;
-    use Factories;
-    use ResetDatabase;
 
     /**
      * @return iterable<string, array{string}>

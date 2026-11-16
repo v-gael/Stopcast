@@ -18,7 +18,7 @@ Réplique en temps réel l'affichage du panneau d'un abri de bus sur un petit é
 Stopcast croise les deux flux de données ouvertes publiés par la plupart des réseaux de transport :
 
 - le **GTFS statique** (lignes, arrêts, quais, destinations des trajets), importé en base ;
-- le **GTFS-RT** (horaires en temps réel), interrogé et mis en cache à la volée.
+- le **GTFS-RT** (horaires en temps réel), indexé par quai toutes les 20 secondes par un worker dédié.
 
 Ce dépôt contient l'**application Symfony** qui reconstitue, pour un quai donné, ce qu'affiche le vrai panneau, et le sert sous forme de page d'affichage à tout écran doté d'un navigateur (Raspberry Pi, tablette…), appairé par un code.
 

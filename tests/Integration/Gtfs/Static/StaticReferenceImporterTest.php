@@ -19,11 +19,11 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class StaticReferenceImporterTest extends KernelTestCase
 {
-    use ResetDatabase;
     use StaticFeedTrait;
 
     public function testReimportReplacesRoutesAndDestinationsOfEachQuay(): void

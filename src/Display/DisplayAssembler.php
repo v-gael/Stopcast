@@ -11,7 +11,6 @@ use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
 use App\Gtfs\Realtime\NextPassageFinder;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
  * Assemble ce qu'un dispositif affiche : une entrée par configuration active,
@@ -26,15 +25,14 @@ final readonly class DisplayAssembler
     }
 
     /**
-     * Passages réels, tirés du flux temps réel. Un seul appel pour tous les
-     * quais du dispositif : le flux n'est lu qu'une fois. Si le flux échoue,
-     * l'exception remonte telle quelle plutôt qu'une réponse partielle ou vide :
-     * l'appelant garde ce qu'il affichait.
+     * Passages réels, lus dans l'index temps réel. Un seul appel pour tous les
+     * quais du dispositif : l'index n'est lu qu'une fois. Si l'index est absent
+     * ou périmé, l'exception remonte telle quelle plutôt qu'une réponse
+     * partielle ou vide : l'appelant garde ce qu'il affichait.
      *
      * @return list<DisplayItem>
      *
-     * @throws InvalidGtfsRealtimeFeedException flux illisible ou périmé
-     * @throws HttpClientExceptionInterface     téléchargement impossible
+     * @throws InvalidGtfsRealtimeFeedException index absent, ou flux périmé
      */
     public function forDevice(Device $device): array
     {
@@ -52,7 +50,7 @@ final readonly class DisplayAssembler
 
     /**
      * Écrans de forDevice, sur les passages d'exemple : pour l'aperçu, sans
-     * appel au flux temps réel. Un quai déprécié en est exclu : sur l'écran
+     * lire l'index temps réel. Un quai déprécié en est exclu : sur l'écran
      * réel, il n'a en général plus de passage et sort donc de la rotation
      * (ScreenPaginator), là où l'aperçu lui montrerait des passages d'exemple.
      *

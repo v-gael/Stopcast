@@ -6,10 +6,11 @@ namespace App\Gtfs\Realtime;
 
 /**
  * Levée quand la réponse du flux temps réel n'est pas un FeedMessage valide
- * (page d'erreur renvoyée avec un statut 200, corps vide ou tronqué), jamais
- * mise en cache, ou quand le flux est périmé (header.timestamp au-delà de
- * GTFS_REALTIME_MAX_AGE) : le producteur sert un flux figé, dont les passages
- * ne bougent plus. Un flux périmé, lisible, est mis en cache comme les autres.
+ * (page d'erreur renvoyée avec un statut 200, corps vide ou tronqué), qui ne
+ * remplace jamais l'index des passages, quand le flux est périmé
+ * (header.timestamp au-delà de GTFS_REALTIME_MAX_AGE) : le producteur sert un
+ * flux figé, dont les passages ne bougent plus, ou quand l'index des passages
+ * est absent. Un flux périmé, lisible, remplace l'index comme les autres.
  */
 class InvalidGtfsRealtimeFeedException extends \RuntimeException
 {
@@ -21,6 +22,11 @@ class InvalidGtfsRealtimeFeedException extends \RuntimeException
     public static function missingHeader(string $url): self
     {
         return new self(\sprintf('Flux GTFS-RT sans header, flux invalide : "%s".', $url));
+    }
+
+    public static function notIndexed(): self
+    {
+        return new self("Index des passages temps réel absent : il n'a pas encore été rafraîchi.");
     }
 
     public static function stale(string $url, int $age, int $maxAge): self

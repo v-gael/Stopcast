@@ -6,8 +6,6 @@ namespace App\Display;
 
 use App\Entity\Device;
 use App\Gtfs\Realtime\InvalidGtfsRealtimeFeedException;
-use App\Monitoring\RealtimeFeedFailureLogger;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 
 /**
  * Ce que l'écran d'un dispositif montre en ce moment, sur les passages réels :
@@ -19,13 +17,13 @@ final readonly class LiveDisplay
     public function __construct(
         private DisplayAssembler $displayAssembler,
         private ScreenPaginator $screenPaginator,
-        private RealtimeFeedFailureLogger $feedFailureLogger,
     ) {
     }
 
     /**
-     * Un dispositif désactivé ne lit pas le flux. Un flux en échec est
-     * journalisé (RealtimeFeedFailureLogger).
+     * Un dispositif désactivé ne lit pas l'index des passages. Un index absent
+     * ou périmé n'est pas journalisé ici : la panne du flux l'est une fois, par
+     * realtime-worker (PassageIndexRefresher), et non par chaque écran.
      */
     public function forDevice(Device $device): LiveDisplayState
     {
@@ -35,9 +33,7 @@ final readonly class LiveDisplay
 
         try {
             return LiveDisplayState::screens($this->screenPaginator->paginate($this->displayAssembler->forDevice($device)));
-        } catch (HttpClientExceptionInterface|InvalidGtfsRealtimeFeedException $failure) {
-            $this->feedFailureLogger->log($failure);
-
+        } catch (InvalidGtfsRealtimeFeedException) {
             return LiveDisplayState::feedUnavailable();
         }
     }

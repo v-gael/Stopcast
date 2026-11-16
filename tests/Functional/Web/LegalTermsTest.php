@@ -7,13 +7,11 @@ namespace App\Tests\Functional\Web;
 use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class LegalTermsTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     public function testTermsArePublic(): void

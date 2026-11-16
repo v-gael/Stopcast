@@ -42,19 +42,6 @@ final readonly class TripUpdatesFeed
     }
 
     /**
-     * Un corps décodé et frais.
-     *
-     * @throws InvalidGtfsRealtimeFeedException flux illisible ou périmé
-     */
-    public function parse(string $raw): FeedMessage
-    {
-        $feed = $this->decode($raw);
-        $this->assertFresh($feed);
-
-        return $feed;
-    }
-
-    /**
      * Un corps décodé, sans vérifier son âge.
      *
      * @throws InvalidGtfsRealtimeFeedException flux illisible
@@ -79,29 +66,48 @@ final readonly class TripUpdatesFeed
     }
 
     /**
+     * @param int $headerTimestamp header.timestamp d'un flux, 0 s'il est absent
+     *
      * @throws InvalidGtfsRealtimeFeedException flux périmé
      */
-    public function assertFresh(FeedMessage $feed): void
+    public function assertFresh(int $headerTimestamp): void
     {
-        $age = $this->ageOf($feed);
+        $age = $this->ageAt($headerTimestamp);
 
         if (!$age->fresh) {
             throw InvalidGtfsRealtimeFeedException::stale($this->url, $age->seconds, $this->maxAge);
         }
     }
 
+    /**
+     * L'index est-il encore frais ? Mesuré sur le timestamp de son flux, ou
+     * à défaut sur l'heure de sa construction (PassageIndex::publishedAt).
+     *
+     * @throws InvalidGtfsRealtimeFeedException index périmé
+     */
+    public function assertIndexFresh(PassageIndex $index): void
+    {
+        $this->assertFresh($index->publishedAt());
+    }
+
     public function ageOf(FeedMessage $feed): FeedAge
     {
-        $timestamp = (int) ($feed->getHeader()?->getTimestamp() ?? 0);
+        return $this->ageAt(self::timestampOf($feed));
+    }
 
-        if (0 === $timestamp) {
+    /**
+     * @param int $headerTimestamp header.timestamp d'un flux, 0 s'il est absent
+     */
+    public function ageAt(int $headerTimestamp): FeedAge
+    {
+        if (0 === $headerTimestamp) {
             return new FeedAge(publishedAt: null, seconds: 0, fresh: true);
         }
 
         $now = $this->clock->now();
-        $seconds = max(0, $now->getTimestamp() - $timestamp);
+        $seconds = max(0, $now->getTimestamp() - $headerTimestamp);
 
-        return new FeedAge(publishedAt: $now->setTimestamp($timestamp), seconds: $seconds, fresh: $seconds <= $this->maxAge);
+        return new FeedAge(publishedAt: $now->setTimestamp($headerTimestamp), seconds: $seconds, fresh: $seconds <= $this->maxAge);
     }
 
     /**
@@ -183,6 +189,14 @@ final readonly class TripUpdatesFeed
         }
 
         return $stopTimes;
+    }
+
+    /**
+     * header.timestamp du flux, 0 s'il est absent.
+     */
+    public static function timestampOf(FeedMessage $feed): int
+    {
+        return (int) ($feed->getHeader()?->getTimestamp() ?? 0);
     }
 
     public function url(): string

@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
-use App\Tests\Support\RealtimeFeedTrait;
+use App\Tests\Support\DisplayTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -19,15 +19,12 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class DisplayConfigurationsTest extends WebTestCase
 {
-    use Factories;
-    use RealtimeFeedTrait;
-    use ResetDatabase;
+    use DisplayTestTrait;
 
     private KernelBrowser $client;
 
@@ -585,15 +582,9 @@ final class DisplayConfigurationsTest extends WebTestCase
         $entityManager->find(Device::class, $device->getId())?->pairScreen('secret-de-l-ecran');
         $entityManager->flush();
 
-        // Noyau neuf pour remplacer le flux, puis sans reboot pour qu'il reste en place.
-        $kernel = $this->client->getKernel();
-        $kernel->shutdown();
-        $kernel->boot();
-
-        $this->client->disableReboot();
-        // Daté de maintenant : ce test tourne sur la vraie horloge, et un flux
-        // à l'heure fixée du trait serait périmé.
-        self::getContainer()->set('http_client', new MockHttpClient(self::feedResponse([], time())));
+        // Sur RealtimeFeedMock : les quais créés ici ne sont desservis par aucune
+        // ligne, et n'ont donc aucun passage.
+        $this->refreshPassageIndex();
 
         $this->client->getCookieJar()->set(new Cookie('STOPCAST_DISPLAY', 'secret-de-l-ecran'));
         $crawler = $this->client->request('GET', '/display?fragment=1');

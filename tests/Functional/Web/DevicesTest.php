@@ -20,15 +20,13 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Field\ChoiceFormField;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class DevicesTest extends WebTestCase
 {
     use ClockSensitiveTrait;
-    use Factories;
     use QueryCountTrait;
-    use ResetDatabase;
 
     private const string NOW = '2026-10-30 14:52:00';
 

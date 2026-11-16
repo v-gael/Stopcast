@@ -29,11 +29,11 @@ logs: ## Suit la sortie du conteneur app (journal d'accès de Caddy)
 dev-log: ## Suit le fichier de log Symfony du jour (var/log/dev-AAAA-MM-JJ.log)
 	docker compose exec app sh -c 'tail -F "var/log/dev-$$(date +%F).log"'
 
-worker-restart: ## Redémarre le worker (à faire après un changement de code)
-	docker compose restart worker
+worker-restart: ## Redémarre les workers (à faire après un changement de code)
+	docker compose restart worker realtime-worker
 
-worker-logs: ## Suit les logs du worker (envoi des emails)
-	docker compose logs -f worker
+worker-logs: ## Suit les logs des workers (envoi des emails, index temps réel)
+	docker compose logs -f worker realtime-worker
 
 ## —— Prod (local, pour tester) ———————————————————————————————————————————
 prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le dev avant : même port 80)
@@ -43,8 +43,8 @@ prod-up: ## Build + démarre avec la stage prod et .env.prod.local (arrêter le 
 prod-down: ## Arrête l'environnement prod
 	$(PROD) down
 
-prod-logs: ## Suit les logs de l'environnement prod (app, worker et backup)
-	$(PROD) logs -f app worker backup
+prod-logs: ## Suit les logs de l'environnement prod (app, workers et backup)
+	$(PROD) logs -f app worker realtime-worker backup
 
 prod-ps: ## État des conteneurs prod (vérifier healthy)
 	$(PROD) ps
@@ -133,11 +133,11 @@ migration: ## Génère une migration à partir des entités
 	docker compose exec app php bin/console make:migration
 
 db-reset: ## Supprime et recrée la base (⚠️ perte de données)
-	docker compose stop worker
+	docker compose stop worker realtime-worker
 	docker compose exec app php bin/console doctrine:database:drop --force --if-exists
 	docker compose exec app php bin/console doctrine:database:create
 	docker compose exec app php bin/console doctrine:migrations:migrate --no-interaction
-	docker compose start worker
+	docker compose start worker realtime-worker
 
 ## —— Aide —————————————————————————————————————————————————————————————————
 help: ## Affiche cette aide

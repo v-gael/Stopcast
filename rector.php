@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
+use Zenstruck\Foundry\Utils\Rector\FoundrySetList;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -19,6 +20,7 @@ return RectorConfig::configure()
         codeQuality: true,
         codingStyle: true
     )
+    ->withSets([FoundrySetList::FOUNDRY_2_9])
     ->withComposerBased(
         doctrine: true,
         symfony: true,

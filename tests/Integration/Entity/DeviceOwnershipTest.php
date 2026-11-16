@@ -13,18 +13,15 @@ use App\Factory\DisplayConfigurationFactory;
 use App\Factory\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * La suppression d'un compte se fait en base : ce qui en dépend doit suivre
  * sans que l'ORM ait chargé les dispositifs.
  */
+#[ResetDatabase]
 final class DeviceOwnershipTest extends KernelTestCase
 {
-    use Factories;
-    use ResetDatabase;
-
     public function testDeletingAUserRemovesTheirDevicesAndConfigurationsOnly(): void
     {
         $lea = UserFactory::createOne();

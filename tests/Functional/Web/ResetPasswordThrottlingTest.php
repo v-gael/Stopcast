@@ -9,17 +9,15 @@ use App\Tests\Support\TurnstileSiteverifyMock;
 use App\Tests\Support\WebTestTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Limite des demandes de « mot de passe oublié » : 5 demandes par adresse IP,
  * que le compte existe ou non.
  */
+#[ResetDatabase]
 final class ResetPasswordThrottlingTest extends WebTestCase
 {
-    use Factories;
-    use ResetDatabase;
     use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';

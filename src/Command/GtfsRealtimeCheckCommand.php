@@ -16,7 +16,7 @@ use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 
 /**
  * Diagnostic du flux temps réel, en une ligne : il est téléchargé sans passer
- * par le cache de l'appli, décodé et daté comme pour l'affichage. Les passages
+ * par l'index des passages, décodé et daté comme pour l'affichage. Les passages
  * à venir sont comptés selon les règles de l'affichage, mais dans le flux
  * seul, sans croisement avec la base (lignes inconnues, terminus). Code 0
  * si le flux est frais, 1 sinon. Ni log ni ping : c'est un outil de diagnostic.

@@ -13,6 +13,7 @@ use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\BrowserTestTrait;
 use App\Tests\Support\ContainerServiceTrait;
+use App\Tests\Support\DisplayTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Facebook\WebDriver\WebDriver;
 use Facebook\WebDriver\WebDriverBy;
@@ -20,8 +21,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\PantherTestCase;
-use Zenstruck\Foundry\Test\Factories;
-use Zenstruck\Foundry\Test\ResetDatabase;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
  * Espace connecté dans Chrome, parcouru comme un administrateur le ferait :
@@ -29,12 +29,12 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * (Turbo, aperçu, autocomplétion) fonctionne.
  */
 #[Group('browser')]
+#[ResetDatabase]
 final class SpaceTest extends PantherTestCase
 {
     use BrowserTestTrait;
     use ContainerServiceTrait;
-    use Factories;
-    use ResetDatabase;
+    use DisplayTestTrait;
 
     private const string EMAIL = 'admin@example.com';
 
@@ -197,7 +197,8 @@ final class SpaceTest extends PantherTestCase
 
     /**
      * Le dispositif de l'administrateur, avec deux quais desservis par une
-     * ligne : le flux simulé leur sert des passages.
+     * ligne : le flux simulé leur sert des passages, que l'index rafraîchi ici
+     * donne au serveur de test.
      */
     private function deviceWithTwoQuays(): Device
     {
@@ -223,6 +224,10 @@ final class SpaceTest extends PantherTestCase
         }
 
         $entityManager->flush();
+        // RealtimeFeedMock relit les quais de la ligne en base, pas dans
+        // l'unité de travail, où la ligne ne connaît pas encore ses quais.
+        $entityManager->clear();
+        $this->refreshPassageIndex();
 
         return $device;
     }

@@ -76,7 +76,7 @@ if [ "$keep" -eq 0 ]; then
 fi
 
 echo "==> Construction de l'image"
-if ! prod build --pull app worker; then
+if ! prod build --pull app worker realtime-worker; then
     echo "Échec : construction de l'image, rien d'autre n'est vérifié." >&2
     exit 1
 fi
@@ -95,7 +95,7 @@ if ! bin/deploy < /dev/null; then
 fi
 
 echo '==> Contrôles des conteneurs'
-for service in app worker backup; do
+for service in app worker realtime-worker backup; do
     container=$(prod ps -q "$service")
     if [ -z "$container" ]; then
         fail "$service ne tourne pas"
@@ -186,12 +186,14 @@ if [ -n "$backup" ]; then
     fi
 fi
 
-worker=$(prod ps -q worker)
-if [ -n "$worker" ]; then
-    sleep 5
-    restarts=$(docker inspect --format '{{.RestartCount}} {{.State.Status}}' "$worker")
-    expect "$restarts" '0 running' 'worker : démarré, aucun redémarrage' "worker : redémarrages et état « $restarts », « 0 running » attendu"
-fi
+sleep 5
+for service in worker realtime-worker; do
+    container=$(prod ps -q "$service")
+    if [ -n "$container" ]; then
+        restarts=$(docker inspect --format '{{.RestartCount}} {{.State.Status}}' "$container")
+        expect "$restarts" '0 running' "$service : démarré, aucun redémarrage" "$service : redémarrages et état « $restarts », « 0 running » attendu"
+    fi
+done
 
 echo '==> Contrôles après déploiement'
 if bin/smoke-test http://localhost; then

@@ -67,6 +67,7 @@ services:
       APP_ENV: dev
       # Déclaré seulement ici : ne reçoit pas celle de app (compose.yaml).
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
       MAILER_DSN: smtp://mailer:1025
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
     healthcheck:
@@ -79,9 +80,46 @@ services:
         condition: service_started
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./:/app
       - app_var:/app/var
+
+  # Rafraîchit l'index des passages temps réel (planning realtime, voir
+  # PassageIndexRefresher), seul : l'import GTFS et les emails de worker ne le
+  # retardent jamais. Même commande qu'en prod ; après un changement de code,
+  # `make worker-restart`.
+  realtime-worker:
+    image: stopcast-dev
+    logging: *logging
+    build:
+      context: .
+      target: dev
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
+    healthcheck:
+      disable: true
+    command: ["php", "bin/console", "messenger:consume", "scheduler_realtime", "--time-limit=3600", "--memory-limit=128M"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - app_var:/app/var
+
+  redis:
+    logging: *logging
+    ports:
+      # Limité à la machine hôte, comme la base : redis-cli ou client de l'IDE.
+      - "127.0.0.1:6379:6379"
 
   ###> doctrine/doctrine-bundle ###
   database:
