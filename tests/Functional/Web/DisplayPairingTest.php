@@ -119,7 +119,7 @@ final class DisplayPairingTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame('display', $crawler->filter('body')->attr('data-controller'));
-        self::assertSame(['CENTRE VILLE'], $crawler->filter('.screen__stop')->each(static fn ($stop): string => $stop->text()));
+        self::assertSame(['Centre'], $crawler->filter('.screen__stop')->each(static fn ($stop): string => $stop->text()));
         self::assertSame(['1'], $crawler->filter('.passage__route')->each(static fn ($route): string => $route->text()));
         self::assertSame('/display?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
         // Les passages sont des instants ; seule l'horloge de l'écran dépend

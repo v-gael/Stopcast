@@ -34,7 +34,7 @@
     {% for screen in state_message is defined and state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">
-                <h1 class="screen__stop">{{ screen.quayName }}</h1>
+                <h1 class="screen__stop">{{ screen.title }}</h1>
                 {{ clock }}
             </div>
             {{ columns }}

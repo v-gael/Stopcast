@@ -11,8 +11,9 @@ use Symfony\Component\Clock\ClockInterface;
 /**
  * Découpe les configurations d'un dispositif en écrans de la page
  * d'affichage : une configuration donne un écran par tranche de
- * PASSAGES_PER_SCREEN passages, ou un seul écran « aucun passage ». Un quai
- * déprécié sans passage n'a pas d'écran : il sort de la rotation.
+ * PASSAGES_PER_SCREEN passages, ou un seul écran « aucun passage », tous
+ * titrés de son libellé, ou à défaut du nom du quai. Un quai déprécié sans
+ * passage n'a pas d'écran : il sort de la rotation.
  */
 final readonly class ScreenPaginator
 {
@@ -34,6 +35,8 @@ final readonly class ScreenPaginator
         $screens = [];
 
         foreach ($items as $item) {
+            // Un libellé fait seulement d'espaces compte comme vide.
+            $title = trim($item->label ?? '') ?: $item->quayName;
             // Un passage tout juste dépassé n'est plus à annoncer.
             $passages = array_values(array_map(
                 static fn (NextPassage $passage): ScreenPassage => self::screenPassage($passage, $now),
@@ -42,14 +45,14 @@ final readonly class ScreenPaginator
 
             if ([] === $passages) {
                 if (!$item->quayDeprecated) {
-                    $screens[] = new Screen($item->quayName, []);
+                    $screens[] = new Screen($title, []);
                 }
 
                 continue;
             }
 
             foreach (array_chunk($passages, self::PASSAGES_PER_SCREEN) as $page) {
-                $screens[] = new Screen($item->quayName, $page);
+                $screens[] = new Screen($title, $page);
             }
         }
 
