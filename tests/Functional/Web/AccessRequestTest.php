@@ -26,7 +26,7 @@ final class AccessRequestTest extends WebTestCase
 {
     use WebTestTrait;
 
-    private const string CONFIRMATION = 'Demande reçue, vous serez contacté par mail.';
+    private const string CONFIRMATION = 'Demande reçue. Si elle est retenue, vous recevrez une invitation par mail.';
 
     private KernelBrowser $client;
 
