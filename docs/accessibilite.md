@@ -14,6 +14,8 @@ Revue au regard du [WCAG 2.2](https://www.w3.org/TR/WCAG22/), niveau AA. Le RGAA
 | Communs | layouts, composants, thème de formulaire | `base.html.twig`, `layout/`, `components/`, `form/tailwind_layout.html.twig`, `assets/styles/app.css` |
 | Écran | page d'affichage, écran d'appairage | `display/`, `assets/styles/display.css` |
 
+Pas encore revues : demande d'accès (`access_request/`), pages légales et sources des données (`legal/`), changement d'email (`account/change_email.html.twig`, `email_change/`), appairage par QR code (`device/pair_scanned.html.twig`) et écran de la vitrine (`showcase/`). `AccessibilityTest` couvre déjà le HTML de la demande d'accès et de l'appairage par QR code.
+
 La page d'affichage n'est revue que pour les contrastes et la lisibilité, puisqu'elle n'est pas interactive : voir « Page d'affichage » plus bas. Les emails (`templates/email/`) sont hors périmètre.
 
 ## Méthode
