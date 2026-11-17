@@ -1,0 +1,184 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Vérifie que les références de la documentation existent : cibles `make`,
+// chemins et classes entre backticks, liens relatifs. Il ne compare pas les
+// valeurs (durées, limites) au code : c'est l'affaire de la relecture
+// (CODING_STANDARDS.md). bin/check l'appelle. Il lit les fichiers que liste git
+// (suivis, ou nouveaux et non ignorés), pour donner le même résultat en local
+// et en CI. Règles : docs/developpement.md, « Qualité de code ».
+//
+// Entrée : le dossier du dépôt en argument, celui du script par défaut. Aucun
+// accès réseau.
+// Sortie : 0 si toutes les références existent, 1 avec une ligne
+// `fichier:ligne: référence : problème` par référence cassée, 2 si git ou le
+// Makefile manque.
+
+// Références voulues qui ne nomment rien du dépôt, avec leur raison.
+const EXCEPTIONS = [
+    'AbstractController' => 'classe de Symfony',
+    'theme.css' => 'fichier de Tailwind, hors du dépôt',
+    '.deploy.lock' => 'verrou du déploiement, sur le serveur',
+];
+
+// Un nom de fichier seul, par son extension : `ci.yml` en est un, pas
+// `localhost.piege.example` ni `api.github.com`.
+const FILE_NAME = '/^[\w.-]+\.(php|ya?ml|json|neon|md|twig|js|css|ini|xml|lock|txt|sh|conf|dist|html|py|mts)$/';
+
+// Un nom court de classe du projet, par son suffixe : `WebTestTrait`,
+// `ScreenContactListener`. Les autres (`Device`, `Request`) ne se distinguent
+// pas d'un mot ou d'une classe du framework.
+const CLASS_NAME = '/^[A-Z][A-Za-z0-9]*(Test|Trait|Mock|Listener|Subscriber|Handler|Controller|Command|Voter|Extractor|Verifier|Refresher|Processor|Formatter|Scrubber|Purger|Repository|Type)$/';
+
+/**
+ * Le chemin depuis la racine du dépôt, sans `.` ni `..`, ou null s'il en sort.
+ */
+function normalize(string $path): ?string
+{
+    $segments = [];
+    foreach (explode('/', $path) as $segment) {
+        if ('..' === $segment) {
+            if ([] === $segments) {
+                return null;
+            }
+            array_pop($segments);
+        } elseif ('' !== $segment && '.' !== $segment) {
+            $segments[] = $segment;
+        }
+    }
+
+    return implode('/', $segments);
+}
+
+$root = rtrim($argv[1] ?? dirname(__DIR__), '/');
+
+exec('git -C '.escapeshellarg($root).' ls-files --cached --others --exclude-standard', $files, $status);
+if (0 !== $status) {
+    fwrite(\STDERR, "git ls-files a échoué dans $root\n");
+    exit(2);
+}
+
+$documents = array_filter($files, static fn (string $file): bool => in_array($file, ['README.md', 'SECURITY.md', 'CODING_STANDARDS.md'], true)
+    || (str_starts_with($file, 'docs/') && str_ends_with($file, '.md')));
+
+if (!is_file($root.'/Makefile')) {
+    fwrite(\STDERR, "Makefile absent de $root\n");
+    exit(2);
+}
+// Les cibles de chaque règle (`up start:`), pas les variables (`FOO := …`).
+preg_match_all('/^([A-Za-z0-9_.\/ -]+):(?!=)/m', (string) file_get_contents($root.'/Makefile'), $matches);
+$targets = preg_split('/\s+/', implode(' ', $matches[1]), -1, \PREG_SPLIT_NO_EMPTY) ?: [];
+
+// Chaque dossier du dépôt, pour un chemin qui en nomme un (`src/Display/`).
+$directories = [];
+foreach ($files as $file) {
+    for ($directory = dirname($file); '.' !== $directory; $directory = dirname($directory)) {
+        $directories[$directory] = true;
+    }
+}
+$topDirectories = array_filter(array_keys($directories), static fn (string $directory): bool => !str_contains($directory, '/'));
+$existing = array_fill_keys($files, true) + $directories;
+$basenames = array_fill_keys(array_map(basename(...), $files), true);
+
+// Les classes, traits, interfaces et enums déclarés dans src/ et tests/.
+$classes = [];
+foreach ($files as $file) {
+    if (1 === preg_match('#^(src|tests)/.*\.php$#', $file)) {
+        preg_match_all('/^(?:(?:final|abstract|readonly)\s+)*(?:class|trait|interface|enum)\s+(\w+)/m', (string) file_get_contents($root.'/'.$file), $matches);
+        $classes += array_fill_keys($matches[1], true);
+    }
+}
+
+$errors = [];
+$report = static function (string $document, int $index, string $reference, string $problem) use (&$errors): void {
+    if (!isset(EXCEPTIONS[$reference])) {
+        $errors[] = sprintf('%s:%d: %s : %s', $document, $index + 1, $reference, $problem);
+    }
+};
+foreach ($documents as $document) {
+    $fence = null;
+    foreach (file($root.'/'.$document, \FILE_IGNORE_NEW_LINES) ?: [] as $index => $line) {
+        // Le code d'une ligne : tout un bloc délimité, ou ses spans `…`. La prose
+        // n'est pas lue : « make sure » n'y est pas une commande.
+        // Un bloc se ferme sur une clôture du même caractère, au moins aussi
+        // longue et sans texte : un bloc ```sh dans un bloc ````md reste du code.
+        if (1 === preg_match('/^\s*(`{3,}|~{3,})(.*)$/', $line, $matches)) {
+            if (null === $fence) {
+                $fence = $matches[1];
+                continue;
+            }
+            if ($matches[1][0] === $fence[0] && strlen($matches[1]) >= strlen($fence) && '' === trim($matches[2])) {
+                $fence = null;
+                continue;
+            }
+        }
+        if (null !== $fence) {
+            $code = [$line];
+            $spans = [];
+        } else {
+            preg_match_all('/`([^`]+)`/', $line, $matches);
+            $code = $spans = $matches[1];
+
+            // Les liens relatifs de la prose : leur cible, depuis le dossier du
+            // document. Une URL (`https:`, `mailto:`) ou une ancre seule n'en est pas un.
+            preg_match_all('/\[[^\]]*\]\((<[^>]+>|[^)\s]+)/', (string) preg_replace('/`[^`]+`/', '', $line), $matches);
+            foreach (array_map(static fn (string $link): string => trim($link, '<>'), $matches[1]) as $link) {
+                if (1 === preg_match('/^([a-z][a-z0-9+.-]*:|#)/i', $link)) {
+                    continue;
+                }
+                $target = normalize(dirname($document).'/'.explode('#', $link)[0]);
+                if (null === $target || !isset($existing[$target])) {
+                    $report($document, $index, $link, 'lien vers un fichier absent');
+                }
+            }
+        }
+
+        foreach ($spans as $span) {
+            // Un gabarit (`<nom>`, `{A,B}`, `*`, `…`, `X.Y.Z`, `AAAA-MM-JJ`) ne
+            // nomme aucun fichier précis, `var/` est propre à chaque machine, un
+            // chemin absolu (`/config/caddy`, `~/.ssh`) est celui d'un conteneur
+            // ou du serveur.
+            if (1 === preg_match('/[\s<{*]|…|X\.Y\.Z|AAAA|^(var\/|\/|~)/u', $span)) {
+                continue;
+            }
+            // Sans sa ligne (`:12`) ni son ancre (`#section`).
+            $path = normalize(preg_replace('/(:\d+)+$|#.*$/', '', $span) ?? $span) ?? $span;
+            $class = preg_replace('/::.*$/', '', $span) ?? $span;
+            if (1 === preg_match('/^App(\\\\Tests)?((?:\\\\\w+)+)$/', $class, $parts)) {
+                // Un nom complet, ou un namespace : son fichier ou son dossier,
+                // d'après l'autoload PSR-4 (App\Tests\ dans tests/, App\ dans src/).
+                $file = ('' === $parts[1] ? 'src' : 'tests').str_replace('\\', '/', $parts[2]);
+                if (!isset($existing[$file.'.php']) && !isset($directories[$file])) {
+                    $report($document, $index, $class, 'classe absente de src/ et tests/');
+                }
+            } elseif (1 === preg_match(CLASS_NAME, $class)) {
+                if (!isset($classes[$class])) {
+                    $report($document, $index, $class, 'classe absente de src/ et tests/');
+                }
+            } elseif (str_contains($path, '/')) {
+                // Un chemin depuis la racine, s'il part d'un dossier du dépôt.
+                if (in_array(explode('/', $path)[0], $topDirectories, true) && !isset($existing[$path])) {
+                    $report($document, $index, $span, 'chemin absent du dépôt');
+                }
+            } elseif (1 === preg_match(FILE_NAME, $path) && !isset($basenames[$path])) {
+                // Un nom de fichier seul (`ci.yml`) : un fichier du dépôt le porte.
+                $report($document, $index, $span, 'aucun fichier du dépôt ne porte ce nom');
+            }
+        }
+
+        preg_match_all('/(?:^|[\s;&|(])make ([a-z][a-z0-9-]*)/', implode("\n", $code), $matches);
+        foreach ($matches[1] as $target) {
+            if (!in_array($target, $targets, true)) {
+                $report($document, $index, 'make '.$target, 'cible absente du Makefile');
+            }
+        }
+    }
+}
+
+foreach ($errors as $error) {
+    echo $error, "\n";
+}
+
+exit([] === $errors ? 0 : 1);
