@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 const INTERVAL = 3000;
@@ -9,7 +10,9 @@ export default class extends Controller {
     static targets = ['item', 'caption'];
 
     connect() {
-        this.index = 0;
+        // Page restaurée du cache de Turbo : elle peut montrer un autre appareil.
+        this.index = -1;
+        this.#next();
         this.timer = setInterval(() => this.#next(), INTERVAL);
     }
 

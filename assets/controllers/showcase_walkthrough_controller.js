@@ -1,3 +1,4 @@
+/* stimulusFetch: 'lazy' */
 import { Controller } from '@hotwired/stimulus';
 
 const PRESS_MS = 180;
@@ -69,6 +70,8 @@ export default class extends Controller {
     connect() {
         this.steps = steps(this.addressTarget.textContent.trim());
         this.run = 0;
+        this.glowing = null;
+        this.following = false;
         this.sentScreen = null;
         this.frame = this.screenTarget.querySelector('iframe');
         // Écran pas encore chargé, ou rechargé : il reçoit l'état courant.
@@ -167,11 +170,21 @@ export default class extends Controller {
         this.element.querySelectorAll('[data-when]').forEach((element) => element.classList.toggle('is-on', state.on.has(element.dataset.when)));
         this.element.querySelectorAll('[data-unless]').forEach((element) => element.classList.toggle('is-off', state.on.has(element.dataset.unless)));
 
+        // Le focus clavier suit le bouton qui brille ; entre deux, il attend sur le parcours (tabindex="-1"),
+        // la page du bouton cliqué venant peut-être d'être cachée.
+        const follow = Boolean(this.glowing?.contains(document.activeElement)) || (this.following && document.activeElement === this.element);
+
         this.glowing?.classList.remove('showcase-glow', 'showcase-press');
         this.glowing?.setAttribute('tabindex', '-1');
         this.glowing = go ? this.element.querySelector(`[data-path="${state.page}"] [data-go="${go}"]`) : null;
         this.glowing?.classList.add('showcase-glow');
         this.glowing?.setAttribute('tabindex', '0');
+
+        this.following = follow;
+
+        if (follow) {
+            (this.glowing ?? this.element).focus({ preventScroll: true });
+        }
 
         this.#send(false);
     }
@@ -180,6 +193,12 @@ export default class extends Controller {
         this.stepTargets.forEach((step, position) => {
             step.classList.toggle('is-on', position === index);
             step.classList.toggle('is-done', position < index);
+
+            if (position === index) {
+                step.setAttribute('aria-current', 'step');
+            } else {
+                step.removeAttribute('aria-current');
+            }
         });
         this.captionTarget.textContent = caption;
     }

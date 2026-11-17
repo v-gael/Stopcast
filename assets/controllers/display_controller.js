@@ -24,7 +24,7 @@ const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
  *
  * Écran de la vitrine (templates/showcase/screen.html.twig) : « now » fige
  * l'heure (en secondes), sans « url » rien n'est relu, et sans « rotation »
- * l'écran reste sur le premier jusqu'à play(). Chaque écran montré est annoncé
+ * l'écran reste sur le premier jusqu'à play(), et stop() l'y arrête. Chaque écran montré est annoncé
  * par l'évènement « display:shown ».
  */
 export default class extends Controller {
@@ -50,12 +50,16 @@ export default class extends Controller {
     }
 
     /*
-     * Rotation lancée depuis le premier écran, sur commande (vitrine).
+     * Rotation lancée depuis le premier écran, ou arrêtée, sur commande (vitrine).
      */
     play() {
         this.index = 0;
         this.#show();
         this.#scheduleRotation();
+    }
+
+    stop() {
+        clearTimeout(this.rotationTimer);
     }
 
     disconnect() {

@@ -45,8 +45,13 @@ export default class extends Controller {
             this.#countDown();
         }
 
+        // Rotation lancée avec les écrans, arrêtée quand ils sont cachés (« Recommencer »).
+        const display = this.application.getControllerForElementAndIdentifier(this.#panel('display'), 'display');
+
         if (data.screen === 'display') {
-            this.application.getControllerForElementAndIdentifier(this.#panel('display'), 'display')?.play();
+            display?.play();
+        } else {
+            display?.stop();
         }
     }
 

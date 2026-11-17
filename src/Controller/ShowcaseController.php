@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Display\Pairing\QrCodeSvg;
+use App\Display\Pairing\ScreenPairing;
 use App\Display\ShowcaseScreens;
 use App\Enum\ShowcaseScreenMode;
 use App\EventListener\SameOriginFramingListener;
@@ -44,7 +45,7 @@ final class ShowcaseController extends AbstractController
             // Pour _screens.html.twig : durée d'un écran ; l'écran de la vitrine ne relit rien.
             'device' => ['screenDuration' => 4, 'refreshInterval' => 0],
             'code' => self::PAIRING_CODE,
-            'remaining_seconds' => 60,
+            'remaining_seconds' => ScreenPairing::CODE_DISPLAY_SECONDS,
             'pairing_url' => $homeUrl,
             'qr_code' => $this->qrCodeSvg->render($homeUrl),
             'host' => $request->getHttpHost(),

@@ -208,6 +208,12 @@
         animation: showcase-glow 1.1s ease-in-out infinite;
     }
 
+    /* Au clavier, contour du focus de tout le site (amber-700, 5:1 sur blanc), sans pulsation. */
+    .showcase-glow:focus-visible {
+        outline-color: var(--color-amber-700);
+        animation: none;
+    }
+
     .showcase-glow::after {
         content: "👆";
         position: absolute;
