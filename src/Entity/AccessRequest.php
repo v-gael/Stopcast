@@ -50,7 +50,7 @@ class AccessRequest
     public function __construct(string $email, ?string $message, \DateTimeImmutable $requestedAt)
     {
         $this->email = EmailNormalizer::normalize($email);
-        $this->message = $message;
+        $this->message = $this->normalizeMessage($message);
         $this->requestedAt = $requestedAt;
     }
 
@@ -59,8 +59,18 @@ class AccessRequest
      */
     public function renew(?string $message, \DateTimeImmutable $requestedAt): void
     {
-        $this->message = $message;
+        $this->message = $this->normalizeMessage($message);
         $this->requestedAt = $requestedAt;
+    }
+
+    /**
+     * Sans espaces autour ; un message vide n'en est pas un.
+     */
+    private function normalizeMessage(?string $message): ?string
+    {
+        $message = trim($message ?? '');
+
+        return '' === $message ? null : $message;
     }
 
     public function getId(): ?int

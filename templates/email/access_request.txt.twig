@@ -11,5 +11,5 @@ Bonjour,
 
 Voir les demandes : {{ url('app_admin_user_index') }}
 
-Sans suite, la demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après son envoi.
+Sans suite, la demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après la dernière demande.
 {% endblock %}

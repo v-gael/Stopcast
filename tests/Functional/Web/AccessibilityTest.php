@@ -65,7 +65,7 @@ final class AccessibilityTest extends WebTestCase
     public function testPublicPagesHaveOneMainHeadingAndNoSkippedLevel(): void
     {
         $this->assertHeadingOutline('/');
-        $this->assertHeadingOutline('/access-request');
+        $this->assertHeadingOutline('/demande-acces');
         $this->assertHeadingOutline('/reset-password');
 
         $this->submitWithTurnstile($this->client->getCrawler()->selectButton('Envoyer le lien')->form([
@@ -111,7 +111,7 @@ final class AccessibilityTest extends WebTestCase
     {
         yield 'connexion' => ['/'];
         yield 'mot de passe oublié' => ['/reset-password'];
-        yield "demande d'accès" => ['/access-request'];
+        yield "demande d'accès" => ['/demande-acces'];
         yield 'ajout de dispositif' => ['/devices/new'];
         yield 'modification de dispositif' => ['/devices/%device%/edit'];
         yield 'appairage par QR code' => ['/devices/pair?code=K7F3QX'];
@@ -127,7 +127,7 @@ final class AccessibilityTest extends WebTestCase
     {
         $device = DeviceFactory::createOne(['owner' => $this->admin]);
         $user = UserFactory::createOne();
-        if (!\in_array($path, ['/', '/reset-password', '/access-request'], true)) {
+        if (!\in_array($path, ['/', '/reset-password', '/demande-acces'], true)) {
             $this->client->loginUser($this->admin);
         }
 

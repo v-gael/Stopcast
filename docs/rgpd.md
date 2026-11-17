@@ -3,7 +3,7 @@
 Registre minimal des traitements de données personnelles de Stopcast. Il est la source de la [politique de confidentialité](../templates/legal/privacy.html.twig) publiée sur `/confidentialite` : toute modification ici se reporte sur la page, et inversement.
 
 - **Responsable du traitement** : `v-gael`, particulier, joignable à `contact@gaelv.com`.
-- **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris) les visiteurs des pages publiques, et ceux qui demandent un accès.
+- **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris), les visiteurs des pages publiques et ceux qui demandent un accès.
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 

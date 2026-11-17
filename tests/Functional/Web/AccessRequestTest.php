@@ -13,6 +13,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 /**
@@ -53,13 +54,20 @@ final class AccessRequestTest extends WebTestCase
     {
         $this->requestAccess(' Paul@Example.com ', 'Recommandé par Léa.');
 
-        self::assertResponseRedirects('/access-request/sent');
-        self::assertQueuedEmailCount(1);
-        $email = $this->lastEmail();
-        self::assertSame(['admin@stopcast.test', 'autre-admin@stopcast.test'], array_map(static fn (Address $address): string => $address->getAddress(), $email->getTo()));
-        self::assertEmailTextBodyContains($email, 'paul@example.com');
-        self::assertEmailTextBodyContains($email, 'Recommandé par Léa.');
-        self::assertEmailTextBodyContains($email, 'http://localhost/admin/users');
+        self::assertResponseRedirects('/demande-acces/envoyee');
+        // Un mail par administrateur activé : aucun ne voit l'adresse des autres.
+        self::assertQueuedEmailCount(2);
+        $emails = self::getMailerMessages();
+        self::assertSame([['admin@stopcast.test'], ['autre-admin@stopcast.test']], array_map(
+            static fn ($email): array => $email instanceof Email ? array_map(static fn (Address $address): string => $address->getAddress(), $email->getTo()) : [],
+            $emails,
+        ));
+        foreach ($emails as $email) {
+            self::assertEmailTextBodyContains($email, 'paul@example.com');
+            self::assertEmailTextBodyContains($email, 'Recommandé par Léa.');
+            self::assertEmailTextBodyContains($email, 'http://localhost/admin/users');
+            self::assertEmailHtmlBodyContains($email, '>http://localhost/admin/users</p>');
+        }
 
         $this->client->followRedirect();
         self::assertSelectorTextContains('main', self::CONFIRMATION);
@@ -78,8 +86,8 @@ final class AccessRequestTest extends WebTestCase
     {
         $this->requestAccess('paul@example.com');
 
-        self::assertResponseRedirects('/access-request/sent');
-        self::assertQueuedEmailCount(1);
+        self::assertResponseRedirects('/demande-acces/envoyee');
+        self::assertQueuedEmailCount(2);
         self::assertSame([['paul@example.com', '—', date('d/m/Y')]], $this->accessRequestRows($this->requestsAsAdmin()));
     }
 
@@ -125,7 +133,7 @@ final class AccessRequestTest extends WebTestCase
 
         $this->requestAccess('LEA@example.com', 'Je veux un deuxième compte.');
 
-        self::assertResponseRedirects('/access-request/sent');
+        self::assertResponseRedirects('/demande-acces/envoyee');
         self::assertQueuedEmailCount(0);
         $this->client->followRedirect();
         self::assertSame($unknownAccountPage, $this->client->getCrawler()->filter('main')->text());
@@ -137,8 +145,8 @@ final class AccessRequestTest extends WebTestCase
         $this->requestAccess('paul@example.com', 'Premier message.');
         $this->requestAccess('paul@example.com');
 
-        self::assertResponseRedirects('/access-request/sent');
-        self::assertQueuedEmailCount(1);
+        self::assertResponseRedirects('/demande-acces/envoyee');
+        self::assertQueuedEmailCount(2);
         self::assertSame([['paul@example.com', '—', date('d/m/Y')]], $this->accessRequestRows($this->requestsAsAdmin()));
     }
 

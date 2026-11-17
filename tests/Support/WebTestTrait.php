@@ -62,7 +62,7 @@ trait WebTestTrait
      */
     private function requestAccess(string $email, string $message = '', string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
     {
-        $crawler = $this->browser()->request('GET', '/access-request');
+        $crawler = $this->browser()->request('GET', '/demande-acces');
         self::assertResponseIsSuccessful();
 
         $this->submitWithTurnstile($crawler->selectButton('Envoyer la demande')->form([

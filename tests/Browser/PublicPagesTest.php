@@ -30,7 +30,7 @@ final class PublicPagesTest extends PantherTestCase
     public static function pages(): iterable
     {
         yield 'mot de passe oublié' => ['/reset-password'];
-        yield "demande d'accès" => ['/access-request'];
+        yield "demande d'accès" => ['/demande-acces'];
         yield 'mentions légales' => ['/mentions-legales'];
         yield "conditions d'utilisation" => ['/conditions-utilisation'];
         yield 'confidentialité' => ['/confidentialite'];

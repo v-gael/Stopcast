@@ -12,7 +12,7 @@
                 <twig:Turnstile />
 
                 <p class="mb-6 text-sm text-slate-500">
-                    Votre demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après son envoi si elle reste sans suite.
+                    Sans suite, votre demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après la dernière demande.
                     Voir la <a href="{{ path('app_legal_privacy') }}" class="font-medium text-amber-700 underline hover:text-amber-800">politique de confidentialité</a>.
                 </p>
 

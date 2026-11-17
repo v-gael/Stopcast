@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Account\AccessRequester;
 use App\Account\AccountDeleter;
 use App\Account\UserInviter;
 use App\Entity\AccessRequest;
@@ -56,26 +57,17 @@ final class UserController extends AbstractController
         ]);
     }
 
-    /**
-     * Invite, avec le rôle Utilisateur, l'adresse d'une demande d'accès ;
-     * l'invitation supprime la demande.
-     */
     #[Route('/access-requests/{id}/invite', name: 'app_admin_access_request_invite', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid(new Expression('"invite-access-request-" ~ args["accessRequest"].getId()'))]
-    public function inviteAccessRequest(AccessRequest $accessRequest, UserRepository $userRepository, UserInviter $userInviter, EntityManagerInterface $entityManager): Response
+    public function inviteAccessRequest(AccessRequest $accessRequest, AccessRequester $accessRequester): Response
     {
         $email = $accessRequest->getEmail();
 
-        // Compte créé depuis la demande, par exemple par un changement d'email.
-        if ($userRepository->loadUserByIdentifier($email) instanceof User) {
-            $entityManager->remove($accessRequest);
-            $entityManager->flush();
+        if (!$accessRequester->invite($accessRequest)) {
             $this->addFlash('error', \sprintf('Un compte existe déjà pour %s : la demande est supprimée.', $email));
 
             return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
         }
-
-        $userInviter->invite(new User($email));
 
         $this->addFlash('success', \sprintf('Invitation envoyée à %s.', $email));
         $this->addInvitationReminderFlash();

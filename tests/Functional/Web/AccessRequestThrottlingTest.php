@@ -39,7 +39,7 @@ final class AccessRequestThrottlingTest extends WebTestCase
     public function testSixthRequestFromTheSameIpIsRefused(): void
     {
         $this->requestAccess('lea@example.com');
-        self::assertResponseRedirects('/access-request/sent');
+        self::assertResponseRedirects('/demande-acces/envoyee');
         $this->exhaustTheLimit(4);
 
         $this->requestAccess('paul@example.com');
@@ -60,7 +60,7 @@ final class AccessRequestThrottlingTest extends WebTestCase
 
         $this->requestAccess('paul@example.com');
 
-        self::assertResponseRedirects('/access-request/sent');
+        self::assertResponseRedirects('/demande-acces/envoyee');
         self::assertQueuedEmailCount(1);
     }
 
@@ -71,7 +71,7 @@ final class AccessRequestThrottlingTest extends WebTestCase
         $this->client->setServerParameter('REMOTE_ADDR', '203.0.113.7');
         $this->requestAccess('paul@example.com');
 
-        self::assertResponseRedirects('/access-request/sent');
+        self::assertResponseRedirects('/demande-acces/envoyee');
         self::assertQueuedEmailCount(1);
     }
 
@@ -79,7 +79,7 @@ final class AccessRequestThrottlingTest extends WebTestCase
     {
         for ($i = 1; $i <= $requests; ++$i) {
             $this->requestAccess(\sprintf('inconnu%d@example.com', $i));
-            self::assertResponseRedirects('/access-request/sent');
+            self::assertResponseRedirects('/demande-acces/envoyee');
         }
     }
 

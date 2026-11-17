@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Demande d'accès d'un visiteur, depuis la vitrine. Page publique.
  */
-#[Route('/access-request')]
+#[Route('/demande-acces')]
 final class AccessRequestController extends AbstractController
 {
     #[Route('', name: 'app_access_request', methods: ['GET', 'POST'])]
@@ -51,7 +51,7 @@ final class AccessRequestController extends AbstractController
     /**
      * Même page que l'adresse ait un compte ou non.
      */
-    #[Route('/sent', name: 'app_access_request_sent', methods: ['GET'])]
+    #[Route('/envoyee', name: 'app_access_request_sent', methods: ['GET'])]
     public function sent(): Response
     {
         return $this->render('access_request/sent.html.twig');
