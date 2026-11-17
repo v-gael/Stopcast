@@ -76,8 +76,7 @@ final readonly class DisplayAssembler
     private static function item(DisplayConfiguration $configuration, array $nextPassages): DisplayItem
     {
         return new DisplayItem(
-            label: $configuration->getLabel(),
-            quayName: $configuration->getQuay()->getName(),
+            displayName: $configuration->getDisplayName(),
             nextPassages: $nextPassages,
             quayDeprecated: !$configuration->getQuay()->isActive(),
         );

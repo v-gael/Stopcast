@@ -48,14 +48,15 @@ final class DisplayPreviewTest extends WebTestCase
     {
         $this->configure('Gare', 'GARE ROUTIERE', position: 1);
         $this->configure('Masquée', 'MAIRIE', position: 0, active: false);
-        $this->configure('Centre', 'CENTRE VILLE', position: 2);
+        $this->configure(null, 'CENTRE VILLE', position: 2);
 
         $crawler = $this->client->request('GET', $this->devicePreview());
 
         self::assertResponseIsSuccessful();
         // Page autonome : ni navigation ni pied de page de l'espace web.
         self::assertSelectorNotExists('header, nav, footer');
-        self::assertSame(['GARE ROUTIERE', 'CENTRE VILLE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        // Chaque écran porte le libellé de son quai, ou à défaut le nom du quai.
+        self::assertSame(['Gare', 'CENTRE VILLE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
         // Un seul écran visible à la fois, le premier de la rotation.
         self::assertSame([null, ''], $crawler->filter('.screen')->each(static fn (Crawler $screen): ?string => $screen->attr('hidden')));
         self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.screen')->first()->filter('.passage'));
@@ -98,7 +99,7 @@ final class DisplayPreviewTest extends WebTestCase
 
         $crawler = $this->client->request('GET', $this->devicePreview());
 
-        self::assertSame(['GARE ROUTIERE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        self::assertSame(['Gare'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
     }
 
     public function testDevicePreviewWithOnlyDeprecatedQuaysShowsItsStateScreen(): void
@@ -116,7 +117,7 @@ final class DisplayPreviewTest extends WebTestCase
 
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/preview', $configuration->getId()));
 
-        self::assertSame(['VIEUX QUAI'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        self::assertSame(['Disparu'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
         self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
     }
 
@@ -128,7 +129,7 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/preview', $hidden->getId()));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['MAIRIE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        self::assertSame(['Masquée'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
         self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
     }
 
@@ -210,7 +211,7 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', $this->liveDevicePreview());
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['GARE ROUTIERE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
+        self::assertSame(['Gare'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
         // Les deux passages du flux simulé (RealtimeFeedMock), pas ceux d'exemple.
         self::assertSame(['L4', 'L4'], $crawler->filter('.passage__route')->each(static fn (Crawler $route): string => $route->text()));
         self::assertSame(['3 min', '12 min'], $crawler->filter('.passage__minutes')->each(static fn (Crawler $minutes): string => $minutes->text()));

@@ -91,7 +91,7 @@ final class DisplayConfigurationController extends AbstractController
         $entityManager->remove($configuration);
         $entityManager->flush();
 
-        $this->addFlash('success', \sprintf('Le quai « %s » a été supprimé.', $configuration->getLabel() ?: $configuration->getQuay()->getName()));
+        $this->addFlash('success', \sprintf('Le quai « %s » a été supprimé.', $configuration->getDisplayName()));
 
         return $this->redirectToDevice($configuration);
     }
