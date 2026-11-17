@@ -36,7 +36,7 @@ La page d'affichage n'est revue que pour les contrastes et la lisibilité, puisq
 - **Glisser-déposer des quais** : le réordonnancement par glisser (critère 2.5.7) garde une alternative sans glisser et au clavier (2.1.1) : les flèches « Monter » et « Descendre », masquées à la souris et au doigt, reviennent quand leur ligne a le focus clavier.
 - **Cibles de 24 px** : liens de la navigation de l'espace et actions du tableau des utilisateurs portés à 24 px de haut.
 
-Déjà conformes, sans changement : `lang="fr"`, titres de page distincts, landmarks (`header`, `nav` nommée, `main`, `footer`), `aria-current` dans la navigation, flashs en `role="status"` (succès) ou `role="alert"` (erreur, avertissement), encadré d'erreurs globales en `role="alert"`, en-têtes de tableau `scope="col"` (colonne d'actions nommée en texte masqué), icônes et émoji en `aria-hidden`, images d'accueil avec un `alt`, `autocomplete` sur les champs d'email et de mot de passe de l'utilisateur, bouton de fermeture des toasts de 24 px, flèches de rotation de 28 px.
+Déjà conformes, sans changement : `lang="fr"`, titres de page distincts, landmarks (`header`, `nav` nommée, `main`, `footer`), `aria-current` dans la navigation, flashs en `role="status"` (succès) ou `role="alert"` (erreur, avertissement), encadré d'erreurs globales en `role="alert"`, en-têtes de tableau `scope="col"` (colonne d'actions nommée en texte masqué), icônes et émoji en `aria-hidden`, `autocomplete` sur les champs d'email et de mot de passe de l'utilisateur, bouton de fermeture des toasts de 24 px, flèches de rotation de 28 px.
 
 ## Écarts restants
 
@@ -50,6 +50,8 @@ Déjà conformes, sans changement : `lang="fr"`, titres de page distincts, landm
 | Badges (anneaux de couleur claire) | 1.4.11 | Décoratifs : le texte du badge porte l'information et atteint 4,5:1. |
 | Cases à cocher de 16 px | 2.5.8 | Exception d'espacement : aucune autre cible dans un cercle de 24 px, et le libellé, cliquable, agrandit la zone. |
 | Texte grisé des champs désactivés (slate-500 sur slate-100, 4,35:1) | 1.4.3 | Exemption des composants inactifs. |
+| Vitrine : écrans d'exemple, appareils et barre de progression qui changent seuls, sans bouton de pause | 2.2.2 | Décoratifs : les écrans d'exemple (iframes en `aria-hidden`, résumés en texte) n'apportent rien que le texte de la page ne dise ; « Réduire les animations » coupe les transitions, pas la rotation. |
+| Vitrine : parcours « Comment ça marche » | 2.4.3, 4.1.2 | Seul le bouton qui brille est atteignable au clavier (`tabindex` passé à 0), le focus le suit d'un temps à l'autre et l'étape courante porte `aria-current="step"` ; les autres boutons de la maquette restent hors de l'ordre de tabulation. À vérifier au lecteur d'écran. |
 | Badge « Quai disparu » de la page de modification d'un quai | 4.1.2 | L'explication est dans le `title` et en texte masqué : certains lecteurs d'écran pourraient la lire deux fois. |
 
 ## Contrastes calculés

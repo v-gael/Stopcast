@@ -1,0 +1,39 @@
+{#
+ # Écran de la vitrine, autonome comme la page d'affichage : les écrans du jeu
+ # de démo (display/_screens.html.twig), figés à l'heure du relevé. Le
+ # contrôleur « showcase-screen » passe d'un état à l'autre sur commande de la
+ # page d'accueil (parcours « Comment ça marche ») : écran allumé, adresse en
+ # cours de saisie, écran d'appairage (display/_pairing.html.twig), écrans.
+ #}
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noindex">
+        <title>Écran d'exemple · Stopcast</title>
+        <link rel="stylesheet" href="{{ asset('styles/display.css') }}">
+        <link rel="stylesheet" href="{{ asset('styles/showcase_screen.css') }}">
+        {{ importmap('showcase_screen', {nonce: csp_nonce('script')}) }}
+    </head>
+    {% set driven = mode is same as enum('App\\Enum\\ShowcaseScreenMode').Driven %}
+    <body class="display" data-controller="showcase-screen">
+        <div class="showcase-panel" data-panel="idle" data-showcase-screen-target="panel"{% if not driven %} hidden{% endif %}>
+            <p class="showcase-boot__hint">Écran allumé</p>
+        </div>
+        <div class="showcase-panel" data-panel="url" data-showcase-screen-target="panel" hidden>
+            <p class="showcase-boot__bar" data-showcase-screen-target="url"></p>
+        </div>
+        <div class="showcase-panel" data-panel="pairing" data-showcase-screen-target="panel" hidden>
+            {{ include('display/_pairing.html.twig') }}
+        </div>
+        <div class="showcase-panel" data-panel="display" data-showcase-screen-target="panel"
+             data-controller="display"
+             data-display-time-zone-value="{{ 'now'|date('e') }}"
+             data-display-now-value="{{ now.timestamp }}"
+             data-display-rotation-value="{{ mode.rotates ? 'true' : 'false' }}"
+             {%- if driven %} hidden{% endif %}>
+            {{ include('display/_screens.html.twig') }}
+        </div>
+    </body>
+</html>

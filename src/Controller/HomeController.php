@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Display\Pairing\QrCodeSvg;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
 
@@ -20,7 +22,7 @@ final class HomeController extends AbstractController
     private const string OPENED_FOR_TARGET_PATH = 'login_panel_opened_for';
 
     #[Route('/', name: 'app_home', methods: ['GET'])]
-    public function __invoke(Request $request, AuthenticationUtils $authenticationUtils): Response
+    public function __invoke(Request $request, AuthenticationUtils $authenticationUtils, QrCodeSvg $qrCodeSvg): Response
     {
         // L'échec d'une connexion est rangé en session : un simple visiteur n'en a pas, ne pas en ouvrir une.
         $hasSession = $request->hasPreviousSession();
@@ -32,6 +34,8 @@ final class HomeController extends AbstractController
         return $this->render('home/index.html.twig', [
             'login_username' => $hasSession ? $authenticationUtils->getLastUsername() : '',
             'login_error' => $error,
+            // QR code de la page d'appairage du parcours « Comment ça marche » : le code est fictif, il mène à la vitrine.
+            'qr_code' => $qrCodeSvg->render($this->generateUrl('app_home', [], UrlGeneratorInterface::ABSOLUTE_URL)),
             'login_panel_open' => $error instanceof \Symfony\Component\Security\Core\Exception\AuthenticationException || ($hasSession && $this->isFirstVisitAfterARedirectToLogin($request->getSession())),
         ]);
     }

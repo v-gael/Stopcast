@@ -3,7 +3,8 @@
  # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
  # que la page relit. « state_message » remplace les écrans par un écran
  # d'état (dispositif désactivé, passages illisibles) ; « offline » en fait
- # l'écran « indisponible ».
+ # l'écran « indisponible ». « now » fixe l'heure affichée (écran figé de la
+ # vitrine).
  #
  # Chaque écran porte ses trois états : passages, « aucun passage » et
  # « indisponible ». Le contrôleur Stimulus retire les passages passés et
@@ -17,7 +18,7 @@
     <p>Horaires temps réel indisponibles</p>
 {% endset %}
 {% set clock %}
-    <span class="screen__clock" data-display-target="clock">{{ 'now'|date('H:i') }}</span>
+    <span class="screen__clock" data-display-target="clock">{{ (now ?? 'now')|date('H:i') }}</span>
 {% endset %}
 {% set columns %}
     <div class="screen__columns">
