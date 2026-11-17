@@ -1,5 +1,7 @@
 # Passages masqués au terminus de leur trajet
 
+Statut : accepté (complète l'[ADR 0001](0001-destination-par-trajet.md)).
+
 À un quai qui sert de terminus, le flux GTFS-RT annonce aussi les bus qui y **terminent** leur course. Un vrai afficheur ne les montre pas : on ne peut pas y monter pour aller quelque part, et leur destination serait le nom du quai lui-même.
 
 Nous enregistrons donc, pour chaque trajet (`Trip`), son terminus : le `stop_id` et le `stop_sequence` de son dernier arrêt, celui du plus grand `stop_sequence` dans `stop_times.txt`. Un terminus est un **passage**, pas seulement un quai : sur une ligne circulaire, le quai de départ est aussi le terminus, et seul le départ permet d'y monter. Un passage n'est donc pas affiché quand son quai et sa séquence (`stop_sequence` du StopTimeUpdate) sont ceux du terminus de son trajet ; le départ du même quai, en séquence 1, reste affiché.

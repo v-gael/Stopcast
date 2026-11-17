@@ -1,5 +1,7 @@
 # Captcha Cloudflare Turnstile sur la connexion et « mot de passe oublié »
 
+Statut : accepté. Étendu au formulaire de demande d'accès (`/demande-acces`), vérifié avec la validation du formulaire, avant la limite de débit, comme « mot de passe oublié ». Depuis que la connexion est un panneau de l'en-tête, le script est chargé à la première ouverture du panneau, sur toute page publique.
+
 La connexion et « mot de passe oublié » n'étaient protégées que par des limites de débit, par identifiant et adresse IP ou par adresse IP. Un robot qui change d'adresse peut tester des identifiants, ou déclencher des mails de réinitialisation à la chaîne.
 
 Nous ajoutons un **captcha Cloudflare Turnstile**, toujours affiché, sur ces deux formulaires seulement. L'acceptation d'une invitation n'en a pas : le jeton du lien la protège déjà. Le widget est en rendu explicite, piloté par un contrôleur Stimulus pour suivre les visites Turbo. Le script de Cloudflare n'est chargé que sur ces deux pages. Le serveur vérifie le jeton auprès de siteverify avec un service maison (`TurnstileVerifier`) :

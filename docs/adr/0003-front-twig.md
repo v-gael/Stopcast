@@ -1,5 +1,7 @@
 # Front d'administration en Twig, API Platform réservé au dispositif
 
+Statut : accepté ; sa partie « API Platform réservé au dispositif » est remplacée par l'[ADR 0008](0008-affichage-html-et-appairage.md), qui a retiré l'API, API Platform et le jeton du dispositif.
+
 L'administration passait par l'API (`/api/devices`, `/api/display_configurations`), protégée par une clé unique : gérer ses dispositifs demandait curl et cette clé. Le projet a besoin d'une interface web où plusieurs personnes gèrent chacune leurs propres dispositifs.
 
 Nous construisons ce front en **rendu serveur** : Twig, le composant Form et Turbo, stylé avec Tailwind (`symfonycasts/tailwind-bundle`, sans Node) et des Twig Components pour les éléments communs (bouton, carte, badge, message flash). Les écrans vivent dans la même application Symfony que l'API, derrière une connexion par formulaire et des sessions.

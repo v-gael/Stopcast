@@ -4,7 +4,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 
 - **Responsable du traitement** : `v-gael`, particulier, joignable à `contact@gaelv.com`.
 - **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris), les visiteurs des pages publiques et ceux qui demandent un accès.
-- **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
+- **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord (session, « se souvenir de moi », et sur un écran d'affichage le cookie de son appairage et celui de la demande d'appairage en cours, tous strictement nécessaires), il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
 Dernière mise à jour : 17 novembre 2026.
@@ -70,11 +70,11 @@ Dernière mise à jour : 17 novembre 2026.
 
 | | |
 |---|---|
-| Finalité | Protéger le service et les comptes : journaux du serveur, limites de débit (connexion, mot de passe oublié, mot de passe actuel, changement d'email), captcha, refus des mots de passe ayant fuité. |
+| Finalité | Protéger le service et les comptes : journaux du serveur, limites de débit (connexion, mot de passe oublié, mot de passe actuel, changement d'email, demande d'accès, appairage des écrans), captcha, refus des mots de passe ayant fuité. |
 | Données | Journaux : adresse IP tronquée, email masqué, requête (méthode, URL sans jeton de réinitialisation, d'invitation ni de changement d'email, statut) et erreur ; aucun en-tête HTTP. Limites de débit : identifiant saisi ou compte, adresse IP, compteurs. Captcha : adresse IP, empreinte TLS, user-agent, transmis à Cloudflare Turnstile. Mots de passe ayant fuité : seuls les 5 premiers caractères de l'empreinte SHA-1 du mot de passe sont envoyés à Have I Been Pwned. |
 | Personnes concernées | Utilisateurs et visiteurs. |
-| Base légale | Intérêt légitime (sécurité du service). Pas de consentement pour le captcha : la CNIL en dispense les traceurs destinés à la sécurité d'un mécanisme d'authentification, et Turnstile ne protège que la connexion et « mot de passe oublié », sans son cookie de pre-clearance ; Cloudflare qualifie ses signaux de strictement nécessaires à la détection des robots. |
-| Durée | Journaux : jusqu'au déploiement suivant, qui recrée les conteneurs, et au plus 50 Mo par service (rotation par taille). Compteurs des limites : 15 minutes après le dernier essai, 1 heure pour les demandes de changement d'email. Captcha et contrôle des mots de passe : rien n'est conservé par Stopcast. |
+| Base légale | Intérêt légitime (sécurité du service). Pas de consentement pour le captcha : la CNIL en dispense les traceurs destinés à la sécurité d'un mécanisme d'authentification, et Turnstile ne protège que la connexion, « mot de passe oublié » et la demande d'accès, qui ouvre la voie à un compte, sans son cookie de pre-clearance ; Cloudflare qualifie ses signaux de strictement nécessaires à la détection des robots. |
+| Durée | Journaux : jusqu'au déploiement suivant, qui recrée les conteneurs, et au plus 50 Mo par service (rotation par taille). Compteurs des limites : 15 minutes après le dernier essai, 1 heure pour les demandes de changement d'email et d'accès et pour les codes d'appairage générés. Captcha et contrôle des mots de passe : rien n'est conservé par Stopcast. |
 | Destinataires et sous-traitants | OVH, Cloudflare (proxy, Turnstile). Cloudflare est aussi responsable de traitement distinct des signaux Turnstile, au titre de son intérêt légitime, pour améliorer sa détection des robots ([politique Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/)). Have I Been Pwned est un service tiers, pas un sous-traitant : il ne reçoit aucune donnée personnelle. |
 
 ### Suivi des erreurs
@@ -92,7 +92,7 @@ Dernière mise à jour : 17 novembre 2026.
 
 | | |
 |---|---|
-| Finalité | Vérifier que le service répond et que les tâches planifiées (import, sauvegarde) tournent. |
+| Finalité | Vérifier que le service répond et que les tâches planifiées (import, purge, sauvegarde, mail de contrôle, index temps réel) tournent. |
 | Données | Aucune donnée personnelle : une sonde interroge `/health`, les tâches envoient un signal de bon fonctionnement. |
 | Personnes concernées | Aucune. |
 | Base légale | Sans objet (intérêt légitime pour le fonctionnement du service). |
@@ -105,7 +105,7 @@ Dernière mise à jour : 17 novembre 2026.
 |---|---|
 | Finalité | Restaurer le service après un incident, sans faire revivre les comptes supprimés entre-temps. |
 | Données | Sauvegarde chiffrée de toute la base ; journal des comptes supprimés (identifiant et date de création, sans email), rejoué après une restauration. |
-| Personnes concernées | Utilisateurs. |
+| Personnes concernées | Utilisateurs et visiteurs qui ont demandé un accès. |
 | Base légale | Intérêt légitime (continuité du service, effectivité de l'effacement). |
 | Durée | 30 jours pour les sauvegardes comme pour le journal. |
 | Destinataires et sous-traitants | OVH, Cloudflare (stockage R2). |

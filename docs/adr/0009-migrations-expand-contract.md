@@ -1,5 +1,7 @@
 # Migrations en deux temps (expand/contract)
 
+Statut : accepté.
+
 En prod, l'ancien code tourne sur le nouveau schéma dans deux cas :
 
 - à chaque déploiement, `bin/deploy` passe les migrations avec la nouvelle image pendant que l'ancien code sert encore, puis remplace les conteneurs ([docs/exploitation.md](../exploitation.md#bindeploy)) : le temps du remplacement, jusqu'à 5 minutes pour le worker, remplacé seulement une fois `app` en bonne santé (`--wait-timeout 300`) ;

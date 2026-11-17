@@ -77,6 +77,7 @@ La prod locale (`make prod-up`, [developpement.md](developpement.md#environnemen
 | `User` | Un compte de l'espace web (email, mot de passe haché, rôle `ROLE_USER` ou `ROLE_ADMIN`) ; en attente tant qu'un invité n'a pas choisi son mot de passe, actif ensuite |
 | `Device` | Un dispositif d'affichage, activable/désactivable, qui appartient à un `User` (son propriétaire) ; son écran appairé s'authentifie par un cookie dont le haché est enregistré sur le dispositif |
 | `DisplayConfiguration` | La configuration d'affichage d'un `Device` : quel `Quay` afficher, sous quel libellé, dans quel ordre (`position`) en cas de rotation |
+| `AccessRequest` | La demande d'accès d'un visiteur (email, message facultatif, date de la dernière demande), en attendant qu'un administrateur l'invite ou la supprime ; ce n'est pas un compte |
 
 Chaque suppression de compte (par son titulaire, un administrateur ou la purge) est d'abord inscrite dans un journal hors base, `var/account-deletions/deletions.jsonl` (`DeletionJournal`) : l'identifiant et la date de création du compte, sans email. Après la restauration d'une sauvegarde, `app:account:replay-deletions` supprime de nouveau ces comptes, pour qu'ils ne reviennent pas (droit à l'effacement). Le journal garde 30 jours, la durée des sauvegardes ; `app:purge` retire les lignes plus anciennes.
 
