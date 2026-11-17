@@ -40,7 +40,7 @@ final class LegalPrivacyTest extends WebTestCase
         self::assertSelectorTextContains('main', 'avertissement par email 30 jours avant');
         self::assertSelectorTextContains('main', 'supprimés à leur expiration');
         self::assertSelectorTextContains('main', "30 jours après l'expiration de son dernier lien");
-        self::assertSelectorTextContains('main', 'Journaux du serveur : environ 14 jours');
+        self::assertSelectorTextContains('main', "Journaux du serveur : jusqu'à la mise à jour suivante du service");
         self::assertSelectorTextContains('main', 'Sauvegardes et liste des comptes supprimés : 30 jours');
     }
 

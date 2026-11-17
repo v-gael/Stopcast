@@ -40,7 +40,7 @@
                     <li>Liens d'invitation (valables 24 heures) et de réinitialisation du mot de passe (1 heure) : supprimés à leur expiration.</li>
                     <li>Invitation jamais acceptée : le compte en attente est supprimé 30 jours après l'expiration de son dernier lien.</li>
                     <li>Demande d'accès : jusqu'à l'invitation ou la suppression de la demande, au plus 30 jours après la dernière demande.</li>
-                    <li>Journaux du serveur : environ 14 jours.</li>
+                    <li>Journaux du serveur : jusqu'à la mise à jour suivante du service, qui les efface, et au plus 50 Mo par service.</li>
                     <li>Mail qui n'a pas pu être envoyé : gardé, avec votre email et le lien qu'il contient, 7 jours au plus après le dernier échec d'envoi.</li>
                     <li>Sauvegardes et liste des comptes supprimés : 30 jours.</li>
                 </ul>
@@ -82,7 +82,7 @@
             <section>
                 <h2 class="mb-2 text-xl font-semibold text-slate-900">Cookies</h2>
                 <p>
-                    Stopcast ne pose que des cookies strictement nécessaires : le cookie de session, qui vous garde connecté, et le cookie « se souvenir de moi » (30 jours), si vous cochez la case.
+                    Stopcast ne pose que des cookies strictement nécessaires : le cookie de session, qui vous garde connecté, le cookie « se souvenir de moi » (30 jours), si vous cochez la case, et, sur un écran d'affichage, le cookie de son appairage (400 jours, renouvelé à chaque passage) et celui de la demande d'appairage en cours (le temps de la session du navigateur).
                     Le captcha Turnstile ne pose pas de cookie de suivi. Aucun outil de mesure d'audience ni cookie de publicité : il n'y a donc pas de bandeau de consentement. La fréquentation n'est connue que par les statistiques agrégées du proxy Cloudflare (nombre de requêtes et de visiteurs, pays), sans script dans les pages.
                     Le suivi ajouté aux mails par Brevo est décrit dans la section « Destinataires et sous-traitants ».
                 </p>
