@@ -176,6 +176,15 @@ Le fichier Symfony est dans `var/log/`, qui est le volume Docker `app_var` : il 
 
 `bin/check` tourne en environnement de test, sauf un second `lint:container`, en prod sans debug : la config `when@prod` et les bundles chargés en prod seulement (Sentry) n'entrent pas dans le conteneur de test, et une erreur n'y apparaîtrait qu'au déploiement. Il supprime d'abord `var/cache/prod`, pour lire la config du moment.
 
+`bin/check` lance `bin/check-docs` juste après `composer validate`. Il vérifie les références de `README.md`, `SECURITY.md`, `CODING_STANDARDS.md` et des `.md` de `docs/`. Il lit les fichiers que liste git (suivis, ou nouveaux et non ignorés) : un fichier local ignoré n'est ni lu ni compté, comme en CI. Il signale, avec le fichier et la ligne :
+
+- une commande `make <cible>`, dans un span ou un bloc de code, dont la cible n'est pas dans le `Makefile` ; la prose n'est pas lue ;
+- un chemin entre backticks qui part d'un dossier du dépôt (`src/…`, `config/…`, `.github/…`) et n'existe pas, ou un nom de fichier seul (`ci.yml`) qu'aucun fichier du dépôt ne porte. La ligne (`:12`) et l'ancre (`#section`) sont retirées ; les gabarits (`<nom>`, `{A,B}`, `*`, `…`, `X.Y.Z`, `AAAA-MM-JJ`), `var/`, les chemins absolus (conteneur, serveur) et les URL sont ignorés ;
+- une classe entre backticks qui n'existe pas dans `src/` ni `tests/` : un nom complet `App\…` (ou un namespace) par son fichier, un nom court par son suffixe (`…Test`, `…Trait`, `…Mock`, `…Listener`, `…Controller`…, liste en tête du script) ;
+- un lien Markdown relatif dont la cible n'existe pas, depuis le dossier du document.
+
+Il ne compare pas les valeurs (durées, limites) au code : une table de correspondance serait plus fragile que la doc elle-même, et la relecture s'en charge ([CODING_STANDARDS.md](../CODING_STANDARDS.md)). Une référence voulue qui ne nomme rien du dépôt (une classe de Symfony, un fichier du serveur) s'ajoute à `EXCEPTIONS`, en tête du script, avec sa raison.
+
 `bin/check-scripts` passe `shellcheck` sur les scripts de `bin/`, `ops/` et `.githooks/` dont la première ligne lance `sh` ou `bash`, puis `actionlint` sur `.github/workflows/`, chacun par son image Docker à version épinglée (en tête du script) : le premier lancement télécharge les deux images, qui restent ensuite en cache. Une remarque voulue s'ignore sur sa ligne, avec sa raison : `# shellcheck disable=SC2016 # raison`.
 
 Un hook `pre-push` lance `make check` avant chaque push et bloque le push en cas d'échec. `make up` l'active (`make hooks` le fait seul, sans démarrer les conteneurs). Si les conteneurs sont arrêtés, le hook bloque aussi le push et demande un `make up`. Un push qui ne fait que supprimer des branches ou des tags distants ne lance pas les contrôles. Pour pousser sans contrôle, par exemple une branche de travail : `git push --no-verify`.
