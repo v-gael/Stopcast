@@ -51,7 +51,7 @@
         <article class="{{ card }}">
             <div class="flex min-h-80 flex-1 flex-col justify-center gap-4 rounded-xl bg-gradient-to-br from-sky-50 to-indigo-100 p-5"
                  data-controller="showcase-stops">
-                <ol class="flex flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap" aria-label="Arrêts de l'écran, dans l'ordre">
+                <ol class="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 whitespace-nowrap" aria-label="Arrêts de l'écran, dans l'ordre">
                     {% for title in ['BEURNONVILLE', 'Direction travail', '1ER RAM'] %}
                         <li class="flex items-center gap-1.5">
                             {%- if not loop.first %}<span class="text-xs text-indigo-300" aria-hidden="true">→</span>{% endif %}
