@@ -40,7 +40,7 @@ final class ShowcaseController extends AbstractController
 
         return $this->render('showcase/screen.html.twig', [
             'mode' => $mode,
-            'screens' => $this->showcaseScreens->all(),
+            'screens' => $mode->isWalkthroughDevice() ? $this->showcaseScreens->walkthroughDevice() : $this->showcaseScreens->all(),
             'now' => $this->showcaseScreens->now(),
             // Pour _screens.html.twig : durée d'un écran ; l'écran de la vitrine ne relit rien.
             'device' => ['screenDuration' => 4, 'refreshInterval' => 0],

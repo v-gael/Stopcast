@@ -55,7 +55,7 @@ final class HomeTest extends WebTestCase
         self::assertCount(0, $crawler->filter('main img'));
         $sources = array_unique($crawler->filter('main iframe')->each(static fn (Crawler $frame): string => (string) $frame->attr('src')));
         sort($sources);
-        self::assertSame(['/vitrine/ecran', '/vitrine/ecran?mode=fixe', '/vitrine/ecran?mode=pilote'], $sources);
+        self::assertSame(['/vitrine/ecran', '/vitrine/ecran?mode=fixe', '/vitrine/ecran?mode=maison', '/vitrine/ecran?mode=pilote'], $sources);
     }
 
     public function testShowcaseSellsTheService(): void

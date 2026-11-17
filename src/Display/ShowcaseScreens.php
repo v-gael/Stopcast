@@ -23,6 +23,9 @@ final readonly class ShowcaseScreens
 
     public const int MINUTE = 50;
 
+    /** Quais du dispositif « Maison » du parcours « Comment ça marche » : les premiers du jeu. */
+    private const int WALKTHROUGH_DEVICE_QUAYS = 2;
+
     /**
      * Titre de l'écran, puis ses passages : ligne, couleur de fond, couleur du
      * texte, destination, secondes après 8 h 50.
@@ -59,6 +62,17 @@ final readonly class ShowcaseScreens
     public function now(): \DateTimeImmutable
     {
         return $this->clock->now()->setTime(self::HOUR, self::MINUTE);
+    }
+
+    /**
+     * Écrans du dispositif « Maison » du parcours, où le visiteur ajoute les
+     * deux premiers quais du jeu.
+     *
+     * @return list<Screen> dans l'ordre de rotation
+     */
+    public function walkthroughDevice(): array
+    {
+        return \array_slice($this->all(), 0, self::WALKTHROUGH_DEVICE_QUAYS);
     }
 
     /**

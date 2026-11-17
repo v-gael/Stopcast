@@ -85,6 +85,26 @@ final class ShowcaseScreenTest extends WebTestCase
         self::assertCount(1, $crawler->filter('[data-panel="pairing"] .pairing__qr svg'));
     }
 
+    /**
+     * Le dispositif « Maison » du parcours n'a que les deux quais que le
+     * visiteur y ajoute : l'écran piloté, une fois appairé, et sa carte
+     * « maison » dans la liste des dispositifs ne tournent que sur eux.
+     */
+    public function testWalkthroughDeviceShowsOnlyTheTwoQuaysAddedToIt(): void
+    {
+        $client = self::createClient();
+
+        foreach (['pilote' => 'false', 'maison' => 'true'] as $mode => $rotation) {
+            $crawler = $client->request('GET', '/vitrine/ecran?mode='.$mode);
+
+            $display = $crawler->filter('[data-panel="display"]');
+            self::assertSame(['BEURNONVILLE', 'Direction travail'], $display->filter('.screen__stop')->each(static fn (Crawler $title): string => $title->text()), $mode);
+            self::assertSame($rotation, $display->attr('data-display-rotation-value'), $mode);
+        }
+
+        self::assertNull($crawler->filter('[data-panel="display"]')->attr('hidden'));
+    }
+
     public function testUnknownModeIsNotFound(): void
     {
         $client = self::createClient();

@@ -31,7 +31,7 @@
              data-controller="display"
              data-display-time-zone-value="{{ 'now'|date('e') }}"
              data-display-now-value="{{ now.timestamp }}"
-             data-display-rotation-value="{{ mode is same as enum('App\\Enum\\ShowcaseScreenMode').Rotation ? 'true' : 'false' }}"
+             data-display-rotation-value="{{ mode.rotates ? 'true' : 'false' }}"
              {%- if driven %} hidden{% endif %}>
             {{ include('display/_screens.html.twig') }}
         </div>
