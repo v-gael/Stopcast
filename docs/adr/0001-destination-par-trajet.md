@@ -1,5 +1,7 @@
 # Destination de chaque passage tirée du trajet statique
 
+Statut : accepté.
+
 Le flux GTFS-RT ne donne, pour chaque passage, que le `trip_id` et le `route_id`, pas la destination. Afficher le nom long de la ligne donnait la même destination à tous ses bus, quel que soit leur sens ou leur terminus, ce qui contredit le principe d'un afficheur réaliste (voir [architecture](../architecture.md)).
 
 Nous importons donc la correspondance `trip_id` → `trip_headsign` depuis `trips.txt` (entité `Trip`, remplacée intégralement à chaque import) et l'utilisons pour la destination de chaque passage. Nous gardons en revanche le principe de ne **pas** croiser le temps réel avec les horaires théoriques (`stop_times.txt`) : l'heure affichée vient uniquement du flux GTFS-RT.

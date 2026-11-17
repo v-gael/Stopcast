@@ -1,5 +1,7 @@
 # Hébergement sur un VPS OVH, derrière Cloudflare et Cloudflare Tunnel
 
+Statut : accepté. (Le numéro 0005 n'a pas été attribué.)
+
 Stopcast n'avait pas d'hébergement. Le serveur doit accueillir plusieurs sites (le portfolio sur `gaelv.com`, Stopcast en sous-domaine), pas seulement cette application, qui tourne en continu : un worker Messenger permanent, un import planifié et PostgreSQL. Le budget est plafonné à **10 €/mois TTC, domaine compris**, sans aucun service payant en plus.
 
 Nous hébergeons sur un **VPS OVH VPS-1 2027** (2 vCores, 4 Go de RAM, 40 Go NVMe, trafic illimité à 500 Mbit/s) à Strasbourg, sans engagement, sous Ubuntu 26.04 LTS. Chaque projet y tourne avec Docker Compose, une stack par projet. PostgreSQL reste un conteneur de la stack, comme en local.
