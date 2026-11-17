@@ -21,11 +21,16 @@ const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
  * montre « aucun passage » ; en panne, il montre « Horaires temps réel
  * indisponibles », comme tous les écrans 15 minutes après le dernier
  * rafraîchissement réussi. Le suivant qui réussit rétablit les passages.
+ *
+ * Écran de la vitrine (templates/showcase/screen.html.twig) : « now » fige
+ * l'heure (en secondes), sans « url » rien n'est relu, et sans « rotation »
+ * l'écran reste sur le premier jusqu'à play(). Chaque écran montré est annoncé
+ * par l'évènement « display:shown ».
  */
 export default class extends Controller {
     static targets = ['content', 'screen', 'clock', 'minutes', 'route', 'passage', 'passages', 'noPassage', 'unavailable'];
 
-    static values = { url: String, timeZone: String };
+    static values = { url: String, timeZone: String, now: Number, rotation: { type: Boolean, default: true } };
 
     connect() {
         this.index = 0;
@@ -34,8 +39,23 @@ export default class extends Controller {
         this.clockFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: this.timeZoneValue || undefined });
         this.#prepare();
         this.clockTimer = setInterval(() => this.#tick(), 1000);
+
+        if (this.rotationValue) {
+            this.#scheduleRotation();
+        }
+
+        if (this.urlValue) {
+            this.#scheduleRefresh();
+        }
+    }
+
+    /*
+     * Rotation lancée depuis le premier écran, sur commande (vitrine).
+     */
+    play() {
+        this.index = 0;
+        this.#show();
         this.#scheduleRotation();
-        this.#scheduleRefresh();
     }
 
     disconnect() {
@@ -125,10 +145,11 @@ export default class extends Controller {
         this.screenTargets.forEach((screen, index) => {
             screen.hidden = index !== this.index;
         });
+        this.dispatch('shown', { detail: { index: this.index } });
     }
 
     #tick() {
-        const now = Date.now();
+        const now = this.nowValue ? this.nowValue * 1000 : Date.now();
         const time = this.clockFormat.format(now);
 
         this.clockTargets.forEach((clock) => {
