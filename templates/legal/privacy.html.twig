@@ -6,7 +6,7 @@
 {% block content %}
     <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Politique de confidentialité</h1>
-        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 10 novembre 2026.</p>
+        <p class="mt-2 text-sm text-slate-500">Dernière mise à jour : 17 novembre 2026.</p>
 
         <div class="mt-8 space-y-8 text-slate-700">
             <section>
@@ -21,6 +21,7 @@
                 <h2 class="mb-2 text-xl font-semibold text-slate-900">Données traitées et pourquoi</h2>
                 <ul class="list-disc space-y-2 pl-6">
                     <li><strong>Votre compte</strong> : email, rôle, mot de passe haché (jamais en clair), date de création. Il sert à vous connecter et à gérer vos écrans. Base légale : l'exécution des <a href="{{ path('app_legal_terms') }}" class="font-medium text-amber-700 underline hover:text-amber-600">conditions d'utilisation</a>.</li>
+                    <li><strong>Votre demande d'accès</strong> : email, message facultatif et date de la demande. Elle sert à vous inviter à créer un compte ; aucun mail n'est envoyé à l'adresse saisie avant cette invitation. Base légale : les mesures précontractuelles prises à votre demande.</li>
                     <li><strong>Vos dispositifs et configurations d'affichage</strong> : nom de chaque écran et haché du secret de son appairage, arrêts choisis, ordre de rotation, durée d'affichage et intervalle de rafraîchissement, date du dernier contact de l'écran. Ils servent à afficher les prochains passages et à vous signaler un écran hors ligne. Base légale : l'exécution des conditions d'utilisation.</li>
                     <li><strong>Les mails du service</strong> : invitation, réinitialisation du mot de passe, avis liés au compte. Ils utilisent votre email. Base légale : l'exécution des conditions d'utilisation. Le suivi ajouté par Brevo est décrit dans « Destinataires et sous-traitants ».</li>
                     <li><strong>La sécurité</strong> : journaux du serveur (adresse IP tronquée, email masqué), limites du nombre d'essais (identifiant saisi, adresse IP), captcha Cloudflare Turnstile (adresse IP, navigateur et empreinte TLS de sa connexion), refus des mots de passe ayant fuité. Base légale : l'intérêt légitime de protéger le service et vos comptes.</li>
@@ -38,6 +39,7 @@
                     <li>Compte sans connexion pendant 2 ans : supprimé, après un avertissement par email 30 jours avant. L'activité d'un écran ne compte pas comme une connexion.</li>
                     <li>Liens d'invitation (valables 24 heures) et de réinitialisation du mot de passe (1 heure) : supprimés à leur expiration.</li>
                     <li>Invitation jamais acceptée : le compte en attente est supprimé 30 jours après l'expiration de son dernier lien.</li>
+                    <li>Demande d'accès : jusqu'à l'invitation ou la suppression de la demande, au plus 30 jours après la dernière demande.</li>
                     <li>Journaux du serveur : environ 14 jours.</li>
                     <li>Mail qui n'a pas pu être envoyé : gardé, avec votre email et le lien qu'il contient, 7 jours au plus après le dernier échec d'envoi.</li>
                     <li>Sauvegardes et liste des comptes supprimés : 30 jours.</li>

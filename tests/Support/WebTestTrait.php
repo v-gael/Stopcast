@@ -58,6 +58,20 @@ trait WebTestTrait
     }
 
     /**
+     * Demande d'accès d'un visiteur, depuis sa page.
+     */
+    private function requestAccess(string $email, string $message = '', string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
+    {
+        $crawler = $this->browser()->request('GET', '/demande-acces');
+        self::assertResponseIsSuccessful();
+
+        $this->submitWithTurnstile($crawler->selectButton('Envoyer la demande')->form([
+            'access_request[email]' => $email,
+            'access_request[message]' => $message,
+        ]), $turnstileToken);
+    }
+
+    /**
      * Envoi d'un formulaire protégé par Turnstile. Le champ
      * cf-turnstile-response est ajouté par le JavaScript du widget : absent
      * du HTML, il est ajouté ici aux valeurs du formulaire.
@@ -96,6 +110,19 @@ trait WebTestTrait
         self::assertCount(1, $row);
 
         return $row;
+    }
+
+    /**
+     * Lignes de la section « Demandes d'accès » de la liste des comptes :
+     * email, message, date.
+     *
+     * @return list<list<string>>
+     */
+    private function accessRequestRows(Crawler $crawler): array
+    {
+        return $crawler->filter('#demandes-acces tbody tr')->each(
+            static fn (Crawler $row): array => \array_slice($row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())), 0, 3),
+        );
     }
 
     /**

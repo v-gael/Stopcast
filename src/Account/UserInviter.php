@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Account;
 
 use App\Entity\User;
+use App\Repository\AccessRequestRepository;
 use App\Repository\ResetPasswordRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -30,14 +31,20 @@ final readonly class UserInviter
         private ResetPasswordHelper $resetPasswordHelper,
         private MailerInterface $mailer,
         private ResetPasswordRequestRepository $resetPasswordRequestRepository,
+        private AccessRequestRepository $accessRequestRepository,
     ) {
     }
 
+    /**
+     * La demande d'accès de la même adresse, s'il y en a une, est supprimée :
+     * elle a reçu sa réponse.
+     */
     public function invite(User $user): void
     {
         $this->assertPending($user);
 
         $this->entityManager->persist($user);
+        $this->accessRequestRepository->removeByEmail($user->getEmail());
         $this->entityManager->flush();
 
         $this->sendInvitation($user);

@@ -1,0 +1,26 @@
+{% extends 'layout/public.html.twig' %}
+
+{% block title %}Demander un accès · Stopcast{% endblock %}
+
+{% block content %}
+    <section class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <twig:Card title="Demander un accès" :titleLevel="1" class="max-w-md">
+            <p class="mb-6 text-slate-600">Les comptes s'ouvrent sur invitation. Laissez votre email : si votre demande est retenue, vous recevrez une invitation pour créer votre compte.</p>
+
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+                <twig:Turnstile />
+
+                <p class="mb-6 text-sm text-slate-500">
+                    Sans suite, votre demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après la dernière demande.
+                    Voir la <a href="{{ path('app_legal_privacy') }}" class="font-medium text-amber-700 underline hover:text-amber-800">politique de confidentialité</a>.
+                </p>
+
+                <div class="flex flex-wrap gap-3">
+                    <twig:Button type="submit">Envoyer la demande</twig:Button>
+                    <twig:Button href="{{ path('app_home') }}" variant="secondary">Annuler</twig:Button>
+                </div>
+            {{ form_end(form) }}
+        </twig:Card>
+    </section>
+{% endblock %}

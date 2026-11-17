@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Account;
 
+use App\Entity\AccessRequest;
 use App\Entity\User;
+use App\Repository\AccessRequestRepository;
 use App\Repository\ResetPasswordRequestRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,8 +24,9 @@ use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
  * la dernière invitation a expiré depuis plus de 30 jours, avertit puis
  * supprime les comptes activés sans connexion depuis 2 ans, et supprime enfin
  * les demandes de réinitialisation et d'invitation expirées des comptes actifs,
- * puis les lignes du journal des suppressions plus vieilles que les sauvegardes
- * et les messages Messenger en échec depuis plus de 7 jours.
+ * puis les lignes du journal des suppressions plus vieilles que les sauvegardes,
+ * les messages Messenger en échec depuis plus de 7 jours et les demandes
+ * d'accès restées sans suite 30 jours.
  *
  * Les demandes d'un compte en attente restent jusqu'à sa suppression : la
  * plus récente date sa dernière invitation, et elles partent en cascade avec
@@ -57,6 +60,7 @@ final readonly class DataPurger
 
     public function __construct(
         private UserRepository $userRepository,
+        private AccessRequestRepository $accessRequestRepository,
         private ResetPasswordRequestRepository $resetPasswordRequestRepository,
         private AccountDeleter $accountDeleter,
         private DeletionJournal $deletionJournal,
@@ -91,15 +95,17 @@ final readonly class DataPurger
             // Après les suppressions de comptes : celles de cette purge y sont inscrites.
             deletionJournalEntries: $this->deletionJournal->purgeBefore($now->modify('-'.self::DELETION_JOURNAL_RETENTION)),
             failedMessages: $this->removeFailedMessages($now),
+            accessRequests: $this->accessRequestRepository->removeRequestedBefore($now->modify(\sprintf('-%d days', AccessRequest::RETENTION_IN_DAYS))),
         );
 
-        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted, {resetPasswordRequests} expired reset password requests deleted, {deletionJournalEntries} deletion journal lines removed and {failedMessages} failed messages removed.', [
+        $this->logger->info('Purge: {pendingAccounts} pending accounts deleted, {inactivityWarnings} inactive accounts warned, {inactiveAccounts} inactive accounts deleted, {resetPasswordRequests} expired reset password requests deleted, {deletionJournalEntries} deletion journal lines removed, {failedMessages} failed messages removed and {accessRequests} access requests deleted.', [
             'pendingAccounts' => $summary->pendingAccounts,
             'inactivityWarnings' => $summary->inactivityWarnings,
             'inactiveAccounts' => $summary->inactiveAccounts,
             'resetPasswordRequests' => $summary->resetPasswordRequests,
             'deletionJournalEntries' => $summary->deletionJournalEntries,
             'failedMessages' => $summary->failedMessages,
+            'accessRequests' => $summary->accessRequests,
         ]);
 
         return $summary;

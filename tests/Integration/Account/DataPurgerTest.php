@@ -7,9 +7,11 @@ namespace App\Tests\Integration\Account;
 use App\Account\DataPurger;
 use App\Account\DeletionJournalEntry;
 use App\Account\UserInviter;
+use App\Entity\AccessRequest;
 use App\Entity\ResetPasswordRequest;
 use App\Entity\User;
 use App\Enum\Role;
+use App\Factory\AccessRequestFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
 use App\Tests\Support\ContainerServiceTrait;
@@ -283,8 +285,23 @@ final class DataPurgerTest extends KernelTestCase
         self::assertFalse($this->userExists(self::EMAIL));
     }
 
+    public function testAccessRequestsOlderThan30DaysAreDeleted(): void
+    {
+        AccessRequestFactory::createOne(['email' => 'ancienne@example.com', 'requestedAt' => now('-30 days -1 minute')]);
+        AccessRequestFactory::createOne(['email' => 'recente@example.com', 'requestedAt' => now('-29 days -23 hours')]);
+
+        $summary = $this->service(DataPurger::class)->purge();
+
+        self::assertSame(1, $summary->accessRequests);
+        self::assertSame(['recente@example.com'], array_map(
+            static fn (AccessRequest $accessRequest): string => $accessRequest->getEmail(),
+            repository(AccessRequest::class)->findAll(),
+        ));
+    }
+
     public function testCommandDisplaysTheCounts(): void
     {
+        AccessRequestFactory::createOne(['requestedAt' => now('-1 day')]);
         $this->invite(self::EMAIL);
         $this->service(ResetPasswordHelperInterface::class)->generateResetToken(UserFactory::createOne());
 
@@ -301,6 +318,7 @@ final class DataPurgerTest extends KernelTestCase
         self::assertStringContainsString('Demandes de réinitialisation supprimées 1', $display);
         self::assertStringContainsString('Lignes du journal des suppressions retirées 0', $display);
         self::assertStringContainsString('Messages en échec supprimés 0', $display);
+        self::assertStringContainsString("Demandes d'accès supprimées 1", $display);
     }
 
     public function testFailedMessagesOlderThan7DaysAreRemoved(): void

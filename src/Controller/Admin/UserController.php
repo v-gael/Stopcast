@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Account\AccessRequester;
 use App\Account\AccountDeleter;
 use App\Account\UserInviter;
+use App\Entity\AccessRequest;
 use App\Entity\User;
 use App\Form\InviteUserType;
 use App\Form\UserRoleType;
+use App\Repository\AccessRequestRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,10 +27,11 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 final class UserController extends AbstractController
 {
     #[Route('', name: 'app_admin_user_index', methods: ['GET'])]
-    public function index(UserRepository $userRepository): Response
+    public function index(UserRepository $userRepository, AccessRequestRepository $accessRequestRepository): Response
     {
         return $this->render('admin/user/index.html.twig', [
             'rows' => $userRepository->findAllWithDeviceCount(),
+            'accessRequests' => $accessRequestRepository->findAllNewestFirst(),
         ]);
     }
 
@@ -51,6 +55,36 @@ final class UserController extends AbstractController
         return $this->render('admin/user/invite.html.twig', [
             'form' => $form,
         ]);
+    }
+
+    #[Route('/access-requests/{id}/invite', name: 'app_admin_access_request_invite', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid(new Expression('"invite-access-request-" ~ args["accessRequest"].getId()'))]
+    public function inviteAccessRequest(AccessRequest $accessRequest, AccessRequester $accessRequester): Response
+    {
+        $email = $accessRequest->getEmail();
+
+        if (!$accessRequester->invite($accessRequest)) {
+            $this->addFlash('error', \sprintf('Un compte existe déjà pour %s : la demande est supprimée.', $email));
+
+            return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
+        }
+
+        $this->addFlash('success', \sprintf('Invitation envoyée à %s.', $email));
+        $this->addInvitationReminderFlash();
+
+        return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/access-requests/{id}/delete', name: 'app_admin_access_request_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid(new Expression('"delete-access-request-" ~ args["accessRequest"].getId()'))]
+    public function deleteAccessRequest(AccessRequest $accessRequest, EntityManagerInterface $entityManager): Response
+    {
+        $entityManager->remove($accessRequest);
+        $entityManager->flush();
+
+        $this->addFlash('success', \sprintf('La demande de %s a été supprimée.', $accessRequest->getEmail()));
+
+        return $this->redirectToRoute('app_admin_user_index', status: Response::HTTP_SEE_OTHER);
     }
 
     #[Route('/{id}/resend-invitation', name: 'app_admin_user_resend_invitation', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
