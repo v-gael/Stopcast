@@ -70,7 +70,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         $this->client->submit($crawler->filter('main li')->eq(0)->selectButton('Descendre')->form());
 
-        self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Troisième', 'Premier', 'Deuxième'], $this->displayedTitles($device));
     }
 
     /**
@@ -87,7 +87,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->postOrder($device, [$third, $first, $second]);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        self::assertSame(['TROISIÈME', 'PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Troisième', 'Premier', 'Deuxième'], $this->displayedTitles($device));
     }
 
     public function testOrderThatNoLongerMatchesTheRotationIsRefusedWithAMessage(): void
@@ -103,7 +103,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="alert"]', "L'ordre des quais a changé entre-temps");
-        self::assertSame(['PREMIER', 'DEUXIÈME', 'TROISIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Premier', 'Deuxième', 'Troisième'], $this->displayedTitles($device));
     }
 
     public function testOrderNamingAQuayOfAnotherDeviceIsRefused(): void
@@ -115,7 +115,7 @@ final class DisplayConfigurationsTest extends WebTestCase
 
         $this->postOrder($device, [$foreign, $first]);
 
-        self::assertSame(['PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Premier', 'Deuxième'], $this->displayedTitles($device));
     }
 
     public function testAnotherUsersRotationIsForbiddenEvenToAnAdministrator(): void
@@ -151,7 +151,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->configure($device, 'Premier');
         $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
 
-        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+        self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
     public function testDeviceWhoseQuaysAllDisappearedShowsItsStateScreen(): void
@@ -159,7 +159,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $device = DeviceFactory::createOne(['owner' => $this->user]);
         $this->configure($device, 'Ancien arrêt', $this->quay('S9', 'VIEUX QUAI', deprecated: true));
 
-        self::assertNotContains('VIEUX QUAI', $this->displayedQuays($device));
+        self::assertNotContains('VIEUX QUAI', $this->displayedTitles($device));
         self::assertSelectorTextSame('.screen__message', 'Aucun quai affiché');
     }
 
@@ -177,7 +177,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le quai « Premier » a été supprimé.');
-        self::assertSame(['DEUXIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Deuxième'], $this->displayedTitles($device));
     }
 
     public function testDevicePageIsRefreshedInPlaceAfterARotationAction(): void
@@ -353,7 +353,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le quai a été ajouté.');
-        self::assertSame(['PREMIER', 'GARE'], $this->displayedQuays($device));
+        self::assertSame(['Premier', 'Vers la gare'], $this->displayedTitles($device));
     }
 
     public function testAddingAQuayHiddenKeepsItOutOfTheRotation(): void
@@ -426,7 +426,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSelectorTextContains('[role="status"]', 'Le quai a été modifié.');
         self::assertSelectorTextContains('main li:nth-child(2)', 'Vers la gare');
         self::assertSame('false', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
-        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+        self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
     #[DataProvider('visibilities')]
@@ -486,7 +486,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSame('true', $crawler->filter('main li')->eq(1)->filter('[role="switch"]')->attr('aria-checked'));
 
-        self::assertSame(['PREMIER', 'DEUXIÈME'], $this->displayedQuays($device));
+        self::assertSame(['Premier', 'Deuxième'], $this->displayedTitles($device));
     }
 
     public function testHidingTwiceKeepsTheConfigurationHidden(): void
@@ -500,7 +500,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
         $this->client->submit($form);
 
-        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+        self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
     public function testEditPageDeletesTheConfigurationAndReturnsToTheDevice(): void
@@ -516,7 +516,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
-        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+        self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
     public function testEditingChangesTheQuay(): void
@@ -578,7 +578,7 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $this->client->followRedirect();
         self::assertSelectorTextContains('[role="status"]', 'Le quai « Ancien arrêt » a été supprimé.');
-        self::assertSame(['PREMIER'], $this->displayedQuays($device));
+        self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
     public function testConfigurationOnAnActiveQuayHasNoFlagNorMessage(): void
@@ -699,12 +699,12 @@ final class DisplayConfigurationsTest extends WebTestCase
     }
 
     /**
-     * Quais que la page d'affichage montre à l'écran appairé du dispositif,
-     * dans l'ordre de rotation.
+     * Titres des écrans que la page d'affichage montre à l'écran appairé du
+     * dispositif (libellé, ou à défaut nom du quai), dans l'ordre de rotation.
      *
      * @return list<string>
      */
-    private function displayedQuays(Device $device): array
+    private function displayedTitles(Device $device): array
     {
         $entityManager = $this->entityManager();
         $entityManager->find(Device::class, $device->getId())?->pairScreen('secret-de-l-ecran');

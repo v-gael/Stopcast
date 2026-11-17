@@ -3,7 +3,7 @@
 {% block title %}Modifier un quai · Stopcast{% endblock %}
 
 {% block content %}
-    {% set name = configuration.label ?: configuration.quay.name %}
+    {% set name = configuration.displayName %}
     {% set device = configuration.device %}
 
     <div class="mb-6 flex flex-wrap items-center gap-3">

@@ -86,7 +86,6 @@ body {
     overflow: hidden;
     color: var(--display-stop-text);
     text-overflow: ellipsis;
-    text-transform: uppercase;
     white-space: nowrap;
 }
 

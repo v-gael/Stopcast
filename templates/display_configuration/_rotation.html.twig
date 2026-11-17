@@ -12,7 +12,7 @@
     </form>
     <ol class="relative divide-y divide-slate-200" data-rotation-sort-target="list">
         {% for configuration in configurations %}
-            {% set name = configuration.label ?: configuration.quay.name %}
+            {% set name = configuration.displayName %}
             {% set quay_deprecated = not configuration.quay.active %}
             <li class="flex items-start gap-2 bg-white py-2{{ quay_deprecated ? ' quay-deprecated -mx-2 px-2' }}"
                 data-rotation-sort-target="item" data-configuration-id="{{ configuration.id }}">
