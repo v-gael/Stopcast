@@ -73,7 +73,7 @@ final class PublicPagesTest extends PantherTestCase
         $client->executeScript('document.getElementById("connexion").hidePopover(); Turbo.visit("/mentions-legales");');
         $client->waitForElementToContain('main h1', 'Mentions légales');
         $client->executeScript('history.back();');
-        $client->waitForElementToContain('main h1', 'Le panneau de votre arrêt de bus');
+        $client->waitForElementToContain('main h1', 'Le panneau de votre arrêt');
 
         self::assertFalse($client->executeScript('return document.getElementById("connexion").matches(":popover-open");'));
         self::assertSame(0, $client->executeScript('return document.querySelectorAll(\'#connexion [data-controller~="turnstile"]\').length;'));

@@ -1,0 +1,15 @@
+{#
+ # Un écran de la vitrine (ShowcaseController) dans son cadre. « mode » :
+ # null (rotation), « fixe » ou « pilote ». « class » donne le format
+ # (aspect-*), 3:2 par défaut, celui de l'écran de référence.
+ #}
+{% macro screen(mode = null, class = 'aspect-[3/2]', lazy = true) %}
+    <iframe src="{{ path('app_showcase_screen', {mode: mode}) }}" title="Écran d'exemple" tabindex="-1" aria-hidden="true"
+            {%- if lazy %} loading="lazy"{% endif %}
+            class="pointer-events-none block h-auto w-full border-0 bg-[#05203c] {{ class }}"></iframe>
+{% endmacro %}
+
+{# Pastille d'une ligne, aux couleurs du réseau ; « colors » : classes Tailwind écrites en entier. #}
+{% macro line(number, colors, class = 'text-sm') %}
+    <span class="inline-flex min-w-9 justify-center rounded px-1.5 py-0.5 font-bold {{ colors }} {{ class }}">{{ number }}</span>
+{% endmacro %}
