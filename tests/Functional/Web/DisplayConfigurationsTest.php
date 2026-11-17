@@ -429,6 +429,44 @@ final class DisplayConfigurationsTest extends WebTestCase
         self::assertSame(['Premier'], $this->displayedTitles($device));
     }
 
+    #[DataProvider('visibilities')]
+    public function testEditPageShowsWhetherTheConfigurationIsDisplayed(bool $active): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $configuration = $this->configure($device, 'Premier')->setActive($active);
+        $this->entityManager()->flush();
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
+
+        self::assertResponseIsSuccessful();
+        $switch = $crawler->selectButton('Enregistrer')->form()['display_configuration[active]'];
+        self::assertInstanceOf(ChoiceFormField::class, $switch);
+        self::assertSame($active, $switch->hasValue());
+    }
+
+    /**
+     * @return iterable<string, array{bool}>
+     */
+    public static function visibilities(): iterable
+    {
+        yield 'affiché' => [true];
+        yield 'masqué' => [false];
+    }
+
+    public function testSavingTheEditPageKeepsTheConfigurationDisplayed(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+        $configuration = $this->configure($device, 'Premier');
+
+        $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/edit', $configuration->getId()));
+        $form = $crawler->selectButton('Enregistrer')->form();
+        $form['display_configuration[label]'] = 'Vers la gare';
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        self::assertTrue($this->reload($configuration)->isActive());
+    }
+
     public function testSwitchHidesThenShowsTheConfiguration(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->user]);
