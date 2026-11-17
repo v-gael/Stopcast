@@ -1,0 +1,13 @@
+{% extends 'email/base.html.twig' %}
+
+{% block content %}
+    <p style="margin: 0 0 16px;">Bonjour,</p>
+    <p style="margin: 0 0 16px;"><strong>{{ accessRequest.email }}</strong> demande un accès à Stopcast.</p>
+    {% if accessRequest.message %}
+        <p style="margin: 0 0 16px; padding-left: 12px; border-left: 3px solid #cbd5e1; white-space: pre-line;">{{ accessRequest.message }}</p>
+    {% endif %}
+    <p style="margin: 0 0 16px;">
+        <a href="{{ url('app_admin_user_index') }}" style="display: inline-block; padding: 10px 16px; background-color: #f59e0b; color: #0f172a; font-weight: bold; text-decoration: none; border-radius: 6px;">Voir les demandes</a>
+    </p>
+    <p style="margin: 0; font-size: 13px; color: #64748b;">Sans suite, la demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après son envoi.</p>
+{% endblock %}

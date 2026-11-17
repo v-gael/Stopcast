@@ -55,6 +55,7 @@ class PurgeCommand extends Command
             ['Demandes de réinitialisation supprimées' => $summary->resetPasswordRequests],
             ['Lignes du journal des suppressions retirées' => $summary->deletionJournalEntries],
             ['Messages en échec supprimés' => $summary->failedMessages],
+            ["Demandes d'accès supprimées" => $summary->accessRequests],
         );
         $io->success('Purge terminée.');
 

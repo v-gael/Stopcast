@@ -123,13 +123,24 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
      */
     public function countActiveAdmins(): int
     {
+        return \count($this->findActiveAdminEmails());
+    }
+
+    /**
+     * Emails des administrateurs activés, dans l'ordre de création des comptes.
+     *
+     * @return list<string>
+     */
+    public function findActiveAdminEmails(): array
+    {
         // DQL ne lit pas dans une colonne JSON.
-        $count = $this->getEntityManager()->getConnection()->fetchOne(
-            'SELECT COUNT(*) FROM app_user WHERE password IS NOT NULL AND roles::jsonb @> :role',
+        /** @var list<string> $emails */
+        $emails = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            'SELECT email FROM app_user WHERE password IS NOT NULL AND roles::jsonb @> :role ORDER BY created_at, id',
             ['role' => json_encode([Role::Admin->value], \JSON_THROW_ON_ERROR)],
         );
 
-        return is_numeric($count) ? (int) $count : 0;
+        return $emails;
     }
 
     /**

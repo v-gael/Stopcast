@@ -3,11 +3,11 @@
 Registre minimal des traitements de données personnelles de Stopcast. Il est la source de la [politique de confidentialité](../templates/legal/privacy.html.twig) publiée sur `/confidentialite` : toute modification ici se reporte sur la page, et inversement.
 
 - **Responsable du traitement** : `v-gael`, particulier, joignable à `contact@gaelv.com`.
-- **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris) et les visiteurs des pages publiques.
+- **Personnes concernées** : les utilisateurs (comptes ouverts sur invitation d'un administrateur, administrateurs compris) les visiteurs des pages publiques, et ceux qui demandent un accès.
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord, il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 10 novembre 2026.
+Dernière mise à jour : 17 novembre 2026.
 
 ## Traitements
 
@@ -21,6 +21,17 @@ Dernière mise à jour : 10 novembre 2026.
 | Base légale | Exécution du contrat ([conditions d'utilisation](../templates/legal/terms.html.twig)). |
 | Durée | Compte : jusqu'à sa suppression par l'utilisateur ou un administrateur, ou après 2 ans sans connexion (voir « Purge des comptes inactifs »). Demandes d'invitation (lien valable 24 heures) et de réinitialisation (1 heure) : supprimées à leur expiration. Compte en attente (invitation jamais acceptée) : supprimé 30 jours après l'expiration de son dernier lien. Session : fin du navigateur, ou 2 heures d'inactivité ; « se souvenir de moi » : 30 jours. |
 | Destinataires et sous-traitants | Administrateurs du service ; OVH (hébergement), Cloudflare (proxy, sauvegardes). |
+
+### Demandes d'accès
+
+| | |
+|---|---|
+| Finalité | Recevoir la demande d'un visiteur qui souhaite un compte, et lui répondre par une invitation. |
+| Données | Email, message libre facultatif (300 caractères au plus), date de la dernière demande. |
+| Personnes concernées | Visiteurs qui demandent un accès. |
+| Base légale | Mesures précontractuelles prises à la demande de la personne. |
+| Durée | Jusqu'à l'invitation ou la suppression de la demande par un administrateur, au plus 30 jours après la dernière demande. Aucun mail n'est envoyé à l'adresse saisie ; les administrateurs reçoivent un mail par demande. |
+| Destinataires et sous-traitants | Administrateurs du service ; Brevo (mail aux administrateurs), OVH, Cloudflare (Turnstile, sauvegardes). |
 
 ### Dispositifs et configurations d'affichage
 
