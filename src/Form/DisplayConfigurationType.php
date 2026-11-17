@@ -44,10 +44,12 @@ final class DisplayConfigurationType extends AbstractType
                 'label' => 'Affiché',
                 'help' => 'Masqué, le quai sort de la rotation sans être supprimé.',
                 'required' => false,
-                // À la création, rien à lire encore : affiché par défaut, comme l'entité.
-                'data' => $editing ? null : true,
                 // Dessiné en interrupteur, comme dans la liste de rotation (templates/form/tailwind_layout.html.twig).
                 'block_prefix' => 'switch',
+                // À la création, rien à lire encore : affiché par défaut, comme
+                // l'entité. À l'édition, l'option doit manquer : même nulle, elle
+                // fige la case et remplace l'état lu dans la configuration.
+                ...($editing ? [] : ['data' => true]),
             ]);
     }
 
