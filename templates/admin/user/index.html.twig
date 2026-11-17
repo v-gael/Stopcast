@@ -8,6 +8,48 @@
         <twig:Button href="{{ path('app_admin_user_invite') }}">Inviter un compte</twig:Button>
     </div>
 
+    {% if accessRequests is not empty %}
+        <section id="demandes-acces" aria-labelledby="demandes-acces-titre" class="mb-8">
+            <h2 id="demandes-acces-titre" class="mb-3 text-lg font-semibold text-slate-900">Demandes d'accès ({{ accessRequests|length }})</h2>
+            <div class="overflow-x-auto rounded-xl border border-amber-200 bg-white shadow-sm">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-amber-50 text-left font-semibold text-slate-700">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Email</th>
+                            <th scope="col" class="px-4 py-3">Message</th>
+                            <th scope="col" class="px-4 py-3">Demandé le</th>
+                            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        {% for accessRequest in accessRequests %}
+                            <tr>
+                                <td class="px-4 py-3 text-slate-900">{{ accessRequest.email }}</td>
+                                <td class="max-w-md px-4 py-3 whitespace-pre-line break-words text-slate-600">{{ accessRequest.message ?? '—' }}</td>
+                                <td class="px-4 py-3 text-slate-600">{{ accessRequest.requestedAt|date('d/m/Y') }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                                        <form method="post" action="{{ path('app_admin_access_request_invite', {id: accessRequest.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('invite-access-request-' ~ accessRequest.id) }}">
+                                            <button type="submit" class="inline-flex min-h-6 items-center font-medium text-amber-700 hover:text-amber-800">Inviter<span class="sr-only"> {{ accessRequest.email }}</span></button>
+                                        </form>
+                                        <form method="post" action="{{ path('app_admin_access_request_delete', {id: accessRequest.id}) }}"
+                                              data-turbo-confirm="Supprimer la demande de {{ accessRequest.email }} ?">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete-access-request-' ~ accessRequest.id) }}">
+                                            <button type="submit" class="inline-flex min-h-6 items-center font-medium text-red-600 hover:text-red-800">Supprimer<span class="sr-only"> la demande de {{ accessRequest.email }}</span></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <h2 class="mb-3 text-lg font-semibold text-slate-900">Comptes</h2>
+    {% endif %}
+
     <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-left font-semibold text-slate-700">

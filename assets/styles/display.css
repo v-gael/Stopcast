@@ -86,7 +86,6 @@ body {
     overflow: hidden;
     color: var(--display-stop-text);
     text-overflow: ellipsis;
-    text-transform: uppercase;
     white-space: nowrap;
 }
 
@@ -200,8 +199,7 @@ body {
     gap: calc(2 * var(--u));
 }
 
-.screen__no-bus,
-.screen__unavailable {
+.screen__no-bus {
     width: calc(141 * var(--u));
     height: calc(141 * var(--u));
 }

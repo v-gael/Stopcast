@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\ScreenPairingTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -23,6 +24,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 #[ResetDatabase]
 final class ScannedPairingTest extends WebTestCase
 {
+    use MockClockTrait;
     use ScreenPairingTrait;
 
     private const string UNKNOWN_CODE = "Ce code est inconnu ou a expiré. Scannez le nouveau code affiché sur l'écran.";
@@ -40,8 +42,7 @@ final class ScannedPairingTest extends WebTestCase
         // d'une requête à l'autre.
         $this->client->disableReboot();
 
-        $this->clock = new MockClock('2026-11-04 08:00:00', date_default_timezone_get());
-        self::getContainer()->set('clock', $this->clock);
+        $this->clock = $this->mockClock('2026-11-04 08:00:00');
 
         $this->user = UserFactory::createOne();
     }

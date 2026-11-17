@@ -105,7 +105,8 @@ class Device
 
     /**
      * Dernière requête de l'écran appairé, à CONTACT_RECORD_INTERVAL près ; null tant que
-     * l'écran n'a jamais appelé. Dissocier ou réappairer la garde.
+     * l'écran n'a jamais appelé. Il est oublié quand l'écran est dissocié ou
+     * remplacé : il ne vaut que pour l'écran appairé.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSeenAt = null;
@@ -181,6 +182,7 @@ class Device
     public function pairScreen(#[\SensitiveParameter] string $secret): static
     {
         $this->screenSecretHash = self::hashScreenSecret($secret);
+        $this->lastSeenAt = null;
 
         return $this;
     }
@@ -188,6 +190,7 @@ class Device
     public function unpairScreen(): static
     {
         $this->screenSecretHash = null;
+        $this->lastSeenAt = null;
 
         return $this;
     }
@@ -386,6 +389,30 @@ class Device
     public function moveDisplayConfigurationDown(DisplayConfiguration $configuration): static
     {
         return $this->moveDisplayConfiguration($configuration, 1);
+    }
+
+    /**
+     * Met la rotation dans cet ordre et la renumérote à partir de 0. L'ordre
+     * doit reprendre chaque configuration du dispositif une fois exactement :
+     * sinon (rotation changée ailleurs entre-temps) rien ne change, et false.
+     *
+     * @param list<DisplayConfiguration> $configurations
+     */
+    public function reorderDisplayConfigurations(array $configurations): bool
+    {
+        $current = $this->displayConfigurations->toArray();
+        $identity = static fn (DisplayConfiguration $configuration): int => spl_object_id($configuration);
+
+        if (\count($configurations) !== \count($current)
+            || [] !== array_diff(array_map($identity, $current), array_map($identity, $configurations))) {
+            return false;
+        }
+
+        foreach ($configurations as $position => $configuration) {
+            $configuration->setPosition($position);
+        }
+
+        return true;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

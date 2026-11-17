@@ -30,14 +30,16 @@
                     }, with_context = false) }}
                 </div>
 
-                <div class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
+                {# Rechargé seul tant que l'état va changer (un écran en cours d'appairage) : l'aperçu et les messages restent en place. #}
+                <turbo-frame id="device-summary" target="_top" class="flex shrink-0 flex-col justify-between gap-4 xl:w-56">
                     <dl class="space-y-2 text-sm">
                         {# L'état, et la date de création au survol (et pour les lecteurs d'écran). Ce qui l'explique est dans les lignes suivantes et dans la colonne « Quais ». #}
                         {% set created = 'Créé le ' ~ device.createdAt|date('d/m/Y à H:i') %}
                         <div>
                             <dt class="font-medium text-slate-500">État</dt>
                             <dd class="mt-0.5">
-                                <span class="inline-flex cursor-help" title="{{ created }}" data-device-state>
+                                <span class="inline-flex cursor-help" title="{{ created }}" data-device-state
+                                      {%- if device_status_settling(device) %} data-controller="frame-refresh"{% endif %}>
                                     {{ status_macros.status(device) }}<span class="sr-only">, {{ created|lower }}</span>
                                 </span>
                             </dd>
@@ -79,7 +81,7 @@
                             <twig:Button type="submit" variant="danger" class="w-full">Supprimer</twig:Button>
                         </form>
                     </div>
-                </div>
+                </turbo-frame>
             </div>
         </twig:Card>
     </div>

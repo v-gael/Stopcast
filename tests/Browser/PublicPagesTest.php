@@ -30,6 +30,7 @@ final class PublicPagesTest extends PantherTestCase
     public static function pages(): iterable
     {
         yield 'mot de passe oublié' => ['/reset-password'];
+        yield "demande d'accès" => ['/demande-acces'];
         yield 'mentions légales' => ['/mentions-legales'];
         yield "conditions d'utilisation" => ['/conditions-utilisation'];
         yield 'confidentialité' => ['/confidentialite'];
@@ -43,16 +44,62 @@ final class PublicPagesTest extends PantherTestCase
     }
 
     /**
-     * Le widget Turnstile (vrai script de Cloudflare, clé de test) remplit son
-     * champ sans violation CSP.
+     * Le widget Turnstile (vrai script de Cloudflare, clé de test) n'est créé
+     * qu'à l'ouverture du panneau de connexion, puis remplit son champ sans
+     * violation CSP.
      */
-    public function testLoginFormGetsATurnstileToken(): void
+    public function testLoginPanelGetsATurnstileTokenOnceOpened(): void
     {
         $client = $this->anonymousClient();
         $this->visitWithCleanConsole($client, '/');
+        self::assertFalse($client->executeScript('return "turnstile" in window;'), "Le script de Turnstile est chargé avant l'ouverture du panneau.");
 
+        $this->openLoginPanel($client);
         $this->waitForTurnstileToken($client);
         $this->assertNoBrowserErrors($client, 'widget Turnstile');
+    }
+
+    /**
+     * Retour arrière vers la vitrine gardée par Turbo : panneau fermé, sans
+     * widget recréé.
+     */
+    public function testShowcaseRestoredByTurboComesBackWithTheLoginPanelClosed(): void
+    {
+        $client = $this->anonymousClient();
+        $this->visitWithCleanConsole($client, '/');
+        $this->openLoginPanel($client);
+        $this->waitForTurnstileToken($client);
+
+        $client->executeScript('document.getElementById("connexion").hidePopover(); Turbo.visit("/mentions-legales");');
+        $client->waitForElementToContain('main h1', 'Mentions légales');
+        $client->executeScript('history.back();');
+        $client->waitForElementToContain('main h1', 'Le panneau de votre arrêt');
+
+        self::assertFalse($client->executeScript('return document.getElementById("connexion").matches(":popover-open");'));
+        self::assertSame(0, $client->executeScript('return document.querySelectorAll(\'#connexion [data-controller~="turnstile"]\').length;'));
+        $this->assertNoBrowserErrors($client, 'retour arrière vers la vitrine');
+    }
+
+    /**
+     * Après un échec de connexion, la vitrine revient avec le panneau ouvert.
+     */
+    public function testFailedLoginReopensTheLoginPanel(): void
+    {
+        UserFactory::createOne(['email' => 'lea@example.com']);
+        $client = $this->anonymousClient();
+        $crawler = $this->visitWithCleanConsole($client, '/');
+        $this->openLoginPanel($client);
+        $this->waitForTurnstileToken($client);
+
+        $client->submit($crawler->filter('#connexion')->selectButton('Se connecter')->form([
+            '_username' => 'lea@example.com',
+            '_password' => 'mauvais-mot-de-passe',
+        ]));
+        $client->waitFor('#connexion [role="alert"]');
+
+        self::assertSelectorTextContains('#connexion [role="alert"]', 'Identifiants invalides.');
+        self::assertTrue($client->executeScript('return document.getElementById("connexion").matches(":popover-open");'), "Le panneau ne s'est pas rouvert sur l'erreur.");
+        $this->assertNoBrowserErrors($client, 'échec de connexion');
     }
 
     public function testInvitationPageHasACleanConsole(): void

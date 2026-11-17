@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Command;
 
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\RealtimeFeedMessageTrait;
 use Google\Transit\Realtime\FeedEntity;
 use Google\Transit\Realtime\TripDescriptor;
@@ -14,7 +15,6 @@ use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -22,6 +22,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class GtfsRealtimeCheckCommandTest extends KernelTestCase
 {
+    use MockClockTrait;
     use RealtimeFeedMessageTrait;
 
     public function testAFreshFeedIsReportedOnOneLine(): void
@@ -121,7 +122,7 @@ final class GtfsRealtimeCheckCommandTest extends KernelTestCase
     {
         $kernel = self::bootKernel();
         self::getContainer()->set('http_client', new MockHttpClient($response));
-        self::getContainer()->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
+        $this->mockClock(self::NOW);
 
         return new CommandTester(new Application($kernel)->find('app:gtfs:realtime:check'));
     }

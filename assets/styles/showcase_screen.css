@@ -1,0 +1,51 @@
+/*
+ * Écran de la vitrine (templates/showcase/screen.html.twig) : les états du
+ * parcours « Comment ça marche » qui précèdent l'appairage, dans les couleurs
+ * de la page d'affichage (display.css, liée avant).
+ */
+
+.showcase-panel {
+    height: 100%;
+}
+
+/* Écran allumé, navigateur ouvert : la barre d'adresse en haut, un mot au centre. */
+.showcase-panel[data-panel="idle"],
+.showcase-panel[data-panel="url"] {
+    display: flex;
+    flex-direction: column;
+    background: #0b1220;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+}
+
+.showcase-boot__hint {
+    margin: auto;
+    color: #475569;
+    font-size: calc(20 * var(--u));
+}
+
+.showcase-boot__bar {
+    margin: calc(14 * var(--u));
+    padding: calc(8 * var(--u)) calc(14 * var(--u));
+    border-radius: 999px;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-size: calc(20 * var(--u));
+}
+
+.showcase-boot__bar::after {
+    content: "▍";
+    animation: showcase-caret 1s steps(1) infinite;
+}
+
+@keyframes showcase-caret {
+    50% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .showcase-boot__bar::after {
+        animation: none;
+    }
+}

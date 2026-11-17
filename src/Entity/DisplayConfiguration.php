@@ -118,6 +118,18 @@ class DisplayConfiguration
         return $this;
     }
 
+    /**
+     * Nom montré partout, à l'écran comme dans l'espace web : le libellé, ou à
+     * défaut le nom du quai. Un libellé fait seulement d'espaces compte comme
+     * vide.
+     */
+    public function getDisplayName(): string
+    {
+        $label = trim($this->label ?? '');
+
+        return '' !== $label ? $label : $this->quay->getName();
+    }
+
     public function getPosition(): int
     {
         return $this->position;

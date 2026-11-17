@@ -1,0 +1,39 @@
+{# « En bref », en mosaïque : le grand bloc du réseau, puis l'accès anticipé et trois engagements. #}
+{% set commitments = [
+    ['📡', 'bg-emerald-100', 'Seulement des passages réels', "L'écran n'affiche que ce que le réseau transmet en temps réel. Si le flux est coupé, il le signale au lieu de montrer des horaires théoriques."],
+    ['🔓', 'bg-violet-100', 'Ouvert et sans pistage', "Le code est public sur GitHub. Ni publicité, ni outil de mesure d'audience."],
+    ['🤝', 'bg-slate-100', 'Un projet indépendant', "Stopcast n'est lié ni à la TCAT ni à Troyes Champagne Métropole : il réutilise les données ouvertes qu'elles publient."],
+] %}
+
+<section id="en-bref" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <h2 class="text-3xl font-bold text-slate-900">En bref</h2>
+    <div class="mt-8 grid gap-5 lg:grid-cols-3">
+        <div class="rounded-2xl bg-sky-700 p-7 text-white lg:row-span-2">
+            <span class="text-4xl" aria-hidden="true">🗺️</span>
+            <h3 class="mt-4 text-2xl font-bold">Pensé pour Troyes,</h3>
+            <p class="mt-1 text-lg text-sky-100">compatible avec tout réseau qui publie ses horaires en temps réel.</p>
+            <p class="mt-4 text-sky-100">Stopcast lit aujourd'hui les données ouvertes du réseau TCAT. Les réseaux qui publient leurs passages au même format (GTFS-RT) peuvent suivre.</p>
+            <p class="mt-8 flex flex-wrap gap-2 text-sm">
+                <span class="rounded-full bg-white px-3 py-1 font-semibold text-sky-800">● Troyes</span>
+                <span class="px-1 py-1 text-sky-100 italic">+ votre ville ?</span>
+            </p>
+        </div>
+        <div class="flex gap-4 rounded-2xl bg-amber-50 p-6 shadow-sm ring-1 ring-amber-200">
+            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-100 text-xl" aria-hidden="true">🚧</span>
+            <div>
+                <h3 class="font-bold text-slate-900">En accès anticipé</h3>
+                <p class="mt-1 text-sm text-slate-600">Le service est en cours de développement : les comptes s'ouvrent sur invitation.</p>
+                <twig:Button href="{{ path('app_access_request') }}" class="mt-4">Demander un accès</twig:Button>
+            </div>
+        </div>
+        {% for commitment in commitments %}
+            <div class="flex gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <span class="grid size-11 shrink-0 place-items-center rounded-xl {{ commitment[1] }} text-xl" aria-hidden="true">{{ commitment[0] }}</span>
+                <div>
+                    <h3 class="font-bold text-slate-900">{{ commitment[2] }}</h3>
+                    <p class="mt-1 text-sm text-slate-600">{{ commitment[3] }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</section>

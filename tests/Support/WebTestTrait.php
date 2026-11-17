@@ -24,13 +24,13 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 trait WebTestTrait
 {
     /**
-     * Connexion depuis le formulaire de la vitrine, avec le jeton Turnstile
+     * Connexion depuis le panneau de l'en-tête de la vitrine, avec le jeton Turnstile
      * que le widget y aurait ajouté.
      */
     private function logIn(string $email, string $password, bool $rememberMe = false, string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
     {
         $crawler = $this->browser()->request('GET', '/');
-        $form = $crawler->selectButton('Se connecter')->form([
+        $form = $crawler->filter('#connexion')->selectButton('Se connecter')->form([
             '_username' => $email,
             '_password' => $password,
         ]);
@@ -54,6 +54,20 @@ trait WebTestTrait
 
         $this->submitWithTurnstile($crawler->selectButton('Envoyer le lien')->form([
             'reset_password_request[email]' => $email,
+        ]), $turnstileToken);
+    }
+
+    /**
+     * Demande d'accès d'un visiteur, depuis sa page.
+     */
+    private function requestAccess(string $email, string $message = '', string $turnstileToken = TurnstileSiteverifyMock::VALID_TOKEN): void
+    {
+        $crawler = $this->browser()->request('GET', '/demande-acces');
+        self::assertResponseIsSuccessful();
+
+        $this->submitWithTurnstile($crawler->selectButton('Envoyer la demande')->form([
+            'access_request[email]' => $email,
+            'access_request[message]' => $message,
         ]), $turnstileToken);
     }
 
@@ -96,6 +110,19 @@ trait WebTestTrait
         self::assertCount(1, $row);
 
         return $row;
+    }
+
+    /**
+     * Lignes de la section « Demandes d'accès » de la liste des comptes :
+     * email, message, date.
+     *
+     * @return list<list<string>>
+     */
+    private function accessRequestRows(Crawler $crawler): array
+    {
+        return $crawler->filter('#demandes-acces tbody tr')->each(
+            static fn (Crawler $row): array => \array_slice($row->filter('td')->each(static fn (Crawler $cell): string => trim($cell->text())), 0, 3),
+        );
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Web;
 
 use App\Entity\User;
 use App\Enum\Role;
+use App\Factory\AccessRequestFactory;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\WebTestTrait;
@@ -64,6 +65,7 @@ final class AccessibilityTest extends WebTestCase
     public function testPublicPagesHaveOneMainHeadingAndNoSkippedLevel(): void
     {
         $this->assertHeadingOutline('/');
+        $this->assertHeadingOutline('/demande-acces');
         $this->assertHeadingOutline('/reset-password');
 
         $this->submitWithTurnstile($this->client->getCrawler()->selectButton('Envoyer le lien')->form([
@@ -93,6 +95,8 @@ final class AccessibilityTest extends WebTestCase
     public function testSpacePagesHaveOneMainHeadingAndNoSkippedLevel(): void
     {
         $device = DeviceFactory::createOne(['owner' => $this->admin]);
+        // La section des demandes d'accès ajoute un niveau h2 à la liste des comptes.
+        AccessRequestFactory::createOne();
         $this->client->loginUser($this->admin);
 
         foreach (['/devices', \sprintf('/devices/%d', $device->getId()), '/devices/pair?code=K7F3QX', \sprintf('/display-configurations/new?device=%d', $device->getId()), '/account', '/admin/users'] as $path) {
@@ -107,6 +111,7 @@ final class AccessibilityTest extends WebTestCase
     {
         yield 'connexion' => ['/'];
         yield 'mot de passe oublié' => ['/reset-password'];
+        yield "demande d'accès" => ['/demande-acces'];
         yield 'ajout de dispositif' => ['/devices/new'];
         yield 'modification de dispositif' => ['/devices/%device%/edit'];
         yield 'appairage par QR code' => ['/devices/pair?code=K7F3QX'];
@@ -122,14 +127,15 @@ final class AccessibilityTest extends WebTestCase
     {
         $device = DeviceFactory::createOne(['owner' => $this->admin]);
         $user = UserFactory::createOne();
-        if ('/' !== $path && '/reset-password' !== $path) {
+        if (!\in_array($path, ['/', '/reset-password', '/demande-acces'], true)) {
             $this->client->loginUser($this->admin);
         }
 
         $crawler = $this->client->request('GET', strtr($path, ['%device%' => $device->getId(), '%user%' => $user->getId()]));
 
         self::assertResponseIsSuccessful();
-        $fields = $crawler->filter('main form')->filter('input:not([type="hidden"]), select, textarea');
+        // Le formulaire de connexion est dans le panneau de l'en-tête.
+        $fields = $crawler->filter('main form, header form')->filter('input:not([type="hidden"]), select, textarea');
         self::assertGreaterThan(0, $fields->count());
         $fields->each(static function (Crawler $field) use ($crawler): void {
             $id = (string) $field->attr('id');

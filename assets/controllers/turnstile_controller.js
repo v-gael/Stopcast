@@ -4,7 +4,9 @@ import { Controller } from '@hotwired/stimulus';
  * Widget Cloudflare Turnstile (composant Turnstile). Le script de Cloudflare
  * n'est chargé que sur les pages qui portent le widget, une seule fois même
  * après plusieurs visites Turbo, en rendu explicite : le widget est affiché à
- * l'arrivée du formulaire et retiré à son départ. À l'expiration de son jeton
+ * l'arrivée du formulaire et retiré à son départ. Dans le panneau de connexion
+ * de l'en-tête, il n'arrive qu'à la première ouverture (contrôleur login-panel,
+ * composant Turnstile « deferred »). À l'expiration de son jeton
  * (300 s), il en obtient un nouveau.
  */
 

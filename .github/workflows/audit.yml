@@ -63,9 +63,12 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      # Même audit que `make audit` en local.
+      # Même audit que `make audit` en local, authentifié auprès de l'API
+      # GitHub (github.client, config/packages/framework.yaml).
       - name: Audit
         run: bin/audit
+        env:
+          GITHUB_ADVISORIES_TOKEN: ${{ github.token }}
 
   # Scan quotidien de la dernière release déployée (latest, posé par le job
   # release de ci.yml) : une faille découverte après le déploiement fait

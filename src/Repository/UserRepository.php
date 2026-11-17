@@ -133,6 +133,23 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     }
 
     /**
+     * Emails des administrateurs activés, dans l'ordre de création des comptes.
+     *
+     * @return list<string>
+     */
+    public function findActiveAdminEmails(): array
+    {
+        // DQL ne lit pas dans une colonne JSON.
+        /** @var list<string> $emails */
+        $emails = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            'SELECT email FROM app_user WHERE password IS NOT NULL AND roles::jsonb @> :role ORDER BY created_at, id',
+            ['role' => json_encode([Role::Admin->value], \JSON_THROW_ON_ERROR)],
+        );
+
+        return $emails;
+    }
+
+    /**
      * Rehache le mot de passe à la connexion quand l'algorithme a changé.
      */
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void

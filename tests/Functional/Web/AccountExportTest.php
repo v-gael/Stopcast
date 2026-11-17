@@ -10,17 +10,18 @@ use App\Entity\Quay;
 use App\Entity\User;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
+use App\Tests\Support\MockClockTrait;
 use App\Tests\Support\WebTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Clock\MockClock;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
 #[ResetDatabase]
 final class AccountExportTest extends WebTestCase
 {
+    use MockClockTrait;
     use WebTestTrait;
 
     private const string EMAIL = 'lea@example.com';
@@ -211,7 +212,7 @@ final class AccountExportTest extends WebTestCase
         $kernel->boot();
 
         $this->client->disableReboot();
-        self::getContainer()->set('clock', new MockClock(self::NOW, date_default_timezone_get()));
+        $this->mockClock(self::NOW);
 
         $this->client->submit($form);
 

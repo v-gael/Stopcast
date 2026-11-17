@@ -112,3 +112,164 @@
         }
     }
 }
+
+/*
+ * Glisser-déposer des quais (contrôleur rotation-sort). Les flèches ne servent
+ * plus qu'au clavier : masquées, elles reviennent quand la ligne a le focus
+ * clavier. La ligne saisie suit le pointeur, une place vide marque l'endroit
+ * où elle sera posée.
+ */
+@layer components {
+    [data-rotation-sortable] [data-rotation-sort-target="item"] {
+        cursor: grab;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    /* Propriétés de sr-only écrites en clair : les tests servent app.css sans le compiler. */
+    [data-rotation-sortable] [data-rotation-sort-target="item"]:not(:has(:focus-visible)) [data-rotation-arrows] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
+    .rotation-lifted {
+        position: fixed;
+        z-index: 50;
+        pointer-events: none;
+        cursor: grabbing;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        outline: 1px solid var(--color-amber-300);
+    }
+
+    .rotation-slot {
+        border: 2px dashed var(--color-amber-300);
+        border-radius: var(--radius-md);
+        background: var(--color-amber-50);
+    }
+
+}
+
+/*
+ * Panneau de connexion de l'en-tête de la vitrine (layout/_login_panel.html.twig) :
+ * un popover, donc dans la couche du dessus, placé sous le bouton « Se connecter »,
+ * à droite de la colonne de 72rem (max-w-6xl) de l'en-tête.
+ */
+@layer components {
+    /* Absolu et non fixe : l'en-tête n'est pas collant, le panneau défile avec lui. */
+    .login-panel {
+        position: absolute;
+        inset: auto;
+        top: calc(var(--spacing) * 18);
+        right: max(calc(var(--spacing) * 3), calc((100vw - 72rem) / 2 + var(--spacing) * 6));
+        margin: 0;
+    }
+}
+
+/*
+ * Vitrine (templates/home/) : fiches horaires papier, barres du signal « En
+ * direct », et, dans « Comment ça marche », le bouton qui brille, le bouton
+ * enfoncé et le curseur du champ en cours de saisie. Sans animation quand le
+ * système demande de réduire les mouvements.
+ */
+@layer components {
+    .showcase-timetable {
+        background: #f1e8d0 radial-gradient(#00000010 1px, transparent 1px) 0 0 / 5px 5px;
+        color: #5b4a2e;
+        font-family: Georgia, "Times New Roman", serif;
+        box-shadow: 0 1px 0 #d9c9a3, 0 6px 14px -6px #0004;
+    }
+
+    .showcase-signal i {
+        display: block;
+        width: 4px;
+        border-radius: 1px;
+        background: var(--color-emerald-500);
+        animation: showcase-signal 1.6s infinite;
+    }
+
+    .showcase-signal i:nth-child(1) { height: 5px; }
+    .showcase-signal i:nth-child(2) { height: 9px; animation-delay: 0.15s; }
+    .showcase-signal i:nth-child(3) { height: 13px; animation-delay: 0.3s; }
+
+    .showcase-glow {
+        position: relative;
+        z-index: 1;
+        cursor: pointer;
+        outline: 3px solid var(--color-amber-500);
+        outline-offset: 3px;
+        animation: showcase-glow 1.1s ease-in-out infinite;
+    }
+
+    /* Au clavier, contour du focus de tout le site (amber-700, 5:1 sur blanc), sans pulsation. */
+    .showcase-glow:focus-visible {
+        outline-color: var(--color-amber-700);
+        animation: none;
+    }
+
+    .showcase-glow::after {
+        content: "👆";
+        position: absolute;
+        right: -0.6rem;
+        bottom: -1.3rem;
+        font-size: 1.15rem;
+        pointer-events: none;
+        animation: showcase-tap 1.1s ease-in-out infinite;
+    }
+
+    .showcase-press {
+        transform: scale(0.95);
+        filter: brightness(0.9);
+        transition: transform 0.12s, filter 0.12s;
+    }
+
+    .showcase-field.is-focused {
+        border-color: var(--color-amber-500);
+        box-shadow: 0 0 0 2px rgb(245 158 11 / 0.2);
+    }
+
+    .showcase-field.is-focused [data-field]::after {
+        content: "▍";
+        margin-left: 1px;
+        animation: showcase-caret 1s steps(1) infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .showcase-signal i,
+        .showcase-glow,
+        .showcase-glow::after,
+        .showcase-field.is-focused [data-field]::after {
+            animation: none;
+        }
+
+        .showcase-glow {
+            outline-offset: 5px;
+        }
+    }
+}
+
+@keyframes showcase-signal {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes showcase-glow {
+    0%, 100% { outline-offset: 2px; outline-color: rgb(245 158 11 / 1); }
+    50% { outline-offset: 8px; outline-color: rgb(245 158 11 / 0.3); }
+}
+
+@keyframes showcase-tap {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-3px, -5px); }
+}
+
+@keyframes showcase-caret {
+    50% { opacity: 0; }
+}

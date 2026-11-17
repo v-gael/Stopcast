@@ -1,0 +1,203 @@
+{% import 'home/_macros.html.twig' as showcase %}
+
+{#
+ # « Comment ça marche » : parcours interactif, le site d'un côté, l'écran de
+ # l'autre. Le visiteur clique sur le bouton qui brille, sans rien taper ; le
+ # contrôleur « showcase-walkthrough » joue le reste (saisies, appairage) et
+ # pilote l'écran (mode « pilote »).
+ #
+ # Le site est une maquette faite des composants de l'espace web : toutes ses
+ # pages sont là, cachées sauf une. Le contrôleur remplit les champs
+ # (data-field), montre ce qui dépend de l'avancée (data-when, data-unless) et
+ # fait briller le bouton à cliquer (data-go).
+ #}
+{% set host = app.request.httpHost %}
+
+{% macro status(label, tone) %}
+    {% set colors = {info: ['text-blue-700', 'bg-blue-500'], success: ['text-emerald-700', 'bg-emerald-500'], neutral: ['text-slate-600', 'bg-slate-400']}[tone] %}
+    <span class="flex items-center gap-1.5 text-sm font-medium {{ colors[0] }}"><span class="size-2 shrink-0 rounded-full {{ colors[1] }}" aria-hidden="true"></span>{{ label }}</span>
+{% endmacro %}
+
+{% macro field(label, name, help = null) %}
+    <div>
+        <span class="block text-sm font-medium text-slate-700">{{ label }}</span>
+        <span class="showcase-field mt-1 block min-h-9 truncate rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm" data-field-box="{{ name }}"><span data-field="{{ name }}"></span></span>
+        {% if help %}<span class="mt-1 block text-xs text-slate-500">{{ help }}</span>{% endif %}
+    </div>
+{% endmacro %}
+
+{# Résultats de la recherche d'un quai : le premier est choisi. #}
+{% macro options(name, options) %}
+    <ul class="absolute inset-x-0 top-full z-10 mt-1 hidden rounded-md bg-white text-xs shadow-lg ring-1 ring-slate-200 [&.is-on]:block" data-when="{{ name }}">
+        {% for option in options %}
+            <li class="px-3 py-1.5{{ loop.first ? ' bg-amber-50' : '' }}"{% if loop.first %} data-option{% endif %}><b>{{ option[0] }}</b> <span class="text-slate-500">→ {{ option[1] }}</span></li>
+        {% endfor %}
+    </ul>
+{% endmacro %}
+
+{% set page = 'hidden h-full [&.is-on]:block' %}
+{% set panel = 'rounded-lg bg-white p-4 ring-1 ring-slate-200' %}
+
+<section id="comment-ca-marche" class="scroll-mt-4 border-y border-slate-200 bg-white py-16">
+    <div class="mx-auto max-w-6xl px-4 outline-none sm:px-6" tabindex="-1"
+         data-controller="showcase-walkthrough"
+         data-showcase-walkthrough-done-value="Votre écran est prêt. Il continue de tourner entre vos arrêts."
+         data-action="click->showcase-walkthrough#press">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="text-3xl font-bold text-slate-900">Comment ça marche</h2>
+                <p class="mt-1 text-slate-600">À vous de jouer : cliquez sur le bouton qui brille.</p>
+            </div>
+            <twig:Button variant="secondary" data-action="showcase-walkthrough#restart">↺ Recommencer</twig:Button>
+        </div>
+
+        <ol class="mt-8 mb-6 grid gap-2 sm:grid-cols-4">
+            {% for step in [
+                ['Créez un dispositif', "Un dispositif, c'est un écran chez vous : vous lui donnez un nom."],
+                ['Ajoutez vos arrêts', 'Cherchez un arrêt ; les destinations aident à choisir le bon sens. Donnez-lui un nom si vous voulez.'],
+                ["Ouvrez Stopcast sur l'écran", "Sur l'écran, ouvrez l'adresse, ou scannez le QR code avec un téléphone ou une tablette : il affiche un code."],
+                ['Saisissez le code', "Comme pour une télé connectée : l'écran affiche aussitôt vos bus et se tient à jour tout seul."],
+            ] %}
+                <li>
+                    <button type="button" data-showcase-walkthrough-target="step" data-action="showcase-walkthrough#jump" data-caption="{{ step[1] }}"
+                            class="w-full cursor-pointer rounded-lg border-t-4 border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-500 [&.is-done]:text-slate-700 [&.is-on]:border-amber-500 [&.is-on]:bg-white [&.is-on]:text-slate-900 [&.is-on]:shadow">
+                        <span class="block text-xs font-normal">Étape {{ loop.index }}</span>
+                        <span data-step-title>{{ step[0] }}</span>
+                    </button>
+                </li>
+            {% endfor %}
+        </ol>
+
+        <div class="grid items-start gap-6 md:grid-cols-2">
+            <div>
+                <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">Sur le site, depuis votre téléphone ou votre ordinateur</p>
+                <div class="overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
+                    <div class="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3 py-2" aria-hidden="true">
+                        <span class="size-2.5 rounded-full bg-red-400"></span><span class="size-2.5 rounded-full bg-amber-400"></span><span class="size-2.5 rounded-full bg-green-400"></span>
+                        <span class="ml-3 flex-1 truncate rounded bg-white px-2 py-0.5 text-xs text-slate-500">{{ host }}<span data-showcase-walkthrough-target="path">/devices</span></span>
+                    </div>
+                    <div class="flex items-center gap-5 bg-slate-900 px-4 py-2 text-xs text-white" aria-hidden="true">
+                        <span class="font-bold">🚏 Stopcast</span><span class="text-amber-400">Dispositifs</span><span>Mon compte</span>
+                    </div>
+
+                    <div class="h-[25rem] overflow-hidden bg-slate-50 p-4 text-sm">
+                        <div class="{{ page }} is-on" data-showcase-walkthrough-target="page" data-path="/devices">
+                            <p class="mb-3 text-lg font-bold text-slate-900">Mes dispositifs</p>
+                            <ul class="grid grid-cols-3 gap-3">
+                                <li class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                                    <div class="bg-slate-100 p-2"><div class="overflow-hidden rounded">{{ showcase.screen('fixe') }}</div></div>
+                                    <div class="p-2"><p class="text-xs font-semibold text-slate-900">Travail</p>{{ _self.status('En ligne', 'success') }}</div>
+                                </li>
+                                <li class="hidden overflow-hidden rounded-lg border border-amber-400 bg-white shadow-sm ring-2 ring-amber-400/40 [&.is-on]:block" data-when="paired">
+                                    <div class="bg-slate-100 p-2"><div class="overflow-hidden rounded">{{ showcase.screen('maison') }}</div></div>
+                                    <div class="p-2"><p class="text-xs font-semibold text-slate-900">Maison</p>{{ _self.status('En ligne', 'success') }}</div>
+                                </li>
+                                <li>
+                                    <button type="button" tabindex="-1" data-go="add-device"
+                                            class="block w-full overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-sm">
+                                        <span class="block bg-slate-100 p-2">
+                                            <span class="flex aspect-[3/2] flex-col items-center justify-center gap-1 rounded bg-[#05203c] text-[#7baee2]">
+                                                <span class="grid size-7 place-items-center rounded-full border-2 border-current text-lg leading-none" aria-hidden="true">+</span>
+                                                <span class="font-['Roboto_Condensed','Arial_Narrow',sans-serif] text-[9px] font-bold tracking-wide uppercase">Nouvel écran</span>
+                                            </span>
+                                        </span>
+                                        <span class="block p-2 text-xs font-semibold text-slate-900">Ajouter un dispositif</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="{{ page }}" data-showcase-walkthrough-target="page" data-path="/devices/new">
+                            <p class="mb-3 text-lg font-bold text-slate-900">Nouveau dispositif</p>
+                            <div class="max-w-sm space-y-4 {{ panel }}">
+                                {{ _self.field('Libellé', 'device-label') }}
+                                <div class="flex gap-3">
+                                    <twig:Button tabindex="-1" data-go="create">Créer</twig:Button>
+                                    <twig:Button tabindex="-1" variant="secondary">Annuler</twig:Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="{{ page }}" data-showcase-walkthrough-target="page" data-path="/devices/12">
+                            <p class="mb-3 text-lg font-bold text-slate-900" data-field="device-label"></p>
+                            <div class="grid grid-cols-[1fr_1.2fr] gap-3">
+                                <div class="{{ panel }}">
+                                    <p class="mb-2 text-xs font-semibold text-slate-500">Quais</p>
+                                    <ul class="space-y-1.5 text-xs font-medium text-slate-900">
+                                        <li class="hidden rounded-md bg-slate-50 px-2 py-1.5 [&.is-on]:block" data-when="quay-1">1. BEURNONVILLE</li>
+                                        <li class="hidden rounded-md bg-slate-50 px-2 py-1.5 [&.is-on]:block" data-when="quay-2">2. Direction travail</li>
+                                    </ul>
+                                    <p class="text-xs text-slate-500 [&.is-off]:hidden" data-unless="quay-1">Aucun quai pour l'instant.</p>
+                                    <twig:Button tabindex="-1" variant="secondary" data-go="add-quay" class="mt-3">Ajouter un quai</twig:Button>
+                                </div>
+                                <div class="{{ panel }}">
+                                    <p class="mb-2 text-xs font-semibold text-slate-500">Dispositif</p>
+                                    <dl class="space-y-1.5 text-xs">
+                                        <dt class="text-slate-500">État</dt>
+                                        <dd>
+                                            <span class="[&.is-off]:hidden" data-unless="screen-paired">{{ _self.status('Non appairé', 'neutral') }}</span>
+                                            <span class="hidden [&.is-on]:block" data-when="pairing">{{ _self.status('Appairage en cours', 'info') }}</span>
+                                            <span class="hidden [&.is-on]:block" data-when="online">{{ _self.status('En ligne', 'success') }}</span>
+                                        </dd>
+                                        <dt class="text-slate-500">Écran</dt>
+                                        <dd class="text-slate-900"><span class="[&.is-off]:hidden" data-unless="screen-paired">Aucun écran appairé</span><span class="hidden [&.is-on]:inline" data-when="screen-paired">Écran appairé</span></dd>
+                                    </dl>
+                                    <twig:Button tabindex="-1" variant="secondary" data-go="pair" class="mt-3">Appairer un écran</twig:Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="{{ page }}" data-showcase-walkthrough-target="page" data-path="/display-configurations/new">
+                            <p class="text-lg font-bold text-slate-900">Ajouter un quai</p>
+                            <p class="mb-3 text-xs text-slate-500">Sur le dispositif « <span data-field="device-label"></span> ».</p>
+                            <div class="max-w-md space-y-4 {{ panel }}">
+                                <div class="relative">
+                                    {{ _self.field('Quai', 'quay', 'Les destinations desservies aident à choisir le bon sens de circulation.') }}
+                                    {{ _self.options('options-beurnonville', [
+                                        ['BEURNONVILLE', 'BUCHERES PARC LOGISTIQUE, CENTRE ADMINISTRATIF, COEUR DE TROYES, HAMELET-DULOU'],
+                                        ['BEURNONVILLE', 'GARE JARDINS, MOLINE, CRENEY CHATAIGNIER'],
+                                    ]) }}
+                                    {{ _self.options('options-patton', [
+                                        ['PATTON', 'CENTRE ADMINISTRATIF, COEUR DE TROYES, FOUCHY, HAMELET-DULOU'],
+                                        ['PATTON', 'CHARTREUX, MOLINE, EUREKA'],
+                                    ]) }}
+                                </div>
+                                {{ _self.field('Libellé', 'quay-label', 'Facultatif. Affiché à la place du nom du quai.') }}
+                                <twig:Button tabindex="-1" data-go="add">Ajouter</twig:Button>
+                            </div>
+                        </div>
+
+                        <div class="{{ page }}" data-showcase-walkthrough-target="page" data-path="/devices/12/pair">
+                            <p class="mb-3 text-lg font-bold text-slate-900">Appairer un écran</p>
+                            <div class="max-w-md space-y-3 {{ panel }}">
+                                <p class="text-xs text-slate-700">Sur l'écran à appairer, ouvrez cette adresse. Il montre un code, valable une minute.</p>
+                                <div class="flex items-center gap-3">
+                                    <span class="rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-900" data-showcase-walkthrough-target="address">{{ host }}/display</span>
+                                    <twig:Button tabindex="-1" variant="secondary" data-go="copy"><span class="[&.is-off]:hidden" data-unless="copied">Copier</span><span class="hidden [&.is-on]:inline" data-when="copied">Copié ✓</span></twig:Button>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-14 shrink-0" aria-hidden="true">{{ qr_code|raw }}</div>
+                                    <p class="text-xs text-slate-600">L'écran est un téléphone ou une tablette ? Scannez ce QR code avec lui.</p>
+                                </div>
+                                {{ _self.field("Code affiché sur l'écran", 'code') }}
+                                <div class="flex gap-3">
+                                    <twig:Button tabindex="-1" data-go="confirm">Appairer</twig:Button>
+                                    <twig:Button tabindex="-1" variant="secondary">Annuler</twig:Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">Sur l'écran</p>
+                <div class="rounded-xl bg-zinc-800 p-2.5 shadow-xl" data-showcase-walkthrough-target="screen">
+                    <div class="overflow-hidden rounded-sm">{{ showcase.screen('pilote') }}</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-6 min-h-10 text-slate-600" data-showcase-walkthrough-target="caption" aria-live="polite"></p>
+    </div>
+</section>

@@ -2,8 +2,9 @@
  # Écrans d'un dispositif, un seul visible à la fois, et ses cadences (en
  # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
  # que la page relit. « state_message » remplace les écrans par un écran
- # d'état (dispositif désactivé, passages illisibles) ; « offline » lui donne
- # le pictogramme no_signal.
+ # d'état (dispositif désactivé, passages illisibles) ; « offline » en fait
+ # l'écran « indisponible ». « now » fixe l'heure affichée (écran figé de la
+ # vitrine).
  #
  # Chaque écran porte ses trois états : passages, « aucun passage » et
  # « indisponible ». Le contrôleur Stimulus retire les passages passés et
@@ -12,12 +13,12 @@
 {% set no_signal %}
     <img class="screen__no-signal" src="{{ asset('images/display/no_signal.png') }}" alt="Données non rafraîchies">
 {% endset %}
+{# Sans grand pictogramme : celui des en-têtes de colonnes signale déjà la panne. #}
 {% set unavailable %}
-    <img class="screen__unavailable" src="{{ asset('images/display/no_signal.png') }}" alt="">
     <p>Horaires temps réel indisponibles</p>
 {% endset %}
 {% set clock %}
-    <span class="screen__clock" data-display-target="clock">{{ 'now'|date('H:i') }}</span>
+    <span class="screen__clock" data-display-target="clock">{{ (now ?? 'now')|date('H:i') }}</span>
 {% endset %}
 {% set columns %}
     <div class="screen__columns">
@@ -34,7 +35,7 @@
     {% for screen in state_message is defined and state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">
-                <h1 class="screen__stop">{{ screen.quayName }}</h1>
+                <h1 class="screen__stop">{{ screen.title }}</h1>
                 {{ clock }}
             </div>
             {{ columns }}
@@ -42,7 +43,7 @@
                 <img class="screen__no-bus" src="{{ asset('images/display/no_bus.png') }}" alt="">
                 <p>Pas de passage prévu actuellement</p>
             </div>
-            <div class="screen__message screen__message--icon" data-display-target="unavailable" hidden>
+            <div class="screen__message" data-display-target="unavailable" hidden>
                 {{ unavailable }}
             </div>
             {% if screen.passages is not empty %}
@@ -66,15 +67,13 @@
                 {{ clock }}
             </div>
             {{ columns }}
-            {% if offline|default(false) %}
-                <div class="screen__message screen__message--icon">
+            <div class="screen__message">
+                {% if offline|default(false) %}
                     {{ unavailable }}
-                </div>
-            {% else %}
-                <div class="screen__message">
+                {% else %}
                     <p>{{ state_message ?? 'Aucun quai affiché' }}</p>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </section>
     {% endfor %}
 </div>

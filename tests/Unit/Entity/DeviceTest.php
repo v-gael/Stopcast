@@ -64,15 +64,28 @@ final class DeviceTest extends TestCase
         self::assertEquals($first->modify('+6 minutes'), $device->getLastSeenAt());
     }
 
-    public function testUnpairingOrPairingAgainKeepsTheLastContact(): void
+    public function testUnpairingForgetsTheLastContact(): void
     {
         $device = new Device($this->owner(), 'A')->pairScreen('premier');
-        $now = new \DateTimeImmutable('2026-10-30 14:32:00');
-        $device->recordContact($now);
+        $device->recordContact(new \DateTimeImmutable('2026-10-30 14:32:00'));
 
-        $device->unpairScreen()->pairScreen('second');
+        $device->unpairScreen();
 
-        self::assertEquals($now, $device->getLastSeenAt());
+        self::assertNull($device->getLastSeenAt());
+    }
+
+    /**
+     * Le nouvel écran n'a encore jamais donné de nouvelles : le dernier
+     * contact de l'ancien ne vaut pas pour lui.
+     */
+    public function testPairingAnotherScreenForgetsTheLastContact(): void
+    {
+        $device = new Device($this->owner(), 'A')->pairScreen('premier');
+        $device->recordContact(new \DateTimeImmutable('2026-10-30 14:32:00'));
+
+        $device->pairScreen('second');
+
+        self::assertNull($device->getLastSeenAt());
     }
 
     /**
@@ -218,6 +231,51 @@ final class DeviceTest extends TestCase
         $device->moveDisplayConfigurationUp($this->find($device, 'Troisième'));
 
         self::assertSame(['Premier' => 0, 'Troisième' => 1, 'Deuxième' => 2], $this->rotation($device));
+    }
+
+    public function testReorderingFollowsTheGivenOrderMaskedOnesIncluded(): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Masqué' => 3, 'Troisième' => 7]);
+
+        $reordered = $device->reorderDisplayConfigurations([
+            $this->find($device, 'Troisième'),
+            $this->find($device, 'Premier'),
+            $this->find($device, 'Masqué'),
+        ]);
+
+        self::assertTrue($reordered);
+        self::assertSame(['Troisième' => 0, 'Premier' => 1, 'Masqué' => 2], $this->rotation($device));
+    }
+
+    /**
+     * @return iterable<string, array{list<string|null>}>
+     */
+    public static function mismatchedOrders(): iterable
+    {
+        yield 'quai oublié' => [['Deuxième', 'Premier']];
+        yield 'quai en double' => [['Deuxième', 'Premier', 'Premier']];
+        yield "quai d'un autre dispositif" => [['Deuxième', 'Premier', null]];
+    }
+
+    /**
+     * Un ordre qui ne reprend pas exactement la rotation (changée ailleurs
+     * entre-temps) ne change rien. null : un quai d'un autre dispositif.
+     *
+     * @param list<string|null> $labels
+     */
+    #[DataProvider('mismatchedOrders')]
+    public function testReorderingWithAnOrderThatDoesNotMatchTheRotationChangesNothing(array $labels): void
+    {
+        $device = $this->deviceWithRotation(['Premier' => 0, 'Deuxième' => 1, 'Troisième' => 2]);
+        $other = new Device($this->owner(), 'B');
+
+        $reordered = $device->reorderDisplayConfigurations(array_map(
+            fn (?string $label): DisplayConfiguration => null === $label ? $this->configuration($other, 'Ailleurs') : $this->find($device, $label),
+            $labels,
+        ));
+
+        self::assertFalse($reordered);
+        self::assertSame(['Premier' => 0, 'Deuxième' => 1, 'Troisième' => 2], $this->rotation($device));
     }
 
     /**

@@ -27,6 +27,7 @@ declare(strict_types=1);
 return [
     'app' => ['path' => './assets/app.js', 'entrypoint' => true],
     'display' => ['path' => './assets/display.js', 'entrypoint' => true],
+    'showcase_screen' => ['path' => './assets/showcase_screen.js', 'entrypoint' => true],
     '@hotwired/stimulus' => ['version' => '3.2.2'],
     '@symfony/stimulus-bundle' => ['path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js'],
     '@hotwired/turbo' => ['version' => '8.0.23'],

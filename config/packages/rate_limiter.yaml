@@ -17,6 +17,13 @@ framework:
             interval: '15 minutes'
             # Verrou Redis, comme current_password.
             lock_factory: lock.factory
+        # Demandes d'accès d'un visiteur, un compteur par adresse IP : protège
+        # les boîtes des administrateurs et le quota d'envoi.
+        access_request:
+            policy: sliding_window
+            limit: 5
+            interval: '1 hour'
+            lock_factory: lock.factory
         # Demandes de changement d'email, un compteur par compte : protège les
         # boîtes de mails et le quota d'envoi, et borne les tests d'adresses.
         email_change_request:
@@ -48,6 +55,8 @@ when@test:
                 # disableReboot(), le compteur tient le temps d'un test.
                 storage_service: app.rate_limiter.test_storage
             reset_password_request:
+                storage_service: app.rate_limiter.test_storage
+            access_request:
                 storage_service: app.rate_limiter.test_storage
             email_change_request:
                 storage_service: app.rate_limiter.test_storage

@@ -16,6 +16,12 @@ enum DeviceStatus
     /** Aucun écran n'est appairé au dispositif. */
     case Unpaired;
 
+    /**
+     * Un code vient d'être saisi, l'écran n'a pas encore récupéré son
+     * appairage. Vient de ScreenPairing, pas de Device::status().
+     */
+    case Pairing;
+
     /** L'écran appairé n'a encore jamais donné de nouvelles. */
     case NeverSeen;
 
@@ -36,6 +42,7 @@ enum DeviceStatus
         return match ($this) {
             self::Disabled => 'Désactivé',
             self::Unpaired => 'Non appairé',
+            self::Pairing => 'Appairage en cours',
             self::NeverSeen => 'Jamais connecté',
             self::Offline => 'Hors ligne',
             self::NothingToShow => 'Rien à afficher',
@@ -45,12 +52,13 @@ enum DeviceStatus
     }
 
     /**
-     * Tonalité de la pastille : neutral, warning, danger ou success.
+     * Tonalité de la pastille : neutral, info, warning, danger ou success.
      */
     public function tone(): string
     {
         return match ($this) {
             self::Disabled, self::Unpaired => 'neutral',
+            self::Pairing => 'info',
             self::NeverSeen, self::NothingToShow, self::QuayGone => 'warning',
             self::Offline => 'danger',
             self::Online => 'success',
