@@ -19,8 +19,8 @@ final class ScreenPaginatorTest extends TestCase
     public function testEachConfigurationGivesOneScreenPerFivePassages(): void
     {
         $screens = $this->paginate([
-            new DisplayItem(null, 'CENTRE VILLE', $this->passages(7), quayDeprecated: false),
-            new DisplayItem(null, 'GARE', $this->passages(5), quayDeprecated: false),
+            new DisplayItem('CENTRE VILLE', $this->passages(7), quayDeprecated: false),
+            new DisplayItem('GARE', $this->passages(5), quayDeprecated: false),
         ]);
 
         self::assertSame(['CENTRE VILLE', 'CENTRE VILLE', 'GARE'], array_map(static fn (Screen $screen): string => $screen->title, $screens));
@@ -29,26 +29,16 @@ final class ScreenPaginatorTest extends TestCase
         self::assertSame(['6', '7'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $screens[1]->passages));
     }
 
-    public function testEveryScreenOfALabelledConfigurationShowsTheLabel(): void
+    public function testEveryScreenOfAConfigurationShowsItsDisplayName(): void
     {
-        $screens = $this->paginate([new DisplayItem('Direction travail', 'CENTRE VILLE', $this->passages(7), quayDeprecated: false)]);
+        $screens = $this->paginate([new DisplayItem('Direction travail', $this->passages(7), quayDeprecated: false)]);
 
         self::assertSame(['Direction travail', 'Direction travail'], array_map(static fn (Screen $screen): string => $screen->title, $screens));
     }
 
-    public function testBlankLabelFallsBackToTheQuayName(): void
-    {
-        $screens = $this->paginate([
-            new DisplayItem('   ', 'GARE', $this->passages(1), quayDeprecated: false),
-            new DisplayItem('', 'MAIRIE', [], quayDeprecated: false),
-        ]);
-
-        self::assertSame(['GARE', 'MAIRIE'], array_map(static fn (Screen $screen): string => $screen->title, $screens));
-    }
-
     public function testConfigurationWithoutPassageGivesTheNoBusScreen(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'GARE', [], quayDeprecated: false)]);
+        $screens = $this->paginate([new DisplayItem('GARE', [], quayDeprecated: false)]);
 
         self::assertCount(1, $screens);
         self::assertSame('GARE', $screens[0]->title);
@@ -58,8 +48,8 @@ final class ScreenPaginatorTest extends TestCase
     public function testDeprecatedQuayWithoutPassageGivesNoScreen(): void
     {
         $screens = $this->paginate([
-            new DisplayItem(null, 'DISPARU', [], quayDeprecated: true),
-            new DisplayItem(null, 'GARE', $this->passages(1), quayDeprecated: false),
+            new DisplayItem('DISPARU', [], quayDeprecated: true),
+            new DisplayItem('GARE', $this->passages(1), quayDeprecated: false),
         ]);
 
         self::assertSame(['GARE'], array_map(static fn (Screen $screen): string => $screen->title, $screens));
@@ -67,12 +57,12 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testDeprecatedQuayWhosePassagesAreAllGoneGivesNoScreen(): void
     {
-        self::assertSame([], $this->paginate([new DisplayItem(null, 'DISPARU', [$this->passage('1', -1)], quayDeprecated: true)]));
+        self::assertSame([], $this->paginate([new DisplayItem('DISPARU', [$this->passage('1', -1)], quayDeprecated: true)]));
     }
 
     public function testDeprecatedQuayStillAnnouncedKeepsItsScreens(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'DISPARU', [$this->passage('1', 2)], quayDeprecated: true)]);
+        $screens = $this->paginate([new DisplayItem('DISPARU', [$this->passage('1', 2)], quayDeprecated: true)]);
 
         self::assertSame(['1'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $screens[0]->passages));
     }
@@ -84,7 +74,7 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testPassageAlreadyGoneIsNotShown(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'GARE', [
+        $screens = $this->paginate([new DisplayItem('GARE', [
             $this->passage('1', -1),
             $this->passage('2', 0),
         ], quayDeprecated: false)]);
@@ -94,7 +84,7 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testMinutesAreRoundedDown(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'GARE', [
+        $screens = $this->paginate([new DisplayItem('GARE', [
             new NextPassage('1', 'FF5500', 'FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+3 minutes 55 seconds')),
             new NextPassage('2', 'FF5500', 'FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+59 seconds')),
         ], quayDeprecated: false)]);
@@ -104,7 +94,7 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testInvalidColorsAreLeftToTheScreenDefaults(): void
     {
-        $screens = $this->paginate([new DisplayItem(null, 'GARE', [
+        $screens = $this->paginate([new DisplayItem('GARE', [
             new NextPassage('1', 'a020f0', '', null, new \DateTimeImmutable(self::NOW)->modify('+5 minutes')),
             new NextPassage('2', 'red', '#FFFFFF', 'GARE', new \DateTimeImmutable(self::NOW)->modify('+6 minutes')),
         ], quayDeprecated: false)]);
