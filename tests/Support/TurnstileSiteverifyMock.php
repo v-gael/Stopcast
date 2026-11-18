@@ -9,7 +9,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 /**
  * siteverify simulé du client turnstile.client en test : seul VALID_TOKEN
  * passe, OUTAGE_TOKEN simule une panne de Cloudflare (erreur 500), tout autre
- * jeton est refusé comme invalide.
+ * jeton est refusé comme invalide. Comme la clé secrète de test de .env, un
+ * jeton valide porte le hostname example.com et aucune action :
+ * TurnstileVerifier saute alors ces contrôles.
  */
 final class TurnstileSiteverifyMock
 {
@@ -38,7 +40,7 @@ final class TurnstileSiteverifyMock
         }
 
         $payload = self::VALID_TOKEN === ($body['response'] ?? null)
-            ? ['success' => true, 'error-codes' => []]
+            ? ['success' => true, 'error-codes' => [], 'hostname' => 'example.com']
             : ['success' => false, 'error-codes' => ['invalid-input-response']];
 
         return new MockResponse(json_encode($payload, \JSON_THROW_ON_ERROR), ['response_headers' => ['content-type' => 'application/json']]);

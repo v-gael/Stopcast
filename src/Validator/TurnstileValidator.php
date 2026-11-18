@@ -28,8 +28,8 @@ final class TurnstileValidator extends ConstraintValidator
             throw new UnexpectedTypeException($constraint, Turnstile::class);
         }
 
-        $token = $this->requestStack->getCurrentRequest()?->request->getString(TurnstileVerifier::RESPONSE_FIELD);
-        if ($this->turnstileVerifier->verify($token)) {
+        $request = $this->requestStack->getCurrentRequest();
+        if ($request instanceof \Symfony\Component\HttpFoundation\Request && $this->turnstileVerifier->verify($request, $constraint->action)) {
             return;
         }
 

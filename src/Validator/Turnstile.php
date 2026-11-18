@@ -10,8 +10,9 @@ use Symfony\Component\Validator\Constraint;
 
 /**
  * Captcha Turnstile d'un formulaire public : le jeton que le widget ajoute
- * à la requête (TurnstileVerifier::RESPONSE_FIELD). Posée sur le formulaire entier, elle
- * affiche son erreur au-dessus des champs.
+ * à la requête (TurnstileVerifier::RESPONSE_FIELD), obtenu pour l'action du
+ * formulaire (TurnstileVerifier::ACTION_*). Posée sur le formulaire entier,
+ * elle affiche son erreur au-dessus des champs.
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class Turnstile extends Constraint
@@ -28,8 +29,11 @@ final class Turnstile extends Constraint
      * @param list<string>|null $groups
      */
     #[HasNamedArguments]
-    public function __construct(?array $groups = null, mixed $payload = null)
-    {
+    public function __construct(
+        public string $action,
+        ?array $groups = null,
+        mixed $payload = null,
+    ) {
         parent::__construct(null, $groups, $payload);
     }
 
