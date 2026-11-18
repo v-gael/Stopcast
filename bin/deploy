@@ -1,17 +1,19 @@
 #!/bin/sh
-# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire l'image, passe
-# les migrations Doctrine avec la nouvelle image (après un dump de la base s'il
-# y en a en attente), puis remplace les conteneurs et attend qu'ils soient
-# prêts. Lancé sur le serveur, dans ~/stopcast/, par ops/ci-deploy (le script
+# Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire les images (celle
+# de l'appli et celles, épinglées, de database et redis), recrée database si son
+# image a changé (après un dump), passe les migrations Doctrine avec la nouvelle
+# image (après un dump de la base s'il y en a en attente), puis remplace les
+# conteneurs et attend qu'ils soient prêts. Lancé sur le serveur, dans ~/stopcast/, par ops/ci-deploy (le script
 # imposé à la clé de la CI), qui l'extrait de l'image à déployer avec
 # compose.yaml et compose.prod.yaml.
 #
 #   IMAGE_TAG=<sha> bin/deploy [--skip-migrations]
 #
 # --skip-migrations sert au retour arrière (`rollback <sha>` d'ops/ci-deploy) :
-# ni lecture de l'état des migrations, ni dump, ni migration ; seulement le pull
-# et le remplacement des conteneurs. Le schéma ne fait qu'avancer : l'image
-# remise en place tourne sur le schéma en place.
+# ni lecture de l'état des migrations, ni dump avant migration, ni migration ;
+# le pull, la base recréée si les fichiers Compose remis en place changent son
+# image, et le remplacement des conteneurs. Le schéma ne fait qu'avancer :
+# l'image remise en place tourne sur le schéma en place.
 #
 # Le fichier d'état .deployed garde l'étiquette en place : le script l'affiche
 # avant de déployer, pour pouvoir y revenir. Test sur la prod locale (image
@@ -76,9 +78,13 @@ previous=$(cat "$state_file" 2>/dev/null || echo 'aucune')
 # Dumps pris avant migration : un filet local, pas une sauvegarde hors serveur.
 backup_dir=backups
 backup_keep=5
-backup_file=''
+# Dumps pris pendant ce déploiement, séparés par des espaces (noms sans espace :
+# IMAGE_TAG est validé plus haut).
+backup_files=''
 # Passe à 1 au remplacement des conteneurs : avant, l'ancienne version sert.
 replacing=0
+# Passe à 1 quand database est recréé sur une nouvelle image ou configuration.
+database_replaced=0
 
 compose() {
     docker compose --env-file .env.prod.local "$@"
@@ -89,14 +95,53 @@ on_exit() {
     if [ "$status" -ne 0 ]; then
         printf '\nÉchec du déploiement de %s (code %s).\nVersion déployée avant : %s\n' "$IMAGE_TAG" "$status" "$previous" >&2
         if [ "$replacing" -eq 0 ]; then
-            echo "Conteneurs non remplacés : l'ancienne version sert toujours." >&2
+            echo "Conteneurs de l'appli non remplacés : l'ancienne version sert toujours." >&2
         fi
-        if [ -n "$backup_file" ]; then
-            echo "Dump de la base pris avant migration : $(pwd)/$backup_file" >&2
+        if [ "$database_replaced" -eq 1 ]; then
+            echo 'Conteneur database recréé sur sa nouvelle image ou configuration.' >&2
         fi
+        for file in $backup_files; do
+            echo "Dump de la base pris pendant ce déploiement : $(pwd)/$file" >&2
+        done
     fi
 }
 trap on_exit EXIT
+
+# Écrit un dump de la base dans $backup_dir/<préfixe>-$IMAGE_TAG.sql.gz, puis ne
+# garde que les $backup_keep dumps les plus récents. Identifiants lus dans le
+# conteneur database, pas sur la ligne de commande de l'hôte. pg_dump compresse
+# lui-même (-Z) : son code de sortie n'est pas masqué par un tube, et le
+# fichier n'est renommé qu'une fois complet.
+dump_database() {
+    mkdir -p "$backup_dir"
+    target="$backup_dir/$1-$IMAGE_TAG.sql.gz"
+    # shellcheck disable=SC2016 # variables développées dans le conteneur database
+    if ! compose exec -T database sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Z 6' > "$target.tmp"; then
+        rm -f "$target.tmp"
+        return 1
+    fi
+    mv "$target.tmp" "$target"
+    backup_files="${backup_files:+$backup_files }$target"
+    echo "Dump : $(pwd)/$target"
+
+    # shellcheck disable=SC2012
+    ls -1t "$backup_dir"/pre-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
+        rm -f "$old"
+    done
+}
+
+# Vrai si `up` va recréer le conteneur database en marche : son image (digest
+# épinglé dans compose.yaml) ou sa configuration a changé. Faux s'il ne tourne
+# pas : premier déploiement, ou base arrêtée, qu'aucun dump ne peut lire.
+database_will_be_recreated() {
+    container=$(compose ps -q database)
+    [ -n "$container" ] || return 1
+    running_image=$(docker inspect --format '{{.Image}}' "$container")
+    running_hash=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.config-hash"}}' "$container")
+    wanted_image=$(docker image inspect --format '{{.Id}}' "$(compose config --images database)")
+    wanted_hash=$(compose config --hash database | cut -d ' ' -f 2)
+    [ "$running_image" != "$wanted_image" ] || [ "$running_hash" != "$wanted_hash" ]
+}
 
 echo "Version déployée : $previous"
 echo "Version à déployer : $IMAGE_TAG"
@@ -104,9 +149,11 @@ echo "Version à déployer : $IMAGE_TAG"
 # Les services qui ont un build (prod locale) gardent l'image construite sur
 # place ; en prod, aucun n'en a et tout vient de GHCR. Une étiquette est le SHA
 # d'un commit et ne change jamais : une image déjà là n'est pas retéléchargée
-# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée).
-echo "==> Téléchargement de l'image"
-compose pull --policy missing --ignore-buildable app worker realtime-worker
+# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée). Les images de
+# database et redis, épinglées par digest dans compose.yaml, ne changent pas
+# non plus : seul un nouveau digest (PR de Dependabot) est téléchargé.
+echo '==> Téléchargement des images'
+compose pull --policy missing --ignore-buildable app worker realtime-worker database redis
 
 # Redis démarre avant app, qui en dépend. `up` ne le recrée que si son image ou
 # sa configuration change : un déploiement qui ne change que l'image de l'appli
@@ -114,17 +161,30 @@ compose pull --policy missing --ignore-buildable app worker realtime-worker
 echo '==> Redis'
 compose up -d --wait redis
 
+# La base démarre si elle ne tourne pas (premier déploiement), ou est recréée
+# si son image ou sa configuration a changé : la base est coupée le temps de son
+# redémarrage, l'ancienne version de l'appli reçoit des erreurs pendant ce
+# temps, les données restent dans le volume. Un dump est pris avant, comme avant
+# les migrations. Aussi au retour arrière : `up app` recréerait sinon la base
+# sur l'image des fichiers Compose remis en place, sans dump.
+echo '==> Base de données'
+if database_will_be_recreated; then
+    echo '==> Dump de la base avant de recréer database'
+    if ! dump_database pre-database; then
+        echo 'Échec du dump : database non recréé.' >&2
+        exit 1
+    fi
+    database_replaced=1
+fi
+compose up -d --wait database
+
 # Les migrations tournent dans un conteneur jetable de la nouvelle image,
 # pendant que l'ancienne version sert encore. Pas au démarrage du conteneur :
-# app et worker partagent l'image et les lanceraient tous les deux. La base est
-# démarrée d'abord, pour le premier déploiement.
+# app et worker partagent l'image et les lanceraient tous les deux.
 if [ "$skip_migrations" -eq 1 ]; then
-    echo '==> Migrations ignorées (--skip-migrations) : la base reste telle quelle'
+    echo '==> Migrations ignorées (--skip-migrations) : le schéma reste tel quel'
     pending=0
 else
-    echo '==> Base de données'
-    compose up -d --wait database
-
     echo '==> Migrations en attente'
     # up-to-date : 0 à jour, 1 migrations en attente, autre code en cas d'erreur.
     if compose run --rm --no-deps app php bin/console doctrine:migrations:up-to-date; then
@@ -140,28 +200,11 @@ else
 fi
 
 if [ "$pending" -eq 1 ]; then
-    # Identifiants lus dans le conteneur database, pas sur la ligne de commande
-    # de l'hôte. pg_dump compresse lui-même (-Z) : son code de sortie n'est pas
-    # masqué par un tube, et le fichier n'est renommé qu'une fois complet.
     echo '==> Dump de la base avant migration'
-    mkdir -p "$backup_dir"
-    target="$backup_dir/pre-deploy-$IMAGE_TAG.sql.gz"
-    # shellcheck disable=SC2016 # variables développées dans le conteneur database
-    if ! compose exec -T database sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Z 6' > "$target.tmp"; then
-        rm -f "$target.tmp"
+    if ! dump_database pre-deploy; then
         echo 'Échec du dump : migrations non lancées.' >&2
         exit 1
     fi
-    mv "$target.tmp" "$target"
-    backup_file=$target
-    echo "Dump : $(pwd)/$backup_file"
-
-    # Garde les $backup_keep dumps les plus récents (noms sans espace : IMAGE_TAG
-    # est validé plus haut).
-    # shellcheck disable=SC2012
-    ls -1t "$backup_dir"/pre-deploy-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
-        rm -f "$old"
-    done
 
     # all_or_nothing (config/packages/doctrine_migrations.yaml) : une migration
     # qui échoue annule tout le lot, et le script s'arrête avant de toucher aux
