@@ -10,14 +10,19 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 /**
  * Widget Cloudflare Turnstile d'un formulaire public (contrôleur Stimulus
  * turnstile). Le widget ajoute le champ cf-turnstile-response au formulaire
- * qui l'entoure, vérifié par TurnstileVerifier.
+ * qui l'entoure, vérifié par TurnstileVerifier pour la même action.
  */
 #[AsTwigComponent]
-final readonly class Turnstile
+final class Turnstile
 {
+    /**
+     * L'action du formulaire, l'une des constantes TurnstileVerifier::ACTION_*.
+     */
+    public string $action;
+
     public function __construct(
         #[Autowire(env: 'TURNSTILE_SITE_KEY')]
-        public string $siteKey,
+        public readonly string $siteKey,
     ) {
     }
 }

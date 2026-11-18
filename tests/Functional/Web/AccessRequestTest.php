@@ -50,6 +50,13 @@ final class AccessRequestTest extends WebTestCase
         self::assertSelectorExists('main a[href="/confidentialite"]');
     }
 
+    public function testRequestFormCarriesTheTurnstileWidget(): void
+    {
+        $crawler = $this->client->request('GET', '/demande-acces');
+
+        self::assertCount(1, $crawler->filter('main form [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"][data-turnstile-action-value="access-request"]'));
+    }
+
     public function testRequestIsConfirmedAndSentToEveryActiveAdmin(): void
     {
         $this->requestAccess(' Paul@Example.com ', 'Recommandé par Léa.');

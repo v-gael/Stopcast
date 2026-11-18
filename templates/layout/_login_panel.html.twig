@@ -44,7 +44,7 @@
                     <label for="login_remember_me" class="text-sm text-slate-800">Se souvenir de moi</label>
                 </div>
 
-                <twig:Turnstile deferred data-login-panel-target="captcha" />
+                <twig:Turnstile :action="constant('App\\Security\\TurnstileVerifier::ACTION_LOGIN')" deferred data-login-panel-target="captcha" />
 
                 <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
 

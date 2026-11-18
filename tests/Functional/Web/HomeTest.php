@@ -121,7 +121,7 @@ final class HomeTest extends WebTestCase
 
         $crawler = $client->request('GET', '/');
 
-        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-login-panel-target="captcha"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"]'));
+        self::assertCount(1, $crawler->filter('#connexion form[action="/login"] [data-login-panel-target="captcha"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"][data-turnstile-action-value="login"]'));
         self::assertCount(0, $crawler->filter('#connexion [data-controller~="turnstile"]'));
     }
 

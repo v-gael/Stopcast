@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Validator;
 
 use App\Security\TurnstileVerifier;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
@@ -28,8 +29,8 @@ final class TurnstileValidator extends ConstraintValidator
             throw new UnexpectedTypeException($constraint, Turnstile::class);
         }
 
-        $token = $this->requestStack->getCurrentRequest()?->request->getString(TurnstileVerifier::RESPONSE_FIELD);
-        if ($this->turnstileVerifier->verify($token)) {
+        $request = $this->requestStack->getCurrentRequest();
+        if ($request instanceof Request && $this->turnstileVerifier->verify($request, $constraint->action)) {
             return;
         }
 

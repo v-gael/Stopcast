@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\AccessRequest;
+use App\Security\TurnstileVerifier;
 use App\Validator\Turnstile;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -51,7 +52,7 @@ final class AccessRequestType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'constraints' => [new Turnstile()],
+            'constraints' => [new Turnstile(action: TurnstileVerifier::ACTION_ACCESS_REQUEST)],
         ]);
     }
 }

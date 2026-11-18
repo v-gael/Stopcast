@@ -6,8 +6,9 @@ import { Controller } from '@hotwired/stimulus';
  * après plusieurs visites Turbo, en rendu explicite : le widget est affiché à
  * l'arrivée du formulaire et retiré à son départ. Dans le panneau de connexion
  * de l'en-tête, il n'arrive qu'à la première ouverture (contrôleur login-panel,
- * composant Turnstile « deferred »). À l'expiration de son jeton
- * (300 s), il en obtient un nouveau.
+ * composant Turnstile « deferred »). Le jeton porte l'action du formulaire,
+ * que le serveur vérifie. À l'expiration de son jeton (300 s), il en obtient
+ * un nouveau.
  */
 
 // La CSP autorise le script par son hôte (script-src) : le nonce n'est qu'un
@@ -44,7 +45,7 @@ function loadApi() {
 }
 
 export default class extends Controller {
-    static values = { siteKey: String };
+    static values = { siteKey: String, action: String };
 
     async connect() {
         const turnstile = await loadApi();
@@ -58,6 +59,7 @@ export default class extends Controller {
         this.element.replaceChildren();
         this.widgetId = turnstile.render(this.element, {
             sitekey: this.siteKeyValue,
+            action: this.actionValue,
             theme: 'light',
             language: 'fr',
             size: 'flexible',
