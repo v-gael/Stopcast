@@ -108,7 +108,9 @@ on_exit() {
 trap on_exit EXIT
 
 # Écrit un dump de la base dans $backup_dir/<préfixe>-$IMAGE_TAG.sql.gz, puis ne
-# garde que les $backup_keep dumps les plus récents. Identifiants lus dans le
+# garde que les $backup_keep dumps les plus récents de ce préfixe : un dump pris
+# avant de recréer database ne chasse pas un dump d'avant migration, que le
+# retour arrière peut demander. Identifiants lus dans le
 # conteneur database, pas sur la ligne de commande de l'hôte. pg_dump compresse
 # lui-même (-Z) : son code de sortie n'est pas masqué par un tube, et le
 # fichier n'est renommé qu'une fois complet.
@@ -125,7 +127,7 @@ dump_database() {
     echo "Dump : $(pwd)/$target"
 
     # shellcheck disable=SC2012
-    ls -1t "$backup_dir"/pre-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
+    ls -1t "$backup_dir/$1"-*.sql.gz | tail -n "+$((backup_keep + 1))" | while read -r old; do
         rm -f "$old"
     done
 }
