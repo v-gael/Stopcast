@@ -98,8 +98,9 @@ ENV APP_ENV=prod \
 
 # Outils du service backup (compose.prod.yaml), qui tourne sur cette image :
 # restic, supercronic pour le planifier, le client PostgreSQL de la même
-# version majeure que le serveur (POSTGRES_VERSION, contrôlée par
-# bin/prod-verify) et tzdata pour l'heure de Paris de supercronic.
+# version majeure que le serveur (image de database dans compose.yaml,
+# concordance vérifiée par bin/check-compose et bin/prod-verify) et tzdata
+# pour l'heure de Paris de supercronic.
 ARG POSTGRES_VERSION=16
 RUN apk add --no-cache \
         "postgresql${POSTGRES_VERSION}-client" \

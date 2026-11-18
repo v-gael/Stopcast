@@ -26,7 +26,7 @@ services:
       # ":80" : Caddy sert en HTTP seul, sans certificat ni redirection.
       SERVER_NAME: ":80"
       APP_SECRET: ${APP_SECRET}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:?REDIS_PASSWORD est requis}@redis:6379
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
@@ -79,7 +79,7 @@ services:
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:?REDIS_PASSWORD est requis}@redis:6379
       GTFS_STATIC_FEED_URL: ${GTFS_STATIC_FEED_URL}
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
@@ -119,7 +119,7 @@ services:
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:?REDIS_PASSWORD est requis}@redis:6379
       GTFS_REALTIME_TRIP_UPDATES_URL: ${GTFS_REALTIME_TRIP_UPDATES_URL}
       HEALTHCHECKS_REALTIME_URL: ${HEALTHCHECKS_REALTIME_URL:-}

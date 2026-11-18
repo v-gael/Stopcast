@@ -66,7 +66,7 @@ services:
     environment:
       APP_ENV: dev
       # Déclaré seulement ici : ne reçoit pas celle de app (compose.yaml).
-      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
       MAILER_DSN: smtp://mailer:1025
     # Pas de serveur web ici : le healthcheck de l'image ne s'applique pas.
@@ -98,7 +98,7 @@ services:
       target: dev
     environment:
       APP_ENV: dev
-      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
     healthcheck:
       disable: true
