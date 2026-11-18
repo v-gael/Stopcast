@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Validator;
 
 use App\Security\TurnstileVerifier;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
@@ -29,7 +30,7 @@ final class TurnstileValidator extends ConstraintValidator
         }
 
         $request = $this->requestStack->getCurrentRequest();
-        if ($request instanceof \Symfony\Component\HttpFoundation\Request && $this->turnstileVerifier->verify($request, $constraint->action)) {
+        if ($request instanceof Request && $this->turnstileVerifier->verify($request, $constraint->action)) {
             return;
         }
 

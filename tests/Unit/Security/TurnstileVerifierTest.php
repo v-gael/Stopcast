@@ -176,6 +176,7 @@ final class TurnstileVerifierTest extends TestCase
         yield 'hostname absent' => [self::siteverify(['success' => true, 'action' => TurnstileVerifier::ACTION_LOGIN])];
         yield 'action absente' => [self::siteverify(['success' => true, 'hostname' => self::HOST])];
         yield 'hostname illisible' => [self::siteverify(['success' => true, 'hostname' => 42, 'action' => TurnstileVerifier::ACTION_LOGIN])];
+        yield 'action illisible' => [self::siteverify(['success' => true, 'hostname' => self::HOST, 'action' => ['login']])];
     }
 
     /**
