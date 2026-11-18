@@ -65,12 +65,12 @@ done
 # l'image de database, serverVersion des DATABASE_URL (Doctrine) et le client
 # de l'image applicative (POSTGRES_VERSION du Dockerfile, pour pg_dump).
 server=$(sed -n 's/^    image: postgres:\([0-9][0-9]*\)-.*/\1/p' compose.yaml)
-urls=$(grep -ho 'serverVersion=[^&]*' compose*.yaml | sed 's/^serverVersion=//' | sort -u)
+server_versions=$(grep -ho 'serverVersion=[^&]*' compose*.yaml | sed 's/^serverVersion=//' | sort -u)
 client=$(sed -n 's/^ARG POSTGRES_VERSION=//p' Dockerfile)
-if [ -n "$server" ] && [ "$urls" = "$server" ] && [ "$client" = "$server" ]; then
+if [ -n "$server" ] && [ "$server_versions" = "$server" ] && [ "$client" = "$server" ]; then
     echo "OK : PostgreSQL $server partout (image, serverVersion, client du Dockerfile)"
 else
-    printf 'Échec : versions majeures de PostgreSQL différentes : image de database « %s », serverVersion des DATABASE_URL « %s », POSTGRES_VERSION du Dockerfile « %s »\n\n' "$server" "$(printf '%s' "$urls" | tr '\n' ' ')" "$client"
+    printf 'Échec : versions majeures de PostgreSQL différentes : image de database « %s », serverVersion des DATABASE_URL « %s », POSTGRES_VERSION du Dockerfile « %s »\n\n' "$server" "$(printf '%s' "$server_versions" | tr '\n' ' ')" "$client"
     status=1
 fi
 
