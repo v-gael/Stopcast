@@ -2,7 +2,8 @@ name: Audit
 
 # Une faille n'apparaît qu'avec un changement des dépendances, que la PR qui le
 # porte fait auditer, ou avec une nouvelle alerte, que couvre le passage
-# quotidien. Filtré par chemins, ce check ne tourne pas sur les autres PR : il ne
+# quotidien. Une PR qui change compose.yaml (nouveau digest de Dependabot) fait
+# scanner ses images tierces. Filtré par chemins, ce check ne tourne pas sur les autres PR : il ne
 # doit jamais être requis par le ruleset, sinon il bloquerait leur merge.
 on:
   pull_request:
@@ -10,6 +11,7 @@ on:
       - composer.json
       - composer.lock
       - importmap.php
+      - compose.yaml
       - bin/audit
       - .github/workflows/audit.yml
   schedule:
@@ -99,6 +101,52 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/v-gael/stopcast:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+  # Images tierces de compose.yaml (postgres, redis), que bin/deploy tire telles
+  # quelles : épinglées par digest, elles sont celles qui tournent en prod. Au
+  # passage quotidien, lues dans main (déployée) ; sur une PR, dans son code.
+  third-party-images:
+    name: Images tierces de compose.yaml
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.list.outputs.images }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Les images qui ne se construisent pas, avec leur nom sans digest pour
+      # le titre du job.
+      - name: Lister les images
+        id: list
+        run: |
+          images=$(docker compose -f compose.yaml config --format json \
+            | jq -c '[.services[] | select(.build == null) | {ref: .image, name: (.image | split("@")[0])}]')
+          echo "$images"
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+  # Mêmes seuils que le job `image`.
+  third-party-image:
+    name: Failles de ${{ matrix.name }}
+    needs: third-party-images
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.third-party-images.outputs.images) }}
+    steps:
+      # Pour .trivyignore, s'il existe.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scanner l'image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ matrix.ref }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
