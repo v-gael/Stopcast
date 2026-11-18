@@ -22,11 +22,15 @@ Un nouveau mot de passe présent dans une fuite connue est refusé, partout où 
 
 ## Captcha
 
-La connexion et « mot de passe oublié » demandent un captcha Cloudflare Turnstile, vérifié côté serveur avant le mot de passe ou l'envoi du mail. Un jeton refusé par Cloudflare bloque l'envoi ; si Cloudflare est injoignable, l'envoi passe et seules les limites ci-dessous protègent ces formulaires (voir [ADR 0004](docs/adr/0004-captcha-turnstile.md)).
+La connexion, « mot de passe oublié » et la demande d'accès demandent un captcha Cloudflare Turnstile, vérifié côté serveur avant le mot de passe ou l'envoi du mail. Un jeton refusé par Cloudflare bloque l'envoi ; si Cloudflare est injoignable, l'envoi passe et seules les limites ci-dessous protègent ces formulaires (voir [ADR 0004](docs/adr/0004-captcha-turnstile.md)).
 
 ## Limite des demandes de changement d'email
 
 Un compte ne peut demander que **3 changements d'email par heure** (fenêtre glissante). Une demande compte dès que le mot de passe actuel est correct, même si l'adresse est ensuite refusée : un compte connecté ne peut pas tester sans limite quelles adresses ont un compte.
+
+## Limite des demandes d'accès
+
+Le formulaire de demande d'accès n'accepte que **5 demandes par heure** (fenêtre glissante) par adresse IP, que l'adresse saisie ait un compte ou non. Au-delà, le formulaire affiche « Trop de demandes. Réessayez plus tard. » et rien n'est enregistré. Aucun mail ne part vers l'adresse saisie : le formulaire ne sert pas à écrire à un tiers.
 
 ## Limite des demandes de réinitialisation du mot de passe
 
@@ -55,7 +59,7 @@ L'application pose elle-même ses en-têtes de sécurité (`nelmio/security-bund
 - `Permissions-Policy`, qui coupe la caméra, le micro, la géolocalisation, le paiement et l'USB ;
 - `Cross-Origin-Opener-Policy: same-origin`.
 
-La **Content Security Policy** est stricte et bloquante dans tous les environnements : seules les ressources de la même origine sont chargées, sans `unsafe-inline` ni `unsafe-eval`, et les scripts et styles inline ne passent qu'avec le nonce tiré à chaque réponse (`csp_nonce()` dans Twig). La page ne peut pas être affichée dans un cadre (`frame-ancestors 'none'`) et les formulaires ne s'envoient qu'à la même origine. En développement, `https://cdn.jsdelivr.net` est autorisé en plus pour les scripts du hot reload FrankenPHP. Les violations ne sont pas encore remontées au serveur.
+La **Content Security Policy** est stricte et bloquante dans tous les environnements : seules les ressources de la même origine sont chargées, plus le script et l'iframe du captcha Turnstile (`https://challenges.cloudflare.com`), sans `unsafe-inline` ni `unsafe-eval`, et les scripts et styles inline ne passent qu'avec le nonce tiré à chaque réponse (`csp_nonce()` dans Twig). La page ne peut pas être affichée dans un cadre (`frame-ancestors 'none'`, `X-Frame-Options: DENY`), sauf les aperçus de la page d'affichage et l'écran de la vitrine, affichables dans un cadre du site lui-même (`'self'`, `SAMEORIGIN`) ; les formulaires ne s'envoient qu'à la même origine. En développement, `https://cdn.jsdelivr.net` est autorisé en plus pour les scripts du hot reload FrankenPHP. Les violations ne sont pas encore remontées au serveur.
 
 HSTS n'est pas posé par l'application : il revient au serveur qui termine le TLS.
 
@@ -65,12 +69,12 @@ L'application ne croit les en-têtes `X-Forwarded-*` que venant des proxys list�
 
 ## Sessions
 
-- La session dure le temps du navigateur et expire après **2 heures d'inactivité** (au plus tôt : le ramasse-miettes des sessions est probabiliste, une session inactive peut survivre un peu plus longtemps quand le trafic est faible).
+- La session dure le temps du navigateur et expire après **2 heures d'inactivité** (durée de vie de sa clé dans Redis, remise à 2 heures à chaque requête).
 - « Se souvenir de moi », sur case à cocher, garde la connexion **30 jours**.
 - Les deux cookies sont `HttpOnly` et `SameSite=Lax` ; en production, ils sont aussi `Secure` et préfixés `__Host-`, ce qui interdit à un autre site du domaine parent de les remplacer.
 - Changer son mot de passe déconnecte les autres sessions ouvertes sur le compte et invalide les cookies « se souvenir de moi » émis avant le changement.
 - Confirmer un changement d'email déconnecte les autres sessions ouvertes sur le compte, le navigateur qui confirme restant connecté, et invalide les cookies « se souvenir de moi », qui portent l'email. Les liens de réinitialisation du mot de passe en cours sont supprimés.
-- Les sessions sont stockées sur le serveur d'application : un redéploiement les ferme, « se souvenir de moi » reconnecte.
+- Les sessions sont stockées dans Redis, partagé par les conteneurs : un redéploiement de l'application ne les ferme pas. Un redémarrage de Redis, sans persistance, les ferme toutes ; « se souvenir de moi » reconnecte.
 
 ## Signaler une vulnérabilité
 

@@ -9,7 +9,7 @@
 
             {{ form_start(form) }}
                 {{ form_widget(form) }}
-                <twig:Turnstile />
+                <twig:Turnstile :action="constant('App\\Security\\TurnstileVerifier::ACTION_ACCESS_REQUEST')" />
 
                 <p class="mb-6 text-sm text-slate-500">
                     Sans suite, votre demande est supprimée {{ constant('App\\Entity\\AccessRequest::RETENTION_IN_DAYS') }} jours après la dernière demande.

@@ -12,12 +12,21 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 final class TurnstileVerifierTest extends TestCase
 {
     private const string SECRET = 'secret-key';
 
     private const string TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
+
+    /**
+     * Un hôte de TRUSTED_HOSTS (.env) : la liste, statique dans Request,
+     * reste celle des tests du kernel lancés avant.
+     */
+    private const string HOST = 'localhost';
+
+    private const string CLIENT_IP = '203.0.113.7';
 
     private TestHandler $logs;
 
@@ -28,16 +37,78 @@ final class TurnstileVerifierTest extends TestCase
 
     public function testASuccessfulSiteverifyAcceptsTheToken(): void
     {
-        $response = self::siteverify(['success' => true]);
+        $response = self::siteverify(['success' => true, 'hostname' => self::HOST, 'action' => TurnstileVerifier::ACTION_LOGIN]);
 
-        self::assertTrue($this->verifier($response)->verify(self::TOKEN));
+        self::assertTrue($this->verifier($response)->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
 
         self::assertSame('POST', $response->getRequestMethod());
         self::assertSame('https://challenges.cloudflare.com/turnstile/v0/siteverify', $response->getRequestUrl());
         $requestBody = $response->getRequestOptions()['body'];
         self::assertIsString($requestBody);
         parse_str($requestBody, $body);
+        self::assertSame(['secret' => self::SECRET, 'response' => self::TOKEN, 'remoteip' => self::CLIENT_IP], $body);
+        self::assertSame([], $this->logs->getRecords());
+    }
+
+    public function testAnUnknownClientIpIsNotSent(): void
+    {
+        $response = self::siteverify(['success' => true, 'hostname' => self::HOST, 'action' => TurnstileVerifier::ACTION_LOGIN]);
+
+        self::assertTrue($this->verifier($response)->verify($this->request(clientIp: null), TurnstileVerifier::ACTION_LOGIN));
+
+        $requestBody = $response->getRequestOptions()['body'];
+        self::assertIsString($requestBody);
+        parse_str($requestBody, $body);
         self::assertSame(['secret' => self::SECRET, 'response' => self::TOKEN], $body);
+    }
+
+    /**
+     * Un jeton obtenu sur un autre site, envoyé ici : Cloudflare le valide,
+     * mais pour l'hôte où le widget l'a délivré.
+     */
+    public function testATokenIssuedForAnotherHostIsRefusedWithAWarning(): void
+    {
+        $response = self::siteverify(['success' => true, 'hostname' => 'piege.example', 'action' => TurnstileVerifier::ACTION_LOGIN]);
+
+        self::assertFalse($this->verifier($response)->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
+
+        self::assertCount(1, $this->logs->getRecords());
+        $record = $this->logs->getRecords()[0];
+        self::assertSame(Level::Warning, $record->level);
+        self::assertSame(['hostname' => 'piege.example', 'expected_hostname' => self::HOST, 'action' => TurnstileVerifier::ACTION_LOGIN, 'expected_action' => TurnstileVerifier::ACTION_LOGIN], $record->context);
+        self::assertStringNotContainsString(self::TOKEN, json_encode($record->toArray(), \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Un jeton obtenu sur un autre formulaire du site ne sert pas ici.
+     */
+    public function testATokenIssuedForAnotherFormIsRefusedWithAWarning(): void
+    {
+        $response = self::siteverify(['success' => true, 'hostname' => self::HOST, 'action' => TurnstileVerifier::ACTION_ACCESS_REQUEST]);
+
+        self::assertFalse($this->verifier($response)->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
+
+        self::assertCount(1, $this->logs->getRecords());
+        $record = $this->logs->getRecords()[0];
+        self::assertSame(Level::Warning, $record->level);
+        self::assertSame(['hostname' => self::HOST, 'expected_hostname' => self::HOST, 'action' => TurnstileVerifier::ACTION_ACCESS_REQUEST, 'expected_action' => TurnstileVerifier::ACTION_LOGIN], $record->context);
+    }
+
+    /**
+     * La clé secrète de test « toujours valide », celle du dev et des tests,
+     * renvoie le hostname example.com et aucune action.
+     */
+    public function testTheTestSecretKeySkipsTheHostnameAndActionChecks(): void
+    {
+        $response = self::siteverify(['success' => true, 'hostname' => 'example.com']);
+        $verifier = new TurnstileVerifier(
+            new MockHttpClient($response, 'https://challenges.cloudflare.com'),
+            new Logger('app', [$this->logs]),
+            '1x0000000000000000000000000000000AA',
+        );
+
+        self::assertTrue($verifier->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
+
         self::assertSame([], $this->logs->getRecords());
     }
 
@@ -57,7 +128,7 @@ final class TurnstileVerifierTest extends TestCase
     #[DataProvider('rejectedTokenCodes')]
     public function testARejectedTokenIsRefusedWithoutLogging(array $errorCodes): void
     {
-        self::assertFalse($this->verifier(self::siteverify(['success' => false, 'error-codes' => $errorCodes]))->verify(self::TOKEN));
+        self::assertFalse($this->verifier(self::siteverify(['success' => false, 'error-codes' => $errorCodes]))->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
 
         self::assertSame([], $this->logs->getRecords());
     }
@@ -83,7 +154,7 @@ final class TurnstileVerifierTest extends TestCase
     #[DataProvider('reportedErrorCodes')]
     public function testAnErrorReportedByCloudflareIsRefusedAndLoggedAsAnError(array $errorCodes): void
     {
-        self::assertFalse($this->verifier(self::siteverify(['success' => false, 'error-codes' => $errorCodes]))->verify(self::TOKEN));
+        self::assertFalse($this->verifier(self::siteverify(['success' => false, 'error-codes' => $errorCodes]))->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
 
         self::assertCount(1, $this->logs->getRecords());
         $record = $this->logs->getRecords()[0];
@@ -102,6 +173,10 @@ final class TurnstileVerifierTest extends TestCase
         yield 'délai dépassé' => [new MockResponse([''], ['error' => 'Idle timeout reached'])];
         yield 'réponse illisible' => [new MockResponse('<html>', ['response_headers' => ['content-type' => 'text/html']])];
         yield 'success absent' => [self::siteverify(['error-codes' => []])];
+        yield 'hostname absent' => [self::siteverify(['success' => true, 'action' => TurnstileVerifier::ACTION_LOGIN])];
+        yield 'action absente' => [self::siteverify(['success' => true, 'hostname' => self::HOST])];
+        yield 'hostname illisible' => [self::siteverify(['success' => true, 'hostname' => 42, 'action' => TurnstileVerifier::ACTION_LOGIN])];
+        yield 'action illisible' => [self::siteverify(['success' => true, 'hostname' => self::HOST, 'action' => ['login']])];
     }
 
     /**
@@ -111,7 +186,7 @@ final class TurnstileVerifierTest extends TestCase
     #[DataProvider('outages')]
     public function testAnOutageLetsTheTokenThroughWithAWarning(MockResponse $response): void
     {
-        self::assertTrue($this->verifier($response)->verify(self::TOKEN));
+        self::assertTrue($this->verifier($response)->verify($this->request(), TurnstileVerifier::ACTION_LOGIN));
 
         self::assertCount(1, $this->logs->getRecords());
         $record = $this->logs->getRecords()[0];
@@ -138,10 +213,20 @@ final class TurnstileVerifierTest extends TestCase
         $client = new MockHttpClient(static fn (): never => self::fail('Cloudflare ne doit pas être appelé.'));
         $verifier = new TurnstileVerifier($client, new Logger('app', [$this->logs]), self::SECRET);
 
-        self::assertFalse($verifier->verify($token));
+        self::assertFalse($verifier->verify($this->request($token), TurnstileVerifier::ACTION_LOGIN));
 
         self::assertSame(0, $client->getRequestsCount());
         self::assertSame([], $this->logs->getRecords());
+    }
+
+    /**
+     * Envoi d'un formulaire sur HOST, depuis CLIENT_IP par défaut.
+     */
+    private function request(?string $token = self::TOKEN, ?string $clientIp = self::CLIENT_IP): Request
+    {
+        $parameters = null === $token ? [] : [TurnstileVerifier::RESPONSE_FIELD => $token];
+
+        return Request::create('https://'.self::HOST.'/login', 'POST', $parameters, server: ['REMOTE_ADDR' => $clientIp]);
     }
 
     /**

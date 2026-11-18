@@ -26,7 +26,7 @@ final class AccessRequestTest extends WebTestCase
 {
     use WebTestTrait;
 
-    private const string CONFIRMATION = 'Demande reçue, vous serez contacté par mail.';
+    private const string CONFIRMATION = 'Demande reçue. Si elle est retenue, vous recevrez une invitation par mail.';
 
     private KernelBrowser $client;
 
@@ -48,6 +48,13 @@ final class AccessRequestTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Demander un accès');
         self::assertSelectorExists('main a[href="/confidentialite"]');
+    }
+
+    public function testRequestFormCarriesTheTurnstileWidget(): void
+    {
+        $crawler = $this->client->request('GET', '/demande-acces');
+
+        self::assertCount(1, $crawler->filter('main form [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"][data-turnstile-action-value="access-request"]'));
     }
 
     public function testRequestIsConfirmedAndSentToEveryActiveAdmin(): void

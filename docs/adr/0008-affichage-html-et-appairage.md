@@ -1,5 +1,7 @@
 # Page d'affichage HTML et appairage par code à la place de l'API JSON
 
+Statut : accepté ; l'API JSON, API Platform et `X-Device-Token` ont disparu.
+
 Le Raspberry Pi lisait `GET /api/next-passages` avec son jeton (`X-Device-Token`) et dessinait lui-même l'écran (client Python, Pillow). La mise en page vivait donc hors de Stopcast : le site ne pouvait pas la montrer, et toute personnalisation (couleurs, thèmes) aurait demandé un second rendu à garder identique au premier.
 
 Stopcast fait désormais la mise en page : la **page d'affichage** (`/display`), en HTML, que le site montre en aperçu et que l'écran ouvre dans un navigateur en kiosque. Un navigateur en kiosque ne sait pas envoyer d'en-tête : l'écran s'authentifie par un **cookie de dispositif**, obtenu par **appairage par code**, façon télévision (RFC 8628, « device authorization grant »).

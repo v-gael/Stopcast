@@ -32,7 +32,7 @@ final readonly class TurnstileLoginListener
             return;
         }
 
-        if (!$this->turnstileVerifier->verify($request->request->getString(TurnstileVerifier::RESPONSE_FIELD))) {
+        if (!$this->turnstileVerifier->verify($request, TurnstileVerifier::ACTION_LOGIN)) {
             throw new CustomUserMessageAuthenticationException(TurnstileVerifier::FAILURE_MESSAGE);
         }
     }

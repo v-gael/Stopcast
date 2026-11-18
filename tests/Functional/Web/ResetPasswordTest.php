@@ -60,7 +60,7 @@ final class ResetPasswordTest extends WebTestCase
     {
         $crawler = $this->client->request('GET', '/reset-password');
 
-        self::assertCount(1, $crawler->filter('main form[name="reset_password_request"] [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"]'));
+        self::assertCount(1, $crawler->filter('main form[name="reset_password_request"] [data-controller="turnstile"][data-turnstile-site-key-value="'.TurnstileSiteverifyMock::SITE_KEY.'"][data-turnstile-action-value="reset-password"]'));
     }
 
     public function testRequestWithAnInvalidTurnstileTokenSendsNothing(): void
