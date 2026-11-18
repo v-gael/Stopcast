@@ -151,3 +151,9 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
+          # gosu (image postgres) ne sert qu'au démarrage, pour lancer le
+          # serveur sous l'utilisateur postgres : Trivy y signale chaque faille
+          # de la bibliothèque standard Go qui l'a compilé, même dans l'image du
+          # jour. Écarté ici seulement : .trivyignore vaut aussi pour l'image
+          # applicative, dont FrankenPHP est un binaire Go.
+          skip-files: usr/local/bin/gosu
