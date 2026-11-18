@@ -28,7 +28,7 @@ services:
   # DATABASE_URL et dans POSTGRES_VERSION du Dockerfile : bin/check-compose
   # vérifie qu'elles concordent.
   database:
-    image: postgres:16-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
       # You should definitely change the password in production
