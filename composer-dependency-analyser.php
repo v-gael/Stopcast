@@ -35,7 +35,7 @@ $config->ignoreErrorsOnPaths([
 $config->ignoreErrorsOnPackages([
     'symfony/asset-mapper', // importmap et assets compilés (asset_mapper.yaml)
     'symfony/dotenv',       // lecture de .env au démarrage (symfony/runtime)
-    'symfony/http-client',  // client HTTP des flux GTFS et de Turnstile, derrière HttpClientInterface
+    'symfony/http-client',  // implémentation de HttpClientInterface (flux GTFS, Turnstile, pings Healthchecks.io)
     'symfony/lock',         // verrous des rate limiters sur Redis (lock.yaml)
     'symfony/yaml',         // lecture de config/*.yaml
 ], [ErrorType::PROD_DEPENDENCY_ONLY_IN_DEV]);
@@ -47,7 +47,7 @@ $config->ignoreErrorsOnPackages([
     'symfony/doctrine-messenger',    // transports doctrine:// (messenger.yaml)
     'symfony/flex',                  // plugin Composer (recipes)
     'symfony/runtime',               // vendor/autoload_runtime.php, public/index.php et bin/console
-    'symfony/translation',           // traductions françaises des messages intégrés de Symfony (validation, sécurité)
+    'symfony/translation',           // implémentation de TranslatorInterface : messages intégrés de Symfony en français (validation, sécurité)
     'symfony/web-link',              // en-têtes Link de préchargement de l'importmap (ImportMapRenderer)
 ], [ErrorType::UNUSED_DEPENDENCY]);
 

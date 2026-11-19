@@ -27,7 +27,7 @@ RUN apk add --no-cache \
         pdo_pgsql \
         redis \
         zip \
-    && apk del --no-cache libecpg
+    && apk del libecpg
 
 # Fuseau horaire commun à toutes les stages.
 COPY frankenphp/conf.d/10-timezone.ini $PHP_INI_DIR/conf.d/
