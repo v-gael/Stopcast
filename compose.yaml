@@ -6,7 +6,7 @@ services:
       target: prod
     environment:
       APP_ENV: ${APP_ENV:-prod}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=utf8
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
       REDIS_URL: redis://${REDIS_PASSWORD:-!ChangeMe!}@redis:6379
     depends_on:
       database:
@@ -21,8 +21,14 @@ services:
   ###< app ###
 
   ###> doctrine/doctrine-bundle ###
+  # Images tierces épinglées par digest, comme l'image de base du Dockerfile :
+  # Dependabot propose les nouveaux digests (écosystème docker-compose),
+  # audit.yml scanne ceux-ci chaque jour et bin/deploy les tire. La version
+  # majeure de PostgreSQL se change à la main, ici, dans serverVersion des
+  # DATABASE_URL et dans POSTGRES_VERSION du Dockerfile : bin/check-compose
+  # vérifie qu'elles concordent.
   database:
-    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
       # You should definitely change the password in production
@@ -47,7 +53,7 @@ services:
   # REDISCLI_AUTH (lu par redis-cli), jamais sur une ligne de commande visible
   # dans `ps`.
   redis:
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-!ChangeMe!}
     # exec : redis-server devient le processus 1 et reçoit le SIGTERM de Docker.

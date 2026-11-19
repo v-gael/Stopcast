@@ -43,6 +43,37 @@ else
     echo 'OK : la prod ne construit aucune image'
 fi
 
+# Les images tierces de compose.yaml (celles que la prod tire au lieu de les
+# construire) sont épinglées par digest : audit.yml scanne exactement ce que
+# bin/deploy fait tourner, et Dependabot en propose les nouveaux digests.
+third_party=$(docker compose -f compose.yaml config --format json 2>/dev/null | jq -r '.services[] | select(.build == null) | .image')
+if [ -z "$third_party" ]; then
+    printf 'Échec : aucune image tierce lue dans compose.yaml\n\n'
+    status=1
+fi
+for image in $third_party; do
+    case $image in
+        *:*@sha256:*) echo "OK : $image épinglée par étiquette et digest" ;;
+        *)
+            printf 'Échec : %s de compose.yaml n'\''est pas épinglée par étiquette et digest (<image>:<étiquette>@sha256:…)\n\n' "$image"
+            status=1
+            ;;
+    esac
+done
+
+# La version majeure de PostgreSQL vit à trois endroits qui doivent concorder :
+# l'image de database, serverVersion des DATABASE_URL (Doctrine) et le client
+# de l'image applicative (POSTGRES_VERSION du Dockerfile, pour pg_dump).
+server=$(sed -n 's/^    image: postgres:\([0-9][0-9]*\)-.*/\1/p' compose.yaml)
+server_versions=$(grep -ho 'serverVersion=[^&]*' compose*.yaml | sed 's/^serverVersion=//' | sort -u)
+client=$(sed -n 's/^ARG POSTGRES_VERSION=//p' Dockerfile)
+if [ -n "$server" ] && [ "$server_versions" = "$server" ] && [ "$client" = "$server" ]; then
+    echo "OK : PostgreSQL $server partout (image, serverVersion, client du Dockerfile)"
+else
+    printf 'Échec : versions majeures de PostgreSQL différentes : image de database « %s », serverVersion des DATABASE_URL « %s », POSTGRES_VERSION du Dockerfile « %s »\n\n' "$server" "$(printf '%s' "$server_versions" | tr '\n' ' ')" "$client"
+    status=1
+fi
+
 # Une tâche planifiée tourne dans le worker qui consomme son planning :
 # realtime-worker pour le planning realtime, worker pour les autres. Sans sa
 # variable, elle lit la valeur vide de .env et son ping ne part jamais, sans
