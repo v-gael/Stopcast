@@ -36,6 +36,7 @@ lint_prod_container() {
 }
 
 run 'Composer validate' composer validate --strict
+run 'Dépendances' vendor/bin/composer-dependency-analyser
 run 'Lint doc' bin/check-docs
 run 'Lint YAML' php bin/console lint:yaml config --parse-tags
 run 'Lint Twig' php bin/console lint:twig templates
