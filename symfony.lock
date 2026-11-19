@@ -243,18 +243,6 @@
             "config/packages/monolog.yaml"
         ]
     },
-    "symfony/notifier": {
-        "version": "8.1",
-        "recipe": {
-            "repo": "github.com/symfony/recipes",
-            "branch": "main",
-            "version": "5.0",
-            "ref": "b912054fd9639f5fad62493cc24439048c2fd045"
-        },
-        "files": [
-            "config/packages/notifier.yaml"
-        ]
-    },
     "symfony/panther": {
         "version": "2.4",
         "recipe": {
@@ -355,15 +343,6 @@
             "templates/base.html.twig"
         ]
     },
-    "symfony/uid": {
-        "version": "8.1",
-        "recipe": {
-            "repo": "github.com/symfony/recipes",
-            "branch": "main",
-            "version": "7.0",
-            "ref": "0df5844274d871b37fc3816c57a768ffc60a43a5"
-        }
-    },
     "symfony/ux-autocomplete": {
         "version": "3.7",
         "recipe": {
@@ -457,9 +436,6 @@
             "version": "0.14",
             "ref": "b8af60cec7149fd0cde0ec9d89ccb32335c4d9bd"
         }
-    },
-    "twig/extra-bundle": {
-        "version": "v3.24.0"
     },
     "zenstruck/foundry": {
         "version": "2.15",

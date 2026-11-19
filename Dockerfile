@@ -12,10 +12,11 @@ WORKDIR /app
 ENV COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/tmp/composer
 
+# install-php-extensions garde libecpg, la bibliothèque ECPG (SQL embarqué) de
+# PostgreSQL, qu'aucune extension n'utilise (pdo_pgsql ne lie que libpq) : il
+# est retiré pour ne pas livrer ses failles. apcu sert au cache système de
+# Symfony, sans appel dans le code.
 RUN apk add --no-cache \
-        file \
-        gettext \
-        git \
         icu-data-full \
     && install-php-extensions \
         @composer \
@@ -25,7 +26,8 @@ RUN apk add --no-cache \
         intl \
         pdo_pgsql \
         redis \
-        zip
+        zip \
+    && apk del libecpg
 
 # Fuseau horaire commun à toutes les stages.
 COPY frankenphp/conf.d/10-timezone.ini $PHP_INI_DIR/conf.d/
@@ -49,8 +51,9 @@ ENV APP_ENV=dev \
 
 RUN install-php-extensions xdebug
 
-# Chrome des tests navigateur (Panther, groupe browser), pas en prod.
-RUN apk add --no-cache chromium chromium-chromedriver
+# Chrome des tests navigateur (Panther, groupe browser), pas en prod. git pour
+# Composer et Flex (recipes) et bin/check-docs (git ls-files).
+RUN apk add --no-cache chromium chromium-chromedriver git
 
 COPY frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/conf.d/
 
@@ -69,8 +72,9 @@ FROM base AS ci
 
 ENV APP_ENV=test
 
-# Chrome des tests navigateur (Panther, groupe browser).
-RUN apk add --no-cache chromium chromium-chromedriver
+# Chrome des tests navigateur (Panther, groupe browser), git pour le test de
+# bin/check-docs.
+RUN apk add --no-cache chromium chromium-chromedriver git
 
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
 COPY . .
