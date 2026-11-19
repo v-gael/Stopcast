@@ -1,5 +1,7 @@
 # Traitement des PR et dépendances restées à la main : docs/developpement.md,
-# « Mettre à jour les dépendances ».
+# « Mettre à jour les dépendances ». Une vérification se lance aussi à la main
+# depuis GitHub, après une alerte de Trivy (docs/exploitation.md, « Scan des
+# failles (Trivy) »).
 version: 2
 
 updates:
@@ -8,6 +10,9 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+      day: sunday
+      time: '08:00'
+      timezone: Europe/Paris
     commit-message:
       prefix: chore(deps)
     groups:
@@ -24,6 +29,9 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+      day: sunday
+      time: '08:00'
+      timezone: Europe/Paris
     commit-message:
       prefix: chore(deps)
     groups:
@@ -31,11 +39,35 @@ updates:
         patterns: ['*']
         update-types: [minor, patch]
 
+  # Images tierces de compose.yaml (postgres, redis), épinglées par digest.
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: sunday
+      time: '08:00'
+      timezone: Europe/Paris
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      docker-compose:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Une version majeure de PostgreSQL demande de migrer les données du
+      # volume : montée à la main (docs/developpement.md).
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop
     schedule:
       interval: weekly
+      day: sunday
+      time: '08:00'
+      timezone: Europe/Paris
     commit-message:
       prefix: ci
     groups:

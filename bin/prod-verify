@@ -164,7 +164,7 @@ if [ -n "$backup" ]; then
     # produit un dump que le pg_restore de l'image ne relirait pas forcément.
     client=$(prod exec -T backup pg_dump --version | major_version)
     server=$(prod exec -T database postgres --version | major_version)
-    expect "$client" "$server" "backup : pg_dump $client, même version majeure que le serveur" "backup : pg_dump $client, serveur PostgreSQL $server (POSTGRES_VERSION de l'image)"
+    expect "$client" "$server" "backup : pg_dump $client, même version majeure que le serveur" "backup : pg_dump $client, serveur PostgreSQL $server : POSTGRES_VERSION du Dockerfile différent de l'image de database dans compose.yaml"
 
     if prod exec -T backup ls /app/var/account-deletions >/dev/null; then
         ok 'backup : journal des suppressions lisible'
