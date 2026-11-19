@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Scripts;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 
 /**
@@ -21,6 +22,8 @@ final class CheckEnvScriptTest extends TestCase
         MAILER_DSN=
         ENV;
 
+    private const string SCRIPT = __DIR__.'/../../../bin/check-env';
+
     private string $directory;
 
     protected function setUp(): void
@@ -31,8 +34,7 @@ final class CheckEnvScriptTest extends TestCase
 
     protected function tearDown(): void
     {
-        array_map(unlink(...), glob($this->directory.'/*') ?: []);
-        rmdir($this->directory);
+        new Filesystem()->remove($this->directory);
     }
 
     public function testPassesWhenEveryVariableOfTheExampleIsSet(): void
@@ -89,10 +91,37 @@ final class CheckEnvScriptTest extends TestCase
         self::assertStringContainsString('REDIS_PASSWORD', $requiredMissing->getErrorOutput());
     }
 
+    public function testARequiredVariableLeftEmptyBlocksLikeAMissingOne(): void
+    {
+        $compose = $this->write('compose.yaml', 'REDIS_URL: redis://${REDIS_PASSWORD:?requis}@redis');
+
+        $process = $this->check("APP_SECRET=s3cr3t-app\nPOSTGRES_USER=app\nREDIS_PASSWORD=      # à remplir\nMAILER_DSN=\n", compose: [$compose]);
+
+        self::assertSame(1, $process->getExitCode());
+        self::assertStringContainsString('REDIS_PASSWORD', $process->getErrorOutput());
+        self::assertStringNotContainsString('MAILER_DSN', $process->getErrorOutput());
+    }
+
+    public function testMalformedLinesNeverLeakTheirValue(): void
+    {
+        $process = $this->check("export APP_SECRET=s3cr3t-export\n  POSTGRES_USER=s3cr3t-indented\nREDIS_PASSWORD=s3cr3t-crlf\r\nMAILER_DSN s3cr3t-no-equal\n");
+
+        $output = $process->getOutput().$process->getErrorOutput();
+        self::assertSame(1, $process->getExitCode());
+        self::assertStringNotContainsString('s3cr3t', $output);
+    }
+
+    public function testFailsWhenTheExampleDefinesNoVariable(): void
+    {
+        $process = $this->runScript([$this->write('env', "APP_SECRET=s3cr3t-app\n"), $this->write('example', "# rien\n")]);
+
+        self::assertSame(2, $process->getExitCode());
+        self::assertStringContainsString('example', $process->getErrorOutput());
+    }
+
     public function testFailsWhenTheFileIsMissing(): void
     {
-        $process = new Process([\dirname(__DIR__, 3).'/bin/check-env', $this->directory.'/absent', $this->write('example', self::EXAMPLE)]);
-        $process->run();
+        $process = $this->runScript([$this->directory.'/absent', $this->write('example', self::EXAMPLE)]);
 
         self::assertSame(2, $process->getExitCode());
         self::assertStringContainsString('absent', $process->getErrorOutput());
@@ -104,8 +133,17 @@ final class CheckEnvScriptTest extends TestCase
      */
     private function check(string $content, array $environment = [], array $compose = []): Process
     {
+        return $this->runScript([$this->write('env', $content), $this->write('example', self::EXAMPLE), ...$compose], $environment);
+    }
+
+    /**
+     * @param list<string>          $arguments
+     * @param array<string, string> $environment
+     */
+    private function runScript(array $arguments, array $environment = []): Process
+    {
         $process = new Process(
-            [\dirname(__DIR__, 3).'/bin/check-env', $this->write('env', $content), $this->write('example', self::EXAMPLE), ...$compose],
+            [self::SCRIPT, ...$arguments],
             env: $environment + ['REDIS_PASSWORD' => false, 'MAILER_DSN' => false, 'APP_SECRET' => false, 'POSTGRES_USER' => false],
         );
         $process->run();
