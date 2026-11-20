@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\DeviceStatus;
+use App\Enum\DisplayTheme;
 use App\Enum\NothingToShowReason;
 use App\Repository\DeviceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -94,6 +95,12 @@ class Device
     #[ORM\Column(type: Types::SMALLINT, options: ['default' => self::DEFAULT_REFRESH_INTERVAL])]
     #[Assert\Range(min: self::MIN_REFRESH_INTERVAL, max: self::MAX_REFRESH_INTERVAL)]
     private int $refreshInterval = self::DEFAULT_REFRESH_INTERVAL;
+
+    /**
+     * Couleurs de l'écran, Sombre par défaut.
+     */
+    #[ORM\Column(type: Types::STRING, length: 16, enumType: DisplayTheme::class, options: ['default' => 'dark'])]
+    private DisplayTheme $theme = DisplayTheme::Dark;
 
     /**
      * Configurations d'affichage jouées par ce dispositif, en rotation si plusieurs.
@@ -278,6 +285,18 @@ class Device
     public function setRefreshInterval(int $refreshInterval): static
     {
         $this->refreshInterval = $refreshInterval;
+
+        return $this;
+    }
+
+    public function getTheme(): DisplayTheme
+    {
+        return $this->theme;
+    }
+
+    public function setTheme(DisplayTheme $theme): static
+    {
+        $this->theme = $theme;
 
         return $this;
     }

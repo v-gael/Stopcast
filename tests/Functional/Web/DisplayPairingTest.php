@@ -9,6 +9,7 @@ use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\User;
+use App\Enum\DisplayTheme;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\AppLogsTrait;
@@ -284,6 +285,24 @@ final class DisplayPairingTest extends WebTestCase
         self::assertStringNotContainsString('<html', (string) $this->client->getResponse()->getContent());
         self::assertSame('60', $crawler->filter('[data-display-target="content"]')->attr('data-refresh-interval'));
         self::assertSame(['1'], $crawler->filter('.passage__route')->each(static fn ($route): string => $route->text()));
+    }
+
+    public function testScreensTakeTheThemeOfTheDeviceAtTheNextRefresh(): void
+    {
+        $this->serveRealtimeFeed();
+        $this->pairedScreen();
+
+        $crawler = $this->client->request('GET', '/display');
+        self::assertSame('dark', $crawler->filter('[data-display-target="content"]')->attr('data-theme'));
+
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->find(Device::class, $this->device->getId())?->setTheme(DisplayTheme::Light);
+        $entityManager->flush();
+        $entityManager->clear();
+
+        $crawler = $this->client->request('GET', '/display?fragment=1');
+        self::assertSame('light', $crawler->filter('[data-display-target="content"]')->attr('data-theme'));
     }
 
     public function testPairingAnotherScreenSendsTheFirstBackToPairing(): void

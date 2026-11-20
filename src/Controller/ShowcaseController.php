@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Display\Pairing\QrCodeSvg;
 use App\Display\Pairing\ScreenPairing;
 use App\Display\ShowcaseScreens;
+use App\Enum\DisplayTheme;
 use App\Enum\ShowcaseScreenMode;
 use App\EventListener\SameOriginFramingListener;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -42,8 +43,8 @@ final class ShowcaseController extends AbstractController
             'mode' => $mode,
             'screens' => $mode->isWalkthroughDevice() ? $this->showcaseScreens->walkthroughDevice() : $this->showcaseScreens->all(),
             'now' => $this->showcaseScreens->now(),
-            // Pour _screens.html.twig : durée d'un écran ; l'écran de la vitrine ne relit rien.
-            'device' => ['screenDuration' => 4, 'refreshInterval' => 0],
+            // Pour _screens.html.twig : durée d'un écran et couleurs ; l'écran de la vitrine ne relit rien.
+            'device' => ['screenDuration' => 4, 'refreshInterval' => 0, 'theme' => DisplayTheme::Dark],
             'code' => self::PAIRING_CODE,
             'remaining_seconds' => ScreenPairing::CODE_DISPLAY_SECONDS,
             'pairing_url' => $homeUrl,

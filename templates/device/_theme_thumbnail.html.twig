@@ -1,0 +1,32 @@
+{#
+ # Vignette d'un thème dans le formulaire d'un dispositif : un écran fictif
+ # figé, aux couleurs du thème « theme » (valeur de DisplayTheme), dessiné
+ # par assets/styles/device_bench.css. Décorative : le nom du thème suit.
+ #}
+<div class="bench" aria-hidden="true">
+    <div class="bench__screens" data-theme="{{ theme }}">
+        <section class="bench__screen">
+            <div class="bench__top">
+                <span class="bench__stop">Arrêt A</span>
+                <span class="bench__clock">12:34</span>
+            </div>
+            <div class="bench__columns">
+                <span>N° ligne</span>
+                <span>Dans</span>
+                <span>Direction</span>
+            </div>
+            <ol class="bench__passages">
+                <li class="bench__passage">
+                    <span class="bench__route bench__route--red">1</span>
+                    <span class="bench__minutes">2 min</span>
+                    <span class="bench__headsign">GARE CENTRALE</span>
+                </li>
+                <li class="bench__passage">
+                    <span class="bench__route bench__route--blue">12</span>
+                    <span class="bench__minutes">4 min</span>
+                    <span class="bench__headsign">HÔPITAL NORD</span>
+                </li>
+            </ol>
+        </section>
+    </div>
+</div>

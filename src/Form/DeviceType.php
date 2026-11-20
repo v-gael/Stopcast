@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Device;
+use App\Enum\DisplayTheme;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Libellé et cadences d'affichage d'un dispositif ; son activation en plus à
+ * Libellé, couleurs de l'écran et cadences d'affichage d'un dispositif ; son activation en plus à
  * l'édition (« include_active »).
  *
  * @extends AbstractType<Device>
@@ -26,6 +28,15 @@ final class DeviceType extends AbstractType
             'help' => 'Pour reconnaître le dispositif, par exemple « Écran de la cuisine ».',
             // Un champ vidé reste une chaîne : NotBlank le signale au lieu d'une erreur de type.
             'empty_data' => '',
+        ]);
+
+        $builder->add('theme', EnumType::class, [
+            'label' => "Couleurs de l'écran",
+            'class' => DisplayTheme::class,
+            'choice_label' => static fn (DisplayTheme $theme): string => $theme->label(),
+            'expanded' => true,
+            // Une vignette d'écran par thème (templates/form/tailwind_layout.html.twig).
+            'block_prefix' => 'display_theme',
         ]);
 
         $builder->add('screenDuration', SecondsSliderType::class, [

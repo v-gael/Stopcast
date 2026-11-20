@@ -57,6 +57,7 @@ final readonly class AccountDataExporter
             'active' => $device->isActive(),
             'screenDuration' => $device->getScreenDuration(),
             'refreshInterval' => $device->getRefreshInterval(),
+            'theme' => $device->getTheme()->value,
             'lastSeenAt' => $device->getLastSeenAt()?->format(\DATE_ATOM),
             'createdAt' => $device->getCreatedAt()->format(\DATE_ATOM),
             'updatedAt' => $device->getUpdatedAt()->format(\DATE_ATOM),

@@ -2,7 +2,7 @@
  * Écran de test du formulaire d'un dispositif (templates/device/_bench.html.twig).
  * Séparé de la page d'affichage (display.css) : il reprend son allure mais
  * évolue seul, pour essayer en direct les réglages du formulaire (durée d'un
- * écran, plus tard les thèmes) sans contraindre l'affichage réel.
+ * écran, couleurs) sans contraindre l'affichage réel.
  *
  * Tout se mesure en --u, 1/480 de la largeur du bloc, qui garde le format
  * 480×320 de l'écran de référence.
@@ -25,12 +25,16 @@
     border-radius: 0.375rem;
 }
 
-/* Les variables vivent sous le conteneur : une unité cqw y vise la largeur du bloc. */
+/*
+ * Les variables vivent sous le conteneur : une unité cqw y vise la largeur du bloc.
+ * Couleurs des thèmes de display.css : Sombre par défaut, Clair sous data-theme="light".
+ */
 .bench__screens {
     --bench-background: #05203c;
     --bench-header-background: #1b4872;
     --bench-header-text: #8fbdec;
     --bench-text: #ffffff;
+    --bench-time-text: #ffffff;
 
     --u: calc(100cqw / 480);
     --padding-inline: calc(14.4 * var(--u));
@@ -42,6 +46,14 @@
     font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
     font-weight: 700;
     -webkit-font-smoothing: antialiased;
+}
+
+.bench__screens[data-theme="light"] {
+    --bench-background: #eaf4fd;
+    --bench-header-background: #0068a8;
+    --bench-header-text: #ffffff;
+    --bench-text: #05203c;
+    --bench-time-text: #005085;
 }
 
 .bench__screen {
@@ -71,6 +83,7 @@
 }
 
 .bench__clock {
+    color: var(--bench-time-text);
     font-variant-numeric: tabular-nums;
 }
 
@@ -127,6 +140,7 @@
 .bench__route--purple { background: #7a3e9d; color: #ffffff; }
 
 .bench__minutes {
+    color: var(--bench-time-text);
     font-size: calc(19 * var(--u));
     white-space: nowrap;
 }
