@@ -5,7 +5,7 @@
 # =============================================================================
 # Étiquette et digest : dev, CI et prod partent de la même base, et une
 # nouvelle base arrive par une PR de Dependabot.
-FROM dunglas/frankenphp:1-php8.5-alpine@sha256:bf8051e99d28fd546b0d1c1b74329f3eba0496b56bb8cd979a10ab1265e28f5c AS base
+FROM dunglas/frankenphp:1-php8.5-alpine@sha256:0b064e00fd2cc0c72546da62f02daeee709635879730d34cbde1922ea43e6b94 AS base
 
 WORKDIR /app
 
@@ -29,8 +29,8 @@ RUN apk add --no-cache \
         zip \
     && apk del libecpg
 
-# Fuseau horaire commun à toutes les stages.
-COPY frankenphp/conf.d/10-timezone.ini $PHP_INI_DIR/conf.d/
+# Fuseau horaire et réglages de session communs à toutes les stages.
+COPY frankenphp/conf.d/10-timezone.ini frankenphp/conf.d/10-session.ini $PHP_INI_DIR/conf.d/
 COPY frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 COPY frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint
