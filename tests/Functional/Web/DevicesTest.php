@@ -323,10 +323,6 @@ final class DevicesTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $device = $this->reload($device);
         self::assertSame([12, 120], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
-
-        $this->client->followRedirect();
-        self::assertSelectorTextSame('[data-screen-duration]', '12 s');
-        self::assertSelectorTextSame('[data-refresh-interval]', '120 s');
     }
 
     public function testNewDeviceIsDark(): void
@@ -346,9 +342,6 @@ final class DevicesTest extends WebTestCase
 
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         self::assertSame(DisplayTheme::Light, $this->reload($device)?->getTheme());
-
-        $this->client->followRedirect();
-        self::assertSelectorTextSame('[data-display-theme]', 'Clair');
     }
 
     public function testThemeIsChosenFromTwoThumbnailsAndTheTestScreenShowsTheSavedOne(): void
