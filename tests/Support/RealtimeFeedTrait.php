@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Dto\GtfsRt\NextPassage;
 use App\Gtfs\Realtime\NextPassageFinder;
 use App\Gtfs\Realtime\PassageIndexBuilder;
 use App\Gtfs\Realtime\PassageIndexRefresher;
@@ -15,6 +16,11 @@ use App\Monitoring\RealtimeFeedMismatchLogger;
 use App\Repository\QuayRepository;
 use App\Repository\RouteRepository;
 use App\Repository\TripRepository;
+use Google\Transit\Realtime\FeedEntity;
+use Google\Transit\Realtime\TripDescriptor;
+use Google\Transit\Realtime\TripUpdate;
+use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
+use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -93,5 +99,40 @@ trait RealtimeFeedTrait
     private static function fixedClock(): MockClock
     {
         return new MockClock(self::NOW, date_default_timezone_get());
+    }
+
+    /**
+     * TripUpdate d'un trajet de la ligne $routeId, avec ses passages.
+     *
+     * @param StopTimeUpdate[] $stopTimeUpdates
+     */
+    private function tripUpdate(string $tripId, array $stopTimeUpdates, string $routeId = 'R1'): FeedEntity
+    {
+        return new FeedEntity()
+            ->setTripUpdate(new TripUpdate()
+                ->setTrip(new TripDescriptor()->setTripId($tripId)->setRouteId($routeId))
+                ->setStopTimeUpdate($stopTimeUpdates));
+    }
+
+    /**
+     * Départ du quai $stopId dans $minutes minutes, avec sa stop_sequence si elle est donnée.
+     */
+    private function departureAt(string $stopId, int $minutes, ?int $sequence = null): StopTimeUpdate
+    {
+        $stopTimeUpdate = new StopTimeUpdate()
+            ->setStopId($stopId)
+            ->setDeparture(new StopTimeEvent()->setTime(self::at($minutes)));
+
+        return null === $sequence ? $stopTimeUpdate : $stopTimeUpdate->setStopSequence($sequence);
+    }
+
+    /**
+     * @param NextPassage[] $passages
+     *
+     * @return list<string|null>
+     */
+    private function headsignsOf(array $passages): array
+    {
+        return array_values(array_map(static fn (NextPassage $passage): ?string => $passage->headsign, $passages));
     }
 }

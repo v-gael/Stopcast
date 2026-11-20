@@ -36,9 +36,9 @@ final readonly class RealtimeFeedMismatchLogger
     /**
      * @param list<string> $sampleStopIds quelques stop_id du flux, pour le contexte
      */
-    public function log(int $passages, array $sampleStopIds): void
+    public function log(int $passageCount, array $sampleStopIds): void
     {
-        $context = ['passages' => $passages, 'sample_stop_ids' => $sampleStopIds];
+        $context = ['passages' => $passageCount, 'sample_stop_ids' => $sampleStopIds];
         $this->logger->warning(self::MESSAGE, $context);
 
         $now = $this->clock->now()->getTimestamp();

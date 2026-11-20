@@ -13,10 +13,6 @@ use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
-use Google\Transit\Realtime\TripDescriptor;
-use Google\Transit\Realtime\TripUpdate;
-use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
-use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -43,7 +39,7 @@ final class FeedIdentifierToleranceTest extends KernelTestCase
     {
         $entityManager = $this->entityManager();
 
-        $route = new Route('1', '1', '009DE0', 'FFFFFF');
+        $route = new Route('R1', '1', '009DE0', 'FFFFFF');
         $route->setLongName('CRENEY PRES TROYES-RIVIERE DE COR');
 
         $entityManager->persist($route);
@@ -182,36 +178,6 @@ final class FeedIdentifierToleranceTest extends KernelTestCase
     private function index(array $entities): array
     {
         return $this->passageIndexBuilder(new MockHttpClient(self::feedResponse($entities)))->build()->passagesByStopId;
-    }
-
-    /**
-     * @param StopTimeUpdate[] $stopTimeUpdates
-     */
-    private function tripUpdate(string $tripId, array $stopTimeUpdates): FeedEntity
-    {
-        return new FeedEntity()
-            ->setTripUpdate(new TripUpdate()
-                ->setTrip(new TripDescriptor()->setTripId($tripId)->setRouteId('1'))
-                ->setStopTimeUpdate($stopTimeUpdates));
-    }
-
-    private function departureAt(string $stopId, int $minutes, ?int $sequence = null): StopTimeUpdate
-    {
-        $stopTimeUpdate = new StopTimeUpdate()
-            ->setStopId($stopId)
-            ->setDeparture(new StopTimeEvent()->setTime(self::at($minutes)));
-
-        return null === $sequence ? $stopTimeUpdate : $stopTimeUpdate->setStopSequence($sequence);
-    }
-
-    /**
-     * @param NextPassage[] $passages
-     *
-     * @return list<string|null>
-     */
-    private function headsignsOf(array $passages): array
-    {
-        return array_values(array_map(static fn (NextPassage $passage): ?string => $passage->headsign, $passages));
     }
 
     /**
