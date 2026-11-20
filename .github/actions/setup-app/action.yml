@@ -1,0 +1,37 @@
+# Prépare l'application sur le runner pour les jobs lint, tests et browser de
+# ci.yml : PHP, dépendances Composer (cache par composer.lock) et CSS Tailwind.
+name: Application PHP
+description: Installe PHP, les dépendances Composer et construit la CSS Tailwind.
+
+runs:
+  using: composite
+  steps:
+    - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      with:
+        php-version: '8.5'
+        extensions: ctype, iconv, intl, zip, pdo_pgsql, redis
+        coverage: none
+        tools: composer:v2
+        # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
+        ini-values: date.timezone=Europe/Paris
+
+    - name: Dossier du cache Composer
+      id: composer-cache
+      shell: bash
+      run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ hashFiles('composer.lock') }}
+        restore-keys: composer-
+
+    - name: Dépendances Composer
+      shell: bash
+      run: composer install --no-interaction --no-progress --prefer-dist
+
+    # Les tests navigateur chargent la CSS : en local, le service tailwind la
+    # construit en continu.
+    - name: CSS Tailwind
+      shell: bash
+      run: php bin/console tailwind:build
