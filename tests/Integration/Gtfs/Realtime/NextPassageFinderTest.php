@@ -164,6 +164,19 @@ final class NextPassageFinderTest extends KernelTestCase
         yield 'deleted' => [TripScheduleRelationship::DELETED];
     }
 
+    public function testTripUpdateWithoutTripDescriptorIsNotShown(): void
+    {
+        $withoutTrip = $this->tripUpdate('T1', [$this->departureAt('S1', 5)]);
+        $withoutTrip->getTripUpdate()?->clearTrip();
+
+        $passages = $this->passagesAtQuay([
+            $withoutTrip,
+            $this->tripUpdate('T2', [$this->departureAt('S1', 10)]),
+        ]);
+
+        self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($passages));
+    }
+
     public function testTripEndingAtTheQuayIsNotShown(): void
     {
         $passages = $this->passagesAtQuay([

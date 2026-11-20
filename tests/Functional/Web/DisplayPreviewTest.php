@@ -20,6 +20,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\Test\ClockSensitiveTrait;
 use Symfony\Component\DomCrawler\Crawler;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 
@@ -27,6 +28,7 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class DisplayPreviewTest extends WebTestCase
 {
     use AppLogsTrait;
+    use ClockSensitiveTrait;
     use DisplayTestTrait;
     use WebTestTrait;
 
@@ -204,6 +206,9 @@ final class DisplayPreviewTest extends WebTestCase
 
     public function testLivePreviewRotatesTheRealPassagesOfTheActiveConfigurations(): void
     {
+        // Heure figée : le délai affiché ne perd pas une minute si une seconde
+        // passe entre le rafraîchissement de l'index et la requête.
+        self::mockTime(new \DateTimeImmutable());
         $this->configure('Gare', 'GARE ROUTIERE', routeShortName: 'L4');
         $this->configure('Masquée', 'MAIRIE', position: 1, active: false, routeShortName: 'L7');
         $this->refreshPassageIndex();
