@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "937c57dd823e0686fd0eb3f85ed82c94",
+    "content-hash": "cd21e9a1a3b89ec3f6c11b43e1457386",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -9644,7 +9644,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T12:14:22+00:00"
+            "time": "2026-11-03T12:14:22+00:00",
+            "published-time": "2026-11-03T12:14:36+00:00"
         },
         {
             "name": "phpstan/phpstan-doctrine",
@@ -12382,7 +12383,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.5.12",
+        "php": ">=8.5.13",
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-redis": "*",
