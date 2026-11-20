@@ -17,15 +17,35 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  quality:
-    name: Qualité et tests
+  # Contrôles du code en trois jobs parallèles, chacun une partie de bin/check :
+  # une erreur de style ou de PHPStan s'affiche sans attendre PHPUnit, et un
+  # échec des tests navigateur a son job et ses captures. `make check` lance
+  # les trois à la suite, dans le même ordre.
+  lint:
+    name: Lints et analyse
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-app
+
+      - name: Contrôles
+        run: bin/check lint
+
+  # Suite sous DAMA, sans les tests navigateur (phpunit.dist.xml).
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     env:
       APP_ENV: test
     # Base des tests d'intégration et fonctionnels : mêmes identifiants que le
     # DATABASE_URL par défaut de .env (l'environnement de test ajoute "_test").
     services:
-      database:
+      database: &database
         image: postgres:16-alpine
         env:
           POSTGRES_USER: app
@@ -55,51 +75,68 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      - uses: ./.github/actions/setup-app
+
+      - name: Contrôles
+        run: bin/check tests
+
+      # Log de test : trace des erreurs levées pendant les tests.
+      - name: Log des tests
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          php-version: '8.5'
-          extensions: ctype, iconv, intl, zip, pdo_pgsql, redis
-          coverage: none
-          tools: composer:v2
-          # Même fuseau que l'image : frankenphp/conf.d/10-timezone.ini.
-          ini-values: date.timezone=Europe/Paris
+          name: test-failure-tests
+          path: var/log/test.log
+          if-no-files-found: ignore
 
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  # Tests navigateur (Panther), sans DAMA (phpunit.browser.dist.xml), avec le
+  # Chrome et le chromedriver du runner.
+  browser:
+    name: Tests navigateur
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+    services:
+      database: *database
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+          persist-credentials: false
 
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: ./.github/actions/setup-app
 
-      # Les tests navigateur chargent la CSS : en local, le service tailwind la
-      # construit en continu.
-      - name: Build Tailwind CSS
-        run: php bin/console tailwind:build
-
-      # Même liste de contrôles que `make check` en local. Les tests navigateur
-      # (Panther) utilisent le Chrome et le chromedriver du runner.
       - name: Contrôles
         run: |
           export PANTHER_CHROME_DRIVER_BINARY="$CHROMEWEBDRIVER/chromedriver"
-          bin/check
+          bin/check browser
 
-      # Captures des pages des tests navigateur en échec (PANTHER_ERROR_SCREENSHOT_DIR)
-      # et log de test : le serveur de Panther y écrit la trace de ses erreurs.
+      # Captures des pages en échec (PANTHER_ERROR_SCREENSHOT_DIR) et log de
+      # test : le serveur de Panther y écrit la trace de ses erreurs.
       - name: Captures et log des tests
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-failure
+          name: test-failure-browser
           path: |
             var/panther/
             var/log/test.log
           if-no-files-found: ignore
+
+  # Check requis par les rulesets de develop et main, et attendu par deploy :
+  # vert seulement si les trois jobs du code le sont. Il garde le nom de
+  # l'ancien job unique, pour que ni les rulesets ni deploy ne changent.
+  quality:
+    name: Qualité et tests
+    needs: [lint, tests, browser]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Résultat des contrôles
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "lint, tests, browser : $RESULTS"
+          jq -e 'all(. == "success")' <<< "$RESULTS" > /dev/null
 
   # Valide les fichiers Compose, les scripts shell et les workflows : `make check`
   # lance les mêmes scripts sur l'hôte.
@@ -148,7 +185,7 @@ jobs:
 
       # Sans cache : chaque build reprend les paquets Alpine du jour, que le
       # cache garderait tant que l'image de base ne change pas. Il reste plus
-      # court que le job quality, qui fixe la durée du déploiement. Sur main,
+      # court que les tests navigateur, qui fixent la durée du déploiement. Sur main,
       # le cache écrit ici sert seulement à l'étape de publication.
       - name: Construire l'image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
