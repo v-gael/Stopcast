@@ -11,6 +11,8 @@ use App\Gtfs\Realtime\PassageIndexStore;
 use App\Gtfs\Realtime\TripUpdatesFeed;
 use App\Monitoring\HealthcheckPinger;
 use App\Monitoring\RealtimeFeedFailureLogger;
+use App\Monitoring\RealtimeFeedMismatchLogger;
+use App\Repository\QuayRepository;
 use App\Repository\RouteRepository;
 use App\Repository\TripRepository;
 use Psr\Log\LoggerInterface;
@@ -57,7 +59,7 @@ trait RealtimeFeedTrait
         $feed = self::tripUpdatesFeed($httpClient, $clock);
 
         return new PassageIndexRefresher(
-            builder: $this->passageIndexBuilder($httpClient, $clock),
+            builder: $this->passageIndexBuilder($httpClient, $clock, $logger),
             store: $store,
             tripUpdatesFeed: $feed,
             feedFailureLogger: new RealtimeFeedFailureLogger($logger ?? new NullLogger(), new ArrayAdapter(), $clock),
@@ -68,17 +70,19 @@ trait RealtimeFeedTrait
         );
     }
 
-    private function passageIndexBuilder(MockHttpClient $httpClient, ?MockClock $clock = null): PassageIndexBuilder
+    private function passageIndexBuilder(MockHttpClient $httpClient, ?MockClock $clock = null, ?LoggerInterface $logger = null): PassageIndexBuilder
     {
         $container = self::getContainer();
+        $quayRepository = $container->get(QuayRepository::class);
         $routeRepository = $container->get(RouteRepository::class);
         $tripRepository = $container->get(TripRepository::class);
+        self::assertInstanceOf(QuayRepository::class, $quayRepository);
         self::assertInstanceOf(RouteRepository::class, $routeRepository);
         self::assertInstanceOf(TripRepository::class, $tripRepository);
 
         $clock ??= self::fixedClock();
 
-        return new PassageIndexBuilder(self::tripUpdatesFeed($httpClient, $clock), $routeRepository, $tripRepository, $clock);
+        return new PassageIndexBuilder(self::tripUpdatesFeed($httpClient, $clock), $quayRepository, $routeRepository, $tripRepository, new RealtimeFeedMismatchLogger($logger ?? new NullLogger(), new ArrayAdapter(), $clock), $clock);
     }
 
     private static function tripUpdatesFeed(MockHttpClient $httpClient, MockClock $clock): TripUpdatesFeed

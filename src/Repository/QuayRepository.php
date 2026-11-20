@@ -24,6 +24,31 @@ class QuayRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les stop_id connus parmi ceux demandés, quais obsolètes compris, en une
+     * seule requête. La comparaison est exacte, casse comprise.
+     *
+     * @param string[] $gtfsStopIds
+     *
+     * @return array<string, true> indexé par stop_id
+     */
+    public function findKnownGtfsStopIds(array $gtfsStopIds): array
+    {
+        if ([] === $gtfsStopIds) {
+            return [];
+        }
+
+        /** @var list<array{gtfsStopId: string}> $rows */
+        $rows = $this->createQueryBuilder('q')
+            ->select('q.gtfsStopId')
+            ->where('q.gtfsStopId IN (:gtfsStopIds)')
+            ->setParameter('gtfsStopIds', array_values(array_unique($gtfsStopIds)))
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_fill_keys(array_column($rows, 'gtfsStopId'), true);
+    }
+
+    /**
      * @return Quay[]
      */
     public function findAllActive(): array
