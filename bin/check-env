@@ -1,0 +1,95 @@
+#!/bin/sh
+# Vérifie qu'un fichier d'environnement définit chaque variable de son modèle,
+# par les noms seulement : aucune valeur n'est lue dans une variable du script
+# ni affichée. Une variable absente du fichier mais exportée dans
+# l'environnement compte, comme pour Compose. bin/prod-verify l'appelle avant
+# de déployer, pour lister d'un coup ce qui manque au lieu d'un refus de
+# Compose par variable.
+#
+#   bin/check-env <fichier> <modèle> [<fichier Compose>…]
+#
+# Avec des fichiers Compose, seules les variables qu'ils exigent (${NOM:?…})
+# bloquent ; les autres manquantes sont signalées sans échec, Compose leur
+# donnant une valeur par défaut. Sans fichier Compose, toutes bloquent.
+#
+# Code de sortie : 0 rien de bloquant ne manque, 1 variables bloquantes
+# manquantes (listées), 2 usage ou fichier illisible.
+
+set -eu
+
+if [ "$#" -lt 2 ]; then
+    echo 'Usage : bin/check-env <fichier> <modèle> [<fichier Compose>…]' >&2
+    exit 2
+fi
+
+for file in "$@"; do
+    if [ ! -r "$file" ]; then
+        echo "Fichier illisible : $file" >&2
+        exit 2
+    fi
+done
+
+# Noms des lignes NOM=…, sans les commentaires ni les valeurs.
+names() {
+    sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$1" | sort -u
+}
+
+# Noms des lignes dont la valeur n'est pas vide : après le « = », autre chose
+# qu'une espace ou un commentaire. Seul le nom sort, comme dans names.
+filled_names() {
+    sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=[^[:space:]#].*/\1/p' "$1" | sort -u
+}
+
+# Vrai si la variable est exportée (avec une valeur non vide si $2 vaut
+# filled). Les lignes d'env ne vont qu'à grep -q : aucune n'est affichée ni
+# gardée.
+exported() {
+    if [ "${2:-}" = filled ]; then
+        env | grep -q "^$1=."
+    else
+        env | grep -q "^$1="
+    fi
+}
+
+env_file=$1
+example=$2
+shift 2
+expected=$(names "$example")
+if [ -z "$expected" ]; then
+    echo "Aucune variable lue dans $example : modèle vide ou illisible." >&2
+    exit 2
+fi
+defined=$(names "$env_file")
+filled=$(filled_names "$env_file")
+required=''
+if [ "$#" -gt 0 ]; then
+    # shellcheck disable=SC2016 # motif littéral ${NOM:?, pas une expansion
+    required=$(cat "$@" | grep -o '\${[A-Za-z_][A-Za-z0-9_]*:?' | sed 's/^\${//; s/:?$//' | sort -u)
+fi
+
+missing=''
+optional=''
+for name in $expected; do
+    # Exigée par Compose (${NOM:?}) : une valeur vide est refusée comme une
+    # absence. Sinon, la ligne présente suffit, même vide.
+    if [ "$#" -eq 0 ] || printf '%s\n' "$required" | grep -Fqx "$name"; then
+        if printf '%s\n' "$filled" | grep -Fqx "$name"; then
+            continue
+        fi
+        exported "$name" filled || missing="$missing $name"
+    else
+        if printf '%s\n' "$defined" | grep -Fqx "$name"; then
+            continue
+        fi
+        exported "$name" || optional="$optional $name"
+    fi
+done
+
+if [ -n "$optional" ]; then
+    printf 'Variables facultatives de %s absentes de %s (valeur par défaut de Compose) :%s\n' "$example" "$env_file" "$optional" >&2
+fi
+if [ -n "$missing" ]; then
+    printf 'Variables de %s absentes ou vides dans %s :%s\n' "$example" "$env_file" "$missing" >&2
+    echo "Les ajouter au fichier (valeurs : voir le modèle et docs/exploitation.md, « Secrets »)." >&2
+    exit 1
+fi

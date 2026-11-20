@@ -10,6 +10,10 @@
 # conteneur de prod.
 export APP_ENV=test
 
+# Cache de test vidé, comme la CI qui part de zéro : un noyau sans debug
+# (ErrorPagesTest) ne recompile pas un conteneur qui nomme un bundle retiré.
+rm -rf var/cache/test
+
 summary=''
 
 run() {
@@ -29,6 +33,24 @@ run() {
     fi
 }
 
+# Flex resynchronise importmap.php à chaque require ou update : il y ajoute les
+# CSS Bootstrap de tom-select et retire declare(strict_types=1).
+check_importmap() {
+    status=0
+    if grep -q 'tom-select/dist/css/tom-select.bootstrap' importmap.php; then
+        echo 'importmap.php contient les CSS Bootstrap de tom-select, ajoutées par Flex.'
+        status=1
+    fi
+    if ! grep -q '^declare(strict_types=1);' importmap.php; then
+        echo 'importmap.php a perdu declare(strict_types=1), retiré par Flex.'
+        status=1
+    fi
+    if [ "$status" -ne 0 ]; then
+        echo "Si le paquet n'apporte pas de JavaScript : git checkout importmap.php (docs/developpement.md, « Mettre à jour les dépendances »)."
+    fi
+    return "$status"
+}
+
 # Pourquoi un lint en prod : docs/developpement.md, « Qualité de code ».
 lint_prod_container() {
     rm -rf var/cache/prod
@@ -38,6 +60,7 @@ lint_prod_container() {
 run 'Composer validate' composer validate --strict
 run 'Dépendances' vendor/bin/composer-dependency-analyser
 run 'Lint doc' bin/check-docs
+run 'Importmap' check_importmap
 run 'Lint YAML' php bin/console lint:yaml config --parse-tags
 run 'Lint Twig' php bin/console lint:twig templates
 run 'Lint container' php bin/console lint:container
