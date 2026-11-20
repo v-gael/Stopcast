@@ -12,8 +12,8 @@
     <twig:Card title="Dispositif">
         {{ form_start(form) }}
             {{ form_row(form.label, {attr: {'data-device-bench-target': 'labelInput', 'data-action': 'input->device-bench#updateLabel'}}) }}
-            {{ form_row(form.screenDuration, {attr: {'data-device-bench-target': 'durationInput', 'data-action': 'input->device-bench#updateDuration'}}) }}
             {{ form_row(form.theme, {attr: {'data-action': 'change->device-bench#updateTheme'}}) }}
+            {{ form_row(form.screenDuration, {attr: {'data-device-bench-target': 'durationInput', 'data-action': 'input->device-bench#updateDuration'}}) }}
             {{ form_rest(form) }}
 
             <div class="flex flex-wrap gap-3">

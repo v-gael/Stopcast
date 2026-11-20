@@ -100,9 +100,9 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 
 ## Page d'affichage
 
-Chaque dispositif a un thème, Sombre par défaut ou Clair, choisi dans son formulaire (`assets/styles/display.css`, sous `data-theme`).
+Chaque dispositif a un thème, Sombre par défaut ou Clair, choisi dans son formulaire (`assets/styles/display.css`, sous `data-theme`). Les tailles se mesurent en `--u`, qui vaut un pixel sur l'écran de référence de 480×320 et grandit avec l'écran : les seuils ci-dessous sont lus à cette taille, la plus petite.
 
-**Thème Sombre** : il reprend les couleurs de l'ancien client Python, sauf le texte des en-têtes de colonnes : celui du client Python (4,06:1 sur le bandeau) était conforme pour du grand texte, mais un écran se lit de loin, en passant, parfois avec un reflet. Il est éclairci en `#8fbdec` pour atteindre 4,5:1. Le bandeau garde sa couleur : il sépare aussi les passages, et un bandeau plus sombre se distinguerait moins du fond ; il sert aussi de fond aux pastilles sans couleur. Les tailles se mesurent en `--u`, qui vaut un pixel sur l'écran de référence de 480×320 et grandit avec l'écran : les seuils ci-dessous sont lus à cette taille, la plus petite.
+**Thème Sombre** : il reprend les couleurs de l'ancien client Python, sauf le texte des en-têtes de colonnes : celui du client Python (4,06:1 sur le bandeau) était conforme pour du grand texte, mais un écran se lit de loin, en passant, parfois avec un reflet. Il est éclairci en `#8fbdec` pour atteindre 4,5:1. Le bandeau garde sa couleur : il sépare aussi les passages, et un bandeau plus sombre se distinguerait moins du fond ; il sert aussi de fond aux pastilles sans couleur.
 
 | Usage | Texte | Fond | Rapport | Seuil |
 |---|---|---|---|---|

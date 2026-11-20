@@ -14,7 +14,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Libellé, cadences d'affichage et couleurs de l'écran d'un dispositif ; son activation en plus à
+ * Libellé, couleurs de l'écran et cadences d'affichage d'un dispositif ; son activation en plus à
  * l'édition (« include_active »).
  *
  * @extends AbstractType<Device>
@@ -30,6 +30,15 @@ final class DeviceType extends AbstractType
             'empty_data' => '',
         ]);
 
+        $builder->add('theme', EnumType::class, [
+            'label' => "Couleurs de l'écran",
+            'class' => DisplayTheme::class,
+            'choice_label' => static fn (DisplayTheme $theme): string => $theme->label(),
+            'expanded' => true,
+            // Une vignette d'écran par thème (templates/form/tailwind_layout.html.twig).
+            'block_prefix' => 'display_theme',
+        ]);
+
         $builder->add('screenDuration', SecondsSliderType::class, [
             'label' => "Durée d'affichage d'un écran",
             'attr' => ['min' => Device::MIN_SCREEN_DURATION, 'max' => Device::MAX_SCREEN_DURATION],
@@ -43,15 +52,6 @@ final class DeviceType extends AbstractType
             'attr' => ['min' => Device::MIN_REFRESH_INTERVAL, 'max' => Device::MAX_REFRESH_INTERVAL],
             'empty_data' => (string) Device::DEFAULT_REFRESH_INTERVAL,
             'presets' => [30, 60, 120, 300],
-        ]);
-
-        $builder->add('theme', EnumType::class, [
-            'label' => "Couleurs de l'écran",
-            'class' => DisplayTheme::class,
-            'choice_label' => static fn (DisplayTheme $theme): string => $theme->label(),
-            'expanded' => true,
-            // Une vignette d'écran par thème (templates/form/tailwind_layout.html.twig).
-            'block_prefix' => 'display_theme',
         ]);
 
         if ($options['include_active']) {

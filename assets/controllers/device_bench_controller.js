@@ -2,9 +2,10 @@ import { Controller } from '@hotwired/stimulus';
 
 /*
  * Écran de test du formulaire d'un dispositif (templates/device/_bench.html.twig) :
- * il fait tourner ses écrans fictifs à la durée saisie, sans l'enregistrer, et
- * recopie le libellé tapé et prend les couleurs de la vignette choisie. Une durée hors des bornes du champ garde la durée
- * enregistrée. Indépendant du contrôleur « display » de la page d'affichage.
+ * il fait tourner ses écrans fictifs à la durée saisie, sans l'enregistrer,
+ * recopie le libellé tapé et prend les couleurs de la vignette choisie. Une
+ * durée hors des bornes du champ garde la durée enregistrée. Indépendant du
+ * contrôleur « display » de la page d'affichage.
  */
 export default class extends Controller {
     static targets = ['screens', 'screen', 'clock', 'labelInput', 'labelOutput', 'durationInput'];
