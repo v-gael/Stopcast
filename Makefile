@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up down build sh console cc composer test test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs dev-log worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset prod-verify prod-backup ci-run ci-down
+.PHONY: help up down build sh console cc composer test test-browser test-verbose check fix hooks rector rector-fix cs-fixer cs-fixer-fix phpstan audit import fixtures migrate migration db-reset logs dev-log worker-restart worker-logs prod-up prod-down prod-logs prod-ps prod-reset prod-verify prod-backup ci-run ci-down
 
 # Commandes de base des environnements prod et CI (locaux, pour tester). Chacun
 # a son propre projet compose : sans -p, ils partageraient le projet du dev
@@ -94,10 +94,13 @@ fix: ## Applique Rector puis PHP CS Fixer (le hook pre-commit le fait sur les fi
 hooks: ## Active les hooks du dépôt (pre-commit : corrige le style ; pre-push : lance make check)
 	@git config core.hooksPath .githooks
 
-test: ## Lance PHPUnit (un fichier ou un dossier : make test f="tests/Functional/Web/LoginTest.php")
+test: ## Lance PHPUnit sous DAMA, sans les tests navigateur (un fichier ou un dossier : make test f="tests/Functional/Web/LoginTest.php")
 	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox $(f)
 
-test-verbose: ## Lance PHPUnit avec plus de détails
+test-browser: ## Lance les tests navigateur, sans DAMA (un fichier : make test-browser f="tests/Browser/SpaceTest.php")
+	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit -c phpunit.browser.dist.xml --display-notices --display-phpunit-notices --testdox $(f)
+
+test-verbose: ## Lance PHPUnit avec plus de détails, sous DAMA, sans les tests navigateur
 	docker compose exec -e APP_ENV=test app php vendor/bin/phpunit --display-notices --display-phpunit-notices --testdox --verbose
 
 rector: ## Lance Rector en dry-run

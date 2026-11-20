@@ -23,6 +23,13 @@
         </testsuite>
     </testsuites>
 
+    <!-- Les tests navigateur ont leur configuration, sans DAMA : phpunit.browser.dist.xml. -->
+    <groups>
+        <exclude>
+            <group>browser</group>
+        </exclude>
+    </groups>
+
     <source ignoreSuppressionOfDeprecations="true"
             ignoreIndirectDeprecations="false"
             restrictNotices="true"
@@ -41,6 +48,9 @@
 
     <extensions>
         <bootstrap class="Zenstruck\Foundry\PHPUnit\FoundryExtension" />
+        <!-- Aucun test navigateur ici : gardée pour que les deux configurations ne
+             diffèrent que par DAMA (PhpunitConfigurationTest). -->
         <bootstrap class="Symfony\Component\Panther\ServerExtension" />
+        <bootstrap class="DAMA\DoctrineTestBundle\PHPUnit\PHPUnitExtension" />
     </extensions>
 </phpunit>
