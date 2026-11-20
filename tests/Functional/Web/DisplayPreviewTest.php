@@ -229,6 +229,11 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->getCrawler();
         self::assertCount(0, $crawler->filter('.passage'));
         self::assertSame(['Pas de passage prévu actuellement'], $crawler->filter('.screen__message:not([hidden])')->each(static fn (Crawler $message): string => $message->text()));
+        // Pictogramme vectoriel décoratif, de la couleur du texte.
+        $noBus = $crawler->filter('.screen__message:not([hidden]) svg.screen__no-bus');
+        self::assertCount(1, $noBus);
+        self::assertSame('true', $noBus->attr('aria-hidden'));
+        self::assertSame('currentColor', $noBus->attr('fill'));
     }
 
     public function testLivePreviewOfADisabledDeviceShowsTheDisabledScreen(): void
