@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use DAMA\DoctrineTestBundle\Doctrine\DBAL\StaticDriver;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverBy;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\After;
+use PHPUnit\Framework\Attributes\Before;
 use Symfony\Component\Panther\Client;
 use Symfony\Component\Panther\DomCrawler\Crawler;
 use Symfony\Component\Panther\PantherTestCase;
@@ -16,12 +18,27 @@ use Symfony\Component\Panther\ServerExtensionLegacy;
 /**
  * Gestes des tests navigateur (Panther) : visite d'une page et contrôle de la
  * console de Chrome. Le serveur web de Panther est un autre processus que le
- * test : ni loginUser() ni remplacement de service n'y ont d'effet.
+ * test : ni loginUser() ni remplacement de service n'y ont d'effet. Il ne
+ * voit pas non plus une transaction de DAMA : les tests navigateur ont leur
+ * configuration, sans DAMA (phpunit.browser.dist.xml).
  *
  * @phpstan-require-extends PantherTestCase
  */
 trait BrowserTestTrait
 {
+    /**
+     * Sous DAMA, les données du test resteraient dans sa transaction : la
+     * page les chercherait en vain, loin de la cause.
+     */
+    #[Before]
+    protected function assertRunningWithoutDama(): void
+    {
+        self::assertFalse(
+            StaticDriver::isKeepStaticConnections(),
+            'Test navigateur lancé sous DAMA, dont le serveur de Panther ne voit pas la transaction : le lancer par php bin/phpunit -c phpunit.browser.dist.xml (make test-browser).',
+        );
+    }
+
     /**
      * Le navigateur de Panther, partagé entre les tests : sans les cookies
      * d'un test précédent.

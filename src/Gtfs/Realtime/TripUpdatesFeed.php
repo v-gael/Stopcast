@@ -127,23 +127,25 @@ final readonly class TripUpdatesFeed
 
         foreach ($feed->getEntity() as $entity) {
             $tripUpdate = $entity->getTripUpdate();
+            $trip = $tripUpdate?->getTrip();
 
-            if (null === $tripUpdate) {
+            // Sans TripUpdate ni TripDescriptor, pas de ligne à afficher.
+            if (null === $tripUpdate || null === $trip) {
                 continue;
             }
 
             // Trajet supprimé du service : aucun de ses passages n'est à afficher.
-            if (\in_array($tripUpdate->getTrip()?->getScheduleRelationship(), [TripScheduleRelationship::CANCELED, TripScheduleRelationship::DELETED], true)) {
+            if (\in_array($trip->getScheduleRelationship(), [TripScheduleRelationship::CANCELED, TripScheduleRelationship::DELETED], true)) {
                 continue;
             }
 
-            $routeId = $tripUpdate->getTrip()?->getRouteId() ?? '';
+            $routeId = $trip->getRouteId();
 
             if ('' === $routeId) {
                 continue;
             }
 
-            $tripId = $tripUpdate->getTrip()?->getTripId() ?? '';
+            $tripId = $trip->getTripId();
 
             // Un même trip ne dessert un quai donné qu'une fois dans sa course :
             // un quai retenu ou sauté n'est plus examiné pour ce trip.

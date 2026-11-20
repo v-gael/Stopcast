@@ -6,7 +6,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.5.12",
+        "php": ">=8.5.13",
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-redis": "*",
@@ -107,6 +107,7 @@
         }
     },
     "require-dev": {
+        "dama/doctrine-test-bundle": "^8.8",
         "doctrine/doctrine-fixtures-bundle": "^4.3",
         "php-cs-fixer/shim": "^3.95.30",
         "phpstan/extension-installer": "^1.4",

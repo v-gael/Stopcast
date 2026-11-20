@@ -35,6 +35,10 @@ if [ ! -f .env.prod.local ]; then
     exit 1
 fi
 
+# Toutes les variables manquantes d'un coup, par leur nom seulement, au lieu
+# d'un refus de Compose par variable. Seules celles que Compose exige bloquent.
+bin/check-env .env.prod.local .env.prod.local.example compose.yaml compose.prod.yaml compose.prod-local.yaml || exit 1
+
 # docker compose ne connaît que les variables exportées.
 COMPOSE_FILE=compose.yaml:compose.prod.yaml:compose.prod-local.yaml
 COMPOSE_PROJECT_NAME=stopcast-prod
