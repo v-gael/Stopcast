@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\DisplayTheme;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
 use App\Tests\Support\MockClockTrait;
@@ -75,7 +76,7 @@ final class AccountExportTest extends WebTestCase
         [$salon, $cuisine] = $data['devices'];
         self::assertIsArray($salon);
         self::assertIsArray($cuisine);
-        self::assertSame(['label', 'active', 'screenDuration', 'refreshInterval', 'lastSeenAt', 'createdAt', 'updatedAt', 'displayConfigurations'], array_keys($salon));
+        self::assertSame(['label', 'active', 'screenDuration', 'refreshInterval', 'theme', 'lastSeenAt', 'createdAt', 'updatedAt', 'displayConfigurations'], array_keys($salon));
         self::assertTrue($salon['active']);
         self::assertSame($device->getCreatedAt()->format(\DATE_ATOM), $salon['createdAt']);
         self::assertSame([], $cuisine['displayConfigurations']);
@@ -124,7 +125,7 @@ final class AccountExportTest extends WebTestCase
 
     public function testTheExportGivesTheScreenSettingsOfEachDevice(): void
     {
-        DeviceFactory::createOne(['owner' => $this->user, 'screenDuration' => 12, 'refreshInterval' => 90]);
+        DeviceFactory::createOne(['owner' => $this->user, 'screenDuration' => 12, 'refreshInterval' => 90, 'theme' => DisplayTheme::Light]);
 
         $data = $this->download();
 
@@ -133,6 +134,7 @@ final class AccountExportTest extends WebTestCase
         self::assertIsArray($device);
         self::assertSame(12, $device['screenDuration']);
         self::assertSame(90, $device['refreshInterval']);
+        self::assertSame('light', $device['theme']);
     }
 
     public function testTheExportLeavesOutSecretsInternalIdsAndOtherAccounts(): void
