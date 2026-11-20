@@ -17,11 +17,14 @@
     font-display: block;
 }
 
-/* Couleurs de l'écran, celles du client Python par défaut. */
+/*
+ * Couleurs de l'écran, celles du client Python par défaut, sauf le texte des
+ * en-têtes, éclairci pour le contraste (docs/accessibilite.md, « Page d'affichage »).
+ */
 :root {
     --display-background: #05203c;
     --display-header-background: #1b4872;
-    --display-header-text: #7baee2;
+    --display-header-text: #8fbdec;
     --display-stop-text: #ffffff;
     --display-hour-text: #ffffff;
     --display-minutes-text: #ffffff;

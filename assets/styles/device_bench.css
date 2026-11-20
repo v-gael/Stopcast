@@ -29,7 +29,7 @@
 .bench__screens {
     --bench-background: #05203c;
     --bench-header-background: #1b4872;
-    --bench-header-text: #7baee2;
+    --bench-header-text: #8fbdec;
     --bench-text: #ffffff;
 
     --u: calc(100cqw / 480);
