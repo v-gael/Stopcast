@@ -1,0 +1,35 @@
+#!/bin/sh
+# Contrôle la taille d'une image de prod déjà construite : somme des couches
+# décompressées (docker history), qui compte deux fois un fichier recopié par
+# une couche suivante. bin/prod-verify l'appelle sur l'image locale, le job
+# `image` de ci.yml sur l'image scannée, avant de la publier.
+#
+#   bin/check-image-size <image>
+#
+# Code de sortie : 0 sous le plafond, 1 au-delà ou image introuvable, 2 usage.
+
+# Plafond, en Mo. 543 Mo au 03/11/2026 ; un chown -R de var/ dans un RUN à
+# part en ajoutait 172. Le relever dans le commit qui fait grossir l'image,
+# avec la raison. 600 -> 650 le 05/11/2026 : restic, supercronic, client
+# PostgreSQL et tzdata du service backup (environ 56 Mo). 650 -> 550 le
+# 21/11/2026 : binaire de Tailwind et cache de Composer retirés de l'image,
+# 406 Mo.
+MAX_IMAGE_MB=550
+
+if [ $# -ne 1 ]; then
+    echo "Usage : bin/check-image-size <image>" >&2
+    exit 2
+fi
+
+if ! sizes=$(docker history --human=false --format '{{.Size}}' "$1"); then
+    printf 'Échec : image %s introuvable\n' "$1"
+    exit 1
+fi
+
+size_mb=$(echo "$sizes" | awk '{ total += $1 } END { print int(total / 1000000) }')
+if [ "$size_mb" -le "$MAX_IMAGE_MB" ]; then
+    echo "OK : taille de l'image : $size_mb Mo (plafond $MAX_IMAGE_MB Mo)"
+else
+    printf "Échec : taille de l'image : %s Mo, au-delà du plafond de %s Mo (MAX_IMAGE_MB dans bin/check-image-size)\n" "$size_mb" "$MAX_IMAGE_MB"
+    exit 1
+fi

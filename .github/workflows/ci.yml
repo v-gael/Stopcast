@@ -154,11 +154,12 @@ jobs:
       - name: Analyser les scripts et les workflows
         run: bin/check-scripts
 
-  # Construit l'image de prod en même temps que les contrôles et la scanne avec
-  # Trivy : sur une PR vers main (release ou hotfix), pour qu'une faille arrête
-  # la PR avant le merge ; sur main, avant de la publier sur GHCR, étiquetée par
-  # le SHA du commit seulement. Une faille CRITICAL ou HIGH corrigeable arrête
-  # le job avant le push : rien n'est publié ni déployé. Si un contrôle échoue,
+  # Construit l'image de prod en même temps que les contrôles, contrôle sa
+  # taille (bin/check-image-size) et la scanne avec Trivy : sur une PR vers main
+  # (release ou hotfix), pour qu'une faille arrête la PR avant le merge ; sur
+  # main, avant de la publier sur GHCR, étiquetée par le SHA du commit
+  # seulement. Une image trop grosse ou une faille CRITICAL ou HIGH corrigeable
+  # arrête le job avant le push : rien n'est publié ni déployé. Si un contrôle échoue,
   # l'image publiée n'est ni déployée ni étiquetée latest.
   image:
     name: Image de production
@@ -169,6 +170,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/v-gael/stopcast
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -185,8 +188,7 @@ jobs:
 
       # Sans cache : chaque build reprend les paquets Alpine du jour, que le
       # cache garderait tant que l'image de base ne change pas. Il reste plus
-      # court que les tests navigateur, qui fixent la durée du déploiement. Sur main,
-      # le cache écrit ici sert seulement à l'étape de publication.
+      # court que les tests navigateur, qui fixent la durée du déploiement.
       - name: Construire l'image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -195,31 +197,27 @@ jobs:
           platforms: linux/amd64
           load: true
           no-cache: true
-          tags: ghcr.io/v-gael/stopcast:${{ github.sha }}
-          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max' || '' }}
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - name: Contrôler la taille de l'image
+        run: bin/check-image-size "$IMAGE:$GITHUB_SHA"
 
       # Mêmes seuils que le scan quotidien d'audit.yml. Exceptions éventuelles :
       # .trivyignore, chaque entrée avec sa raison.
       - name: Scanner l'image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/v-gael/stopcast:${{ github.sha }}
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
 
-      # Reprend les couches du cache de l'étape de construction.
+      # L'image scannée elle-même, sans la reconstruire : un second build
+      # publierait une autre image que celle que Trivy a lue.
       - name: Publier l'image
         if: github.event_name == 'push'
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: prod
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/v-gael/stopcast:${{ github.sha }}
-          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=gha
+        run: docker push "$IMAGE:$GITHUB_SHA"
 
   # Déploie l'image du commit sur le serveur. La clé de la CI n'y ouvre pas de
   # shell : authorized_keys lui impose ops/ci-deploy, qui n'accepte que
