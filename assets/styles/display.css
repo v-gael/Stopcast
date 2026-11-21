@@ -17,16 +17,21 @@
     font-display: block;
 }
 
-/* Couleurs de l'écran, celles du client Python par défaut. */
+/*
+ * Couleurs de l'écran : le thème Sombre, celles du client Python, sauf le texte
+ * des en-têtes, éclairci pour le contraste (docs/accessibilite.md, « Page
+ * d'affichage »). Le thème Clair les remplace plus bas.
+ */
 :root {
     --display-background: #05203c;
     --display-header-background: #1b4872;
-    --display-header-text: #7baee2;
+    --display-header-text: #8fbdec;
     --display-stop-text: #ffffff;
     --display-hour-text: #ffffff;
     --display-minutes-text: #ffffff;
     --display-direction-text: #ffffff;
     --display-message-text: #ffffff;
+    --display-route-text: #ffffff;
 
     --u: min(100vh / 320, 100vw / 480);
     --padding-inline: 3vw;
@@ -58,8 +63,22 @@ body {
     display: none !important;
 }
 
+/* Thème Clair : fond clair, pour les pièces lumineuses (DisplayTheme::Light). */
+[data-theme="light"] {
+    --display-background: #eaf4fd;
+    --display-header-background: #0068a8;
+    --display-header-text: #ffffff;
+    --display-stop-text: #05203c;
+    --display-hour-text: #005085;
+    --display-minutes-text: #005085;
+    --display-direction-text: #05203c;
+    --display-message-text: #05203c;
+}
+
+/* Le fond suit le thème des écrans, que porte ce bloc : la page garde celui du thème Sombre. */
 .display-content {
     height: 100%;
+    background: var(--display-background);
 }
 
 .screen {
@@ -143,7 +162,7 @@ body {
 
 .passage__route {
     --route-color: var(--display-header-background);
-    --route-text-color: var(--display-direction-text);
+    --route-text-color: var(--display-route-text);
 
     display: flex;
     align-items: center;

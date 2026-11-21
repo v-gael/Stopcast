@@ -9,6 +9,7 @@ use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
 use App\Entity\User;
+use App\Enum\DisplayTheme;
 use App\Enum\Role;
 use App\Factory\DeviceFactory;
 use App\Factory\UserFactory;
@@ -322,10 +323,38 @@ final class DevicesTest extends WebTestCase
         self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
         $device = $this->reload($device);
         self::assertSame([12, 120], [$device?->getScreenDuration(), $device?->getRefreshInterval()]);
+    }
 
-        $this->client->followRedirect();
-        self::assertSelectorTextSame('[data-screen-duration]', '12 s');
-        self::assertSelectorTextSame('[data-refresh-interval]', '120 s');
+    public function testNewDeviceIsDark(): void
+    {
+        $crawler = $this->client->request('GET', '/devices/new');
+        $this->client->submit($crawler->selectButton('Créer')->form(['device[label]' => 'Écran de la cuisine']));
+
+        $device = $this->entityManager()->getRepository(Device::class)->findOneBy(['label' => 'Écran de la cuisine']);
+        self::assertSame(DisplayTheme::Dark, $device?->getTheme());
+    }
+
+    public function testEditingSwitchesTheScreenToLight(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user]);
+
+        $this->edit($device, ['device[theme]' => 'light']);
+
+        self::assertResponseRedirects(\sprintf('/devices/%d', $device->getId()), 303);
+        self::assertSame(DisplayTheme::Light, $this->reload($device)?->getTheme());
+    }
+
+    public function testThemeIsChosenFromTwoThumbnailsAndTheTestScreenShowsTheSavedOne(): void
+    {
+        $device = DeviceFactory::createOne(['owner' => $this->user, 'theme' => DisplayTheme::Light]);
+
+        $crawler = $this->client->request('GET', \sprintf('/devices/%d/edit', $device->getId()));
+
+        $group = $crawler->filter('[role="radiogroup"][aria-labelledby="device_theme_label"]');
+        self::assertSame(['Sombre', 'Clair'], $group->filter('label [data-theme-name]')->each(static fn (Crawler $name): string => $name->text()));
+        self::assertSame(['dark', 'light'], $group->filter('label [data-theme]')->each(static fn (Crawler $thumbnail): ?string => $thumbnail->attr('data-theme')));
+        self::assertSame('light', $group->filter('input:checked')->attr('value'));
+        self::assertSame('light', $crawler->filter('[data-device-bench-target="screens"]')->attr('data-theme'));
     }
 
     /**

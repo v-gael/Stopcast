@@ -92,6 +92,25 @@
     </div>
 {%- endblock seconds_presets_row -%}
 
+{#
+ # Couleurs de l'écran (option « block_prefix: display_theme » de DeviceType) : une vignette
+ # d'écran cliquable par thème, le bouton radio et le nom dessous.
+ #}
+{%- block display_theme_widget -%}
+    {%- set attr = attr|merge({role: 'radiogroup', 'aria-labelledby': id ~ '_label', class: (attr.class ?? '') ~ ' mt-1 grid grid-cols-2 gap-3'}) -%}
+    <div {{ block('widget_container_attributes') }}>
+        {%- for child in form -%}
+            <label for="{{ child.vars.id }}" class="cursor-pointer rounded-lg bg-white p-1.5 ring-2 ring-slate-200 hover:ring-slate-300 has-checked:ring-amber-500 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-amber-700">
+                {{- include('device/_theme_thumbnail.html.twig', {theme: child.vars.value}) -}}
+                <span class="mt-1.5 flex items-center px-1 text-sm font-semibold text-slate-900">
+                    {{- form_widget(child) -}}
+                    <span data-theme-name>{{ child.vars.label }}</span>
+                </span>
+            </label>
+        {%- endfor -%}
+    </div>
+{%- endblock display_theme_widget -%}
+
 {%- block radio_widget -%}
     {%- set widget_class = widget_class|default('mr-2 border-slate-500 text-amber-600 focus:ring-amber-700') -%}
     {{- parent() -}}

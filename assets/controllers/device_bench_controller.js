@@ -2,12 +2,13 @@ import { Controller } from '@hotwired/stimulus';
 
 /*
  * Écran de test du formulaire d'un dispositif (templates/device/_bench.html.twig) :
- * il fait tourner ses écrans fictifs à la durée saisie, sans l'enregistrer, et
- * recopie le libellé tapé. Une durée hors des bornes du champ garde la durée
- * enregistrée. Indépendant du contrôleur « display » de la page d'affichage.
+ * il fait tourner ses écrans fictifs à la durée saisie, sans l'enregistrer,
+ * recopie le libellé tapé et prend les couleurs de la vignette choisie. Une
+ * durée hors des bornes du champ garde la durée enregistrée. Indépendant du
+ * contrôleur « display » de la page d'affichage.
  */
 export default class extends Controller {
-    static targets = ['screen', 'clock', 'labelInput', 'labelOutput', 'durationInput'];
+    static targets = ['screens', 'screen', 'clock', 'labelInput', 'labelOutput', 'durationInput'];
 
     static values = { savedDuration: Number, emptyLabel: String };
 
@@ -32,6 +33,13 @@ export default class extends Controller {
         const label = this.labelInputTarget.value.trim();
         this.labelOutputTarget.textContent = label || this.emptyLabelValue;
         this.labelOutputTarget.classList.toggle('text-slate-500', !label);
+    }
+
+    // Les couleurs de la vignette cochée : la valeur du bouton radio est celle de DisplayTheme.
+    updateTheme(event) {
+        if (this.hasScreensTarget && event.target.checked) {
+            this.screensTarget.dataset.theme = event.target.value;
+        }
     }
 
     // Une nouvelle durée s'applique tout de suite : l'écran en cours repart pour cette durée.

@@ -7,7 +7,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord (session, « se souvenir de moi », et sur un écran d'affichage le cookie de son appairage et celui de la demande d'appairage en cours, tous strictement nécessaires), il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 17 novembre 2026.
+Dernière mise à jour : 20 novembre 2026.
 
 ## Traitements
 
@@ -38,7 +38,7 @@ Dernière mise à jour : 17 novembre 2026.
 | | |
 |---|---|
 | Finalité | Afficher les prochains passages sur les écrans de l'utilisateur ; montrer le dernier contact de chaque écran et signaler un écran hors ligne. |
-| Données | Nom de chaque dispositif et haché du secret de son écran appairé (gardé par l'écran dans un cookie), état actif, durée d'affichage et intervalle de rafraîchissement, date du dernier contact de l'écran (à 5 minutes près), dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
+| Données | Nom de chaque dispositif et haché du secret de son écran appairé (gardé par l'écran dans un cookie), état actif, durée d'affichage, intervalle de rafraîchissement et thème, date du dernier contact de l'écran (à 5 minutes près), dates de création et de modification ; configurations d'affichage (arrêts choisis, ordre de rotation). |
 | Personnes concernées | Utilisateurs. |
 | Base légale | Exécution du contrat. |
 | Durée | Jusqu'à la suppression du dispositif ou du compte. |

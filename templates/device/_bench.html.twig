@@ -2,7 +2,8 @@
  # Écran de test du formulaire d'un dispositif : trois écrans fictifs, écrits
  # ici, que le contrôleur Stimulus « device-bench » fait tourner selon la durée
  # saisie. Séparé de la page d'affichage (templates/display/), il en reprend
- # seulement l'allure (assets/styles/device_bench.css).
+ # seulement l'allure (assets/styles/device_bench.css), aux couleurs du thème
+ # « theme » (valeur de DisplayTheme), que le contrôleur change au choix d'une vignette.
  #}
 {% set passages = [
     {route: '1', color: 'red', minutes: 2, headsign: 'GARE CENTRALE'},
@@ -12,7 +13,7 @@
     {route: 'N2', color: 'purple', minutes: 18, headsign: 'ZONE ARTISANALE DES PRÉS - CENTRE COMMERCIAL'},
 ] %}
 <div class="bench" role="img" aria-label="Écran de test : trois écrans fictifs qui tournent à la durée d'écran saisie" data-bench>
-    <div class="bench__screens" aria-hidden="true">
+    <div class="bench__screens" aria-hidden="true" data-theme="{{ theme }}" data-device-bench-target="screens">
         {% for stop in ['Arrêt A', 'Arrêt B', 'Arrêt C'] %}
             {# Chaque écran décale la liste, pour qu'on voie bien le changement d'écran. #}
             {% set shift = loop.index0 %}

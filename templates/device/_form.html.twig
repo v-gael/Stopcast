@@ -1,7 +1,7 @@
 {#
  # Formulaire d'un dispositif (ajout et modification), dans la disposition de sa page :
  # le formulaire sur un tiers, un écran de test sur deux. L'écran de test suit la saisie
- # (libellé, durée d'un écran) sans rien enregistrer.
+ # (libellé, durée d'un écran, couleurs) sans rien enregistrer.
  # Attend « form », « submit_label » et « cancel_url ».
  #}
 {% set device = form.vars.value %}
@@ -12,6 +12,7 @@
     <twig:Card title="Dispositif">
         {{ form_start(form) }}
             {{ form_row(form.label, {attr: {'data-device-bench-target': 'labelInput', 'data-action': 'input->device-bench#updateLabel'}}) }}
+            {{ form_row(form.theme, {attr: {'data-action': 'change->device-bench#updateTheme'}}) }}
             {{ form_row(form.screenDuration, {attr: {'data-device-bench-target': 'durationInput', 'data-action': 'input->device-bench#updateDuration'}}) }}
             {{ form_rest(form) }}
 
@@ -25,7 +26,7 @@
     <twig:Card title="Aperçu de l'écran" class="lg:col-span-2">
         <p class="mb-3 truncate font-medium text-slate-900" data-device-bench-target="labelOutput">{{ device.label }}</p>
         <twig:SampleFrame>
-            {{ include('device/_bench.html.twig') }}
+            {{ include('device/_bench.html.twig', {theme: device.theme.value}) }}
         </twig:SampleFrame>
     </twig:Card>
 </div>

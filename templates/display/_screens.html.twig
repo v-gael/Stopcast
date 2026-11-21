@@ -1,6 +1,7 @@
 {#
- # Écrans d'un dispositif, un seul visible à la fois, et ses cadences (en
- # secondes), relues à chaque rafraîchissement. Rendu seul, c'est le fragment
+ # Écrans d'un dispositif, un seul visible à la fois, ses cadences (en
+ # secondes) et ses couleurs (data-theme, valeur de DisplayTheme), relues à
+ # chaque rafraîchissement. Rendu seul, c'est le fragment
  # que la page relit. « state_message » remplace les écrans par un écran
  # d'état (dispositif désactivé, passages illisibles) ; « offline » en fait
  # l'écran « indisponible ». « now » fixe l'heure affichée (écran figé de la
@@ -30,6 +31,7 @@
 {% endset %}
 <div class="display-content"
      data-display-target="content"
+     data-theme="{{ device.theme.value }}"
      data-screen-duration="{{ device.screenDuration }}"
      data-refresh-interval="{{ device.refreshInterval }}">
     {% for screen in state_message is defined and state_message is not null ? [] : screens %}

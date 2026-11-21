@@ -100,16 +100,27 @@ Couleurs Tailwind 4.3.3 converties en sRGB. Seuils : 4,5:1 pour le texte, 3:1 po
 
 ## Page d'affichage
 
-La page d'affichage reprend les couleurs de l'ancien client Python (`assets/styles/display.css`). Les tailles se mesurent en `--u`, qui vaut un pixel sur l'écran de référence de 480×320 et grandit avec l'écran : les seuils ci-dessous sont lus à cette taille, la plus petite.
+Chaque dispositif a un thème, Sombre par défaut ou Clair, choisi dans son formulaire (`assets/styles/display.css`, sous `data-theme`). Les tailles se mesurent en `--u`, qui vaut un pixel sur l'écran de référence de 480×320 et grandit avec l'écran : les seuils ci-dessous sont lus à cette taille, la plus petite.
+
+**Thème Sombre** : il reprend les couleurs de l'ancien client Python, sauf le texte des en-têtes de colonnes : celui du client Python (4,06:1 sur le bandeau) était conforme pour du grand texte, mais un écran se lit de loin, en passant, parfois avec un reflet. Il est éclairci en `#8fbdec` pour atteindre 4,5:1. Le bandeau garde sa couleur : il sépare aussi les passages, et un bandeau plus sombre se distinguerait moins du fond ; il sert aussi de fond aux pastilles sans couleur.
 
 | Usage | Texte | Fond | Rapport | Seuil |
 |---|---|---|---|---|
 | Nom du quai, heure, délais, destinations, messages | blanc | `#05203c` | 16,43 | 4,5 |
-| En-têtes de colonnes (gras, 20 `--u`) | `#7baee2` | `#1b4872` | 4,06 | 3 (grand texte) |
+| En-têtes de colonnes (gras, 20 `--u`) | `#8fbdec` | `#1b4872` | 4,81 | 4,5 |
 | Pastille d'une ligne sans couleur dans les données du réseau | blanc | `#1b4872` | 9,47 | 4,5 |
-| Consigne de l'écran d'appairage (gras, 14 `--u`) | `#7baee2` | `#05203c` | 7,04 | 4,5 |
+| Consigne de l'écran d'appairage (gras, 14 `--u`) | `#8fbdec` | `#05203c` | 8,34 | 4,5 |
 
-**Pastilles de ligne** : elles reprennent `route_color` et `route_text_color` du réseau telles quelles, comme les vrais panneaux et les plans du réseau, pour que chaque ligne se reconnaisse à sa couleur. C'est un écart assumé : calculé le 7 novembre 2026 sur les 61 lignes TCAT, en texte gras de 16 `--u` (seuil 4,5:1), 14 lignes sont en dessous, comme la ligne 1 (blanc sur `#009DE0`, 3,04:1) ou la 7 (blanc sur `#919294`, 3,11:1), et la 9A (blanc sur `#ED86A6`) descend à 2,45:1. Le numéro de ligne est aussi écrit, et la destination est en blanc sur le fond de l'écran : la couleur n'est pas le seul repère. Un choix automatique du texte noir ou blanc quand le contraste est trop faible pourra être décidé avec les thèmes d'affichage.
+**Thème Clair** : pour les pièces lumineuses. L'écran d'appairage, qui précède le dispositif, garde les couleurs du thème Sombre.
+
+| Usage | Texte | Fond | Rapport | Seuil |
+|---|---|---|---|---|
+| Nom du quai, destinations, messages | `#05203c` | `#eaf4fd` | 14,75 | 4,5 |
+| Heure et délais | `#005085` | `#eaf4fd` | 7,58 | 4,5 |
+| En-têtes de colonnes (gras, 20 `--u`) | blanc | `#0068a8` | 5,92 | 4,5 |
+| Pastille d'une ligne sans couleur dans les données du réseau | blanc | `#0068a8` | 5,92 | 4,5 |
+
+**Pastilles de ligne** : elles reprennent `route_color` et `route_text_color` du réseau telles quelles, comme les vrais panneaux et les plans du réseau, pour que chaque ligne se reconnaisse à sa couleur. C'est un écart assumé : calculé le 7 novembre 2026 sur les 61 lignes TCAT, en texte gras de 16 `--u` (seuil 4,5:1), 14 lignes sont en dessous, comme la ligne 1 (blanc sur `#009DE0`, 3,04:1) ou la 7 (blanc sur `#919294`, 3,11:1), et la 9A (blanc sur `#ED86A6`) descend à 2,45:1. Le numéro de ligne est aussi écrit, et la destination suit en texte contrasté sur le fond de l'écran : la couleur n'est pas le seul repère. Les pastilles sont les mêmes dans les deux thèmes, sans contour ni texte noir ou blanc choisi automatiquement, même quand leur couleur se confond avec le fond de l'écran : la fidélité au réseau l'emporte.
 
 ## Lighthouse
 
