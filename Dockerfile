@@ -4,7 +4,9 @@
 # base : dépendances système communes à toutes les stages
 # =============================================================================
 # Étiquette et digest : dev, CI et prod partent de la même base, et une
-# nouvelle base arrive par une PR de Dependabot.
+# nouvelle base arrive par une PR de Dependabot. Seul un paquet mis à jour
+# depuis les dépôts Alpine (libxml2, ci-dessous) prend la version du jour du
+# build plutôt que celle du digest.
 FROM dunglas/frankenphp:1-php8.5-alpine@sha256:0b064e00fd2cc0c72546da62f02daeee709635879730d34cbde1922ea43e6b94 AS base
 
 WORKDIR /app
@@ -16,8 +18,15 @@ ENV COMPOSER_ALLOW_SUPERUSER=1 \
 # PostgreSQL, qu'aucune extension n'utilise (pdo_pgsql ne lie que libpq) : il
 # est retiré pour ne pas livrer ses failles. apcu sert au cache système de
 # Symfony, sans appel dans le code.
+# libxml2 est mis à jour depuis les dépôts Alpine : l'image de base livre
+# 2.13.9-r2 (CVE-2026-86144), corrigée en 2.13.9-r3. À chaque PR de
+# Dependabot qui change le digest, lire la version de la nouvelle base
+# (docker run --rm --entrypoint apk dunglas/frankenphp:<étiquette>@<digest>
+# info -v libxml2) et retirer cette mise à jour dès qu'elle livre 2.13.9-r3
+# ou plus.
 RUN apk add --no-cache \
         icu-data-full \
+    && apk upgrade --no-cache libxml2 \
     && install-php-extensions \
         @composer \
         apcu \
