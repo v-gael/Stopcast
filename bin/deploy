@@ -3,9 +3,10 @@
 # de l'appli et celles, épinglées, de database et redis), recrée database si son
 # image a changé (après un dump), passe les migrations Doctrine avec la nouvelle
 # image (après un dump de la base s'il y en a en attente), puis remplace les
-# conteneurs et attend qu'ils soient prêts. Lancé sur le serveur, dans
-# ~/stopcast/, par ops/ci-deploy (le script imposé à la clé de la CI), qui
-# l'extrait de l'image à déployer avec compose.yaml et compose.prod.yaml.
+# conteneurs, attend qu'ils soient prêts et supprime les images qui ne servent
+# plus (prune_images). Lancé sur le serveur, dans ~/stopcast/, par
+# ops/ci-deploy (le script imposé à la clé de la CI), qui l'extrait de l'image à
+# déployer avec compose.yaml et compose.prod.yaml.
 #
 #   IMAGE_TAG=<sha> bin/deploy [--skip-migrations]
 #
@@ -73,6 +74,7 @@ fi
 export IMAGE_TAG COMPOSE_PROJECT_NAME COMPOSE_FILE
 
 state_file=.deployed
+app_image=ghcr.io/v-gael/stopcast
 previous=$(cat "$state_file" 2>/dev/null || echo 'aucune')
 
 # Dumps pris avant migration : un filet local, pas une sauvegarde hors serveur.
@@ -143,6 +145,92 @@ database_will_be_recreated() {
     wanted_image=$(docker image inspect --format '{{.Id}}' "$(compose config --images database)")
     wanted_hash=$(compose config --hash database | cut -d ' ' -f 2)
     [ "$running_image" != "$wanted_image" ] || [ "$running_hash" != "$wanted_hash" ]
+}
+
+# Retire la référence $1 (étiquette ou identifiant) sans -f, et l'affiche sous
+# le libellé $2. Une étiquette parmi d'autres sur la même image n'est que
+# retirée ; la dernière supprime l'image. Docker refuse si un conteneur, même
+# arrêté, utilise encore l'image : elle reste, ce n'est pas un échec.
+remove_image() {
+    if error=$(docker image rm "$1" 2>&1 >/dev/null); then
+        echo "Supprimée : $2"
+    elif [ -n "$(docker ps -a -q --filter "ancestor=$1")" ]; then
+        echo "Gardée (utilisée par un conteneur) : $2"
+    else
+        echo "Échec de la suppression de $2 : $error" >&2
+        return 1
+    fi
+}
+
+# Ne garde, après un déploiement réussi, que les images utiles à la pile : celle
+# de l'appli déployée et la précédente (un retour arrière vers elle ne télécharge
+# rien), et celles de database et redis que demandent les fichiers Compose en
+# place. Les autres étiquettes de l'appli et les anciens digests de postgres et
+# redis sont supprimés, une par une : jamais de `prune`, qui toucherait aux
+# images des autres piles du serveur (/srv/infra, autres sites). Appelé dans un
+# `if` : `set -e` n'y joue pas, chaque échec est donc relevé ici, et le ménage
+# va jusqu'au bout.
+prune_images() {
+    failed=0
+
+    # Appli : par étiquette.
+    if app_tags=$(docker image ls --format '{{.Tag}}' "$app_image"); then
+        for tag in $app_tags; do
+            case $tag in
+                "$IMAGE_TAG" | "$previous" | '<none>') continue ;;
+            esac
+            remove_image "$app_image:$tag" "$app_image:$tag" || failed=1
+        done
+    else
+        echo "Impossible de lister les images $app_image." >&2
+        failed=1
+    fi
+
+    # database et redis : par identifiant, une image épinglée par digest n'ayant
+    # pas d'étiquette. Rien n'est supprimé si les images à garder sont
+    # illisibles.
+    if ! wanted_images=$(compose config --images database redis); then
+        echo 'Impossible de lire les images de database et redis.' >&2
+        return 1
+    fi
+    keep_ids=''
+    for image in $wanted_images; do
+        if ! image_id=$(docker image inspect --format '{{.Id}}' "$image"); then
+            echo "Image introuvable : $image ; anciennes images de database et redis gardées." >&2
+            return 1
+        fi
+        keep_ids="$keep_ids $image_id"
+    done
+    for image in $wanted_images; do
+        # postgres:16-alpine@sha256:… → postgres (images du Docker Hub, sans
+        # port de registre dans le nom).
+        repository=${image%%@*}
+        repository=${repository%:*}
+        # Un identifiant par étiquette : dédoublonné après coup, pour que
+        # l'échec de `docker image ls` ne soit pas masqué par un tube.
+        if ! image_ids=$(docker image ls --no-trunc --format '{{.ID}}' "$repository"); then
+            echo "Impossible de lister les images $repository." >&2
+            failed=1
+            continue
+        fi
+        for image_id in $(printf '%s\n' "$image_ids" | sort -u); do
+            case " $keep_ids " in
+                *" $image_id "*) continue ;;
+            esac
+            remove_image "$image_id" "$repository $image_id" || failed=1
+        done
+    done
+
+    return "$failed"
+}
+
+# Occupation de la partition qui porte les images (le dossier de Docker sur le
+# serveur ; / si ce dossier n'est pas sur l'hôte, comme avec une VM sous macOS).
+show_disk_usage() {
+    docker_root=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null) || docker_root=''
+    [ -n "$docker_root" ] && [ -d "$docker_root" ] || docker_root=/
+    echo "Disque ($docker_root) :"
+    df -h "$docker_root"
 }
 
 echo "Version déployée : $previous"
@@ -223,4 +311,13 @@ compose up -d --wait --wait-timeout 300 --remove-orphans app
 compose up -d worker realtime-worker backup
 
 printf '%s\n' "$IMAGE_TAG" > "$state_file"
+
+# Le ménage vient après un déploiement réussi et ne le fait jamais échouer : un
+# échec s'affiche, le code de sortie reste 0.
+echo '==> Ménage des images'
+if ! prune_images; then
+    echo 'Avertissement : ménage des images incomplet, le déploiement reste en place.' >&2
+fi
+show_disk_usage || echo "Avertissement : occupation du disque illisible." >&2
+
 echo "Déployé : $IMAGE_TAG (version précédente : $previous)"
