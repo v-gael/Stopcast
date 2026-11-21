@@ -341,6 +341,8 @@ Si la branche de release a reçu des commits, les ramener ensuite dans `develop`
 gh pr create --base develop --head main --title 'chore(release): merge vX.Y.Z into develop' --body 'Back-merge of vX.Y.Z.'
 ```
 
+Le ruleset de `develop` exige une PR à jour avec la branche, et GitHub propose « Update branch » : ne pas cliquer, ce bouton fusionnerait `develop` dans `main`, qui ne reçoit que des releases et des hotfixes, et un push sur `main` déploie. La CI de la PR teste déjà la fusion de `main` dans le `develop` actuel. Une fois « Qualité et tests » et « Titre de PR » verts, et `develop` inchangé depuis le début de la CI (sinon, relancer la CI de la PR), merger par le menu du bouton : « Create a merge commit » coché, puis « Bypass requirements ». Le ruleset autorise ce contournement au rôle du mainteneur sur le dépôt.
+
 Les notes listent les PR mergées depuis la release précédente, rangées par `.github/release.yml` en Fonctionnalités, Corrections, Sécurité et Maintenance. GitHub ne les trie que par labels : `label-release-notes.yml` pose le label d'après le titre de chaque PR.
 
 | Titre de la PR | Label | Catégorie |
@@ -377,6 +379,6 @@ git push -u origin hotfix/X.Y.Z
 gh pr create --base main --title 'fix: <description>' --body '<le problème en prod et le correctif>'
 ```
 
-Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge : la CI déploie, puis publie la release `vX.Y.Z` comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge.
+Le titre `fix: …` (ou `fix(<scope>): …`, dont `fix(security): …`) range le correctif dans les notes de la version. La CI passée, merger la PR avec un commit de merge : la CI déploie, puis publie la release `vX.Y.Z` comme ci-dessus. Ramener ensuite le correctif dans `develop`, toujours, par la PR `chore(release): merge vX.Y.Z into develop`, mergée avec un commit de merge, sans « Update branch » (voir « Publier une release »).
 
 Si une `release/*` est ouverte pendant le hotfix, y fusionner `origin/main` puis pousser, pour que la CI de la PR de release reteste le tout : `git switch release/A.B.C && git fetch origin && git merge origin/main && git push`.
