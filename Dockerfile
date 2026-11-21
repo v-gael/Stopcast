@@ -16,8 +16,12 @@ ENV COMPOSER_ALLOW_SUPERUSER=1 \
 # PostgreSQL, qu'aucune extension n'utilise (pdo_pgsql ne lie que libpq) : il
 # est retiré pour ne pas livrer ses failles. apcu sert au cache système de
 # Symfony, sans appel dans le code.
+# libxml2 est mis à jour depuis les dépôts Alpine : l'image de base livre
+# 2.13.9-r2 (CVE-2026-86144), corrigée en 2.13.9-r3. Retirer cet upgrade
+# quand le digest de l'image de base contient la version corrigée.
 RUN apk add --no-cache \
         icu-data-full \
+    && apk upgrade --no-cache libxml2 \
     && install-php-extensions \
         @composer \
         apcu \
