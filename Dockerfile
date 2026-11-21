@@ -122,12 +122,26 @@ RUN apk add --no-cache \
         tzdata
 
 COPY frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/
+
+# vendor/ dans sa propre couche, avant le code : avec le cache de build (en
+# local), elle n'est refaite que si composer.lock change. La CI construit sans
+# cache et la refait à chaque fois. Le cache de Composer est vidé dans le même
+# RUN pour ne pas entrer dans l'image.
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --no-scripts --no-autoloader \
+    && composer clear-cache
+
 COPY . .
 
+# Le second composer install ne télécharge rien : il écrit l'autoloader et
+# lance les scripts (auto-scripts), qui demandent le code. Le binaire de
+# Tailwind (une centaine de Mo) ne sert qu'à tailwind:build : il est retiré
+# dans ce RUN, la CSS compilée (var/tailwind/app.built.css) reste.
 RUN composer install --prefer-dist --no-dev --no-progress --no-interaction --optimize-autoloader \
     && composer dump-autoload --classmap-authoritative --no-dev \
     && php bin/console cache:clear --env=prod --no-warmup \
     && php bin/console tailwind:build --minify --env=prod \
+    && rm -rf var/tailwind/v*/ \
     && php bin/console asset-map:compile --env=prod \
     && php bin/console cache:warmup --env=prod \
     && mkdir -p var/account-deletions \

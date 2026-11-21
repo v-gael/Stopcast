@@ -6,6 +6,11 @@
 .deployed
 .DS_Store
 
+# Cache d'outils lancés dans le workspace (la base de Trivy s'écrit dans
+# .cache/trivy) : jamais dans l'image, même si elle est construite après leur
+# passage.
+.cache/
+
 /var/
 /vendor/
 /node_modules/
