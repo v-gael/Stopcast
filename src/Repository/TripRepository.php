@@ -52,4 +52,58 @@ class TripRepository extends ServiceEntityRepository
 
         return $trips;
     }
+
+    /**
+     * Destination et terminus des courses demandées par la fin de leur
+     * trip_id, en une seule requête : le flux de TCAT écrit `C2026456` pour les
+     * trajets `PS : Lu Ma Je VeC2026456` et `PS : MeC2026456`, un par service.
+     * Une course n'est retenue que si tous ses trajets ont la même destination
+     * et le même terminus (quai et séquence) ; sinon, comme une course sans
+     * trajet, elle est absente du résultat.
+     *
+     * @param string[] $courseIds lettre C suivie de chiffres, sans caractère spécial de LIKE
+     *
+     * @return array<string, array{headsign: string|null, terminusStopId: string|null, terminusStopSequence: int|null}> indexé par course
+     */
+    public function findHeadsignsAndTerminiByCourseIds(array $courseIds): array
+    {
+        $courseIds = array_values(array_unique(array_filter($courseIds, static fn (string $courseId): bool => 1 === preg_match('/^C\d+$/', $courseId))));
+
+        if ([] === $courseIds) {
+            return [];
+        }
+
+        $queryBuilder = $this->createQueryBuilder('t')
+            ->select('t.gtfsTripId', 't.headsign', 't.terminusStopId', 't.terminusStopSequence');
+        $matches = $queryBuilder->expr()->orX();
+        foreach ($courseIds as $position => $courseId) {
+            $matches->add($queryBuilder->expr()->like('t.gtfsTripId', ':course'.$position));
+            $queryBuilder->setParameter('course'.$position, '%'.$courseId);
+        }
+
+        /** @var list<array{gtfsTripId: string, headsign: string|null, terminusStopId: string|null, terminusStopSequence: int|null}> $rows */
+        $rows = $queryBuilder->where($matches)->getQuery()->getArrayResult();
+
+        $variantsByCourseId = [];
+        foreach ($rows as $row) {
+            foreach ($courseIds as $courseId) {
+                if (str_ends_with($row['gtfsTripId'], $courseId)) {
+                    $variantsByCourseId[$courseId][] = [
+                        'headsign' => $row['headsign'],
+                        'terminusStopId' => $row['terminusStopId'],
+                        'terminusStopSequence' => $row['terminusStopSequence'],
+                    ];
+                }
+            }
+        }
+
+        $trips = [];
+        foreach ($variantsByCourseId as $courseId => $variants) {
+            if (1 === \count(array_unique(array_map(serialize(...), $variants)))) {
+                $trips[$courseId] = $variants[0];
+            }
+        }
+
+        return $trips;
+    }
 }

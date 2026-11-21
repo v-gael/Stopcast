@@ -15,9 +15,7 @@ use App\Tests\Support\QueryCountTrait;
 use App\Tests\Support\RealtimeFeedTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Transit\Realtime\FeedEntity;
-use Google\Transit\Realtime\TripDescriptor;
 use Google\Transit\Realtime\TripDescriptor\ScheduleRelationship as TripScheduleRelationship;
-use Google\Transit\Realtime\TripUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
@@ -534,36 +532,6 @@ final class NextPassageFinderTest extends KernelTestCase
     private function passagesAtQuay(array $entities): array
     {
         return $this->nextPassageFinder(new MockHttpClient(self::feedResponse($entities)))->forQuays([$this->quay])['S1'];
-    }
-
-    /**
-     * @param StopTimeUpdate[] $stopTimeUpdates
-     */
-    private function tripUpdate(string $tripId, array $stopTimeUpdates, string $routeId = 'R1'): FeedEntity
-    {
-        return new FeedEntity()
-            ->setTripUpdate(new TripUpdate()
-                ->setTrip(new TripDescriptor()->setTripId($tripId)->setRouteId($routeId))
-                ->setStopTimeUpdate($stopTimeUpdates));
-    }
-
-    private function departureAt(string $stopId, int $minutes, ?int $sequence = null): StopTimeUpdate
-    {
-        $stopTimeUpdate = new StopTimeUpdate()
-            ->setStopId($stopId)
-            ->setDeparture(new StopTimeEvent()->setTime(self::at($minutes)));
-
-        return null === $sequence ? $stopTimeUpdate : $stopTimeUpdate->setStopSequence($sequence);
-    }
-
-    /**
-     * @param NextPassage[] $passages
-     *
-     * @return list<string|null>
-     */
-    private function headsignsOf(array $passages): array
-    {
-        return array_values(array_map(static fn (NextPassage $passage): ?string => $passage->headsign, $passages));
     }
 
     /**
