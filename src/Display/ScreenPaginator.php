@@ -35,10 +35,10 @@ final readonly class ScreenPaginator
         $screens = [];
 
         foreach ($items as $item) {
-            // Un passage tout juste dépassé n'est plus à annoncer.
+            // Un passage en retard reste annoncé, à 0 min, tant qu'il est attendu.
             $passages = array_values(array_map(
                 static fn (NextPassage $passage): ScreenPassage => self::screenPassage($passage, $now),
-                array_filter($item->nextPassages, static fn (NextPassage $passage): bool => $passage->expectedAt >= $now),
+                array_filter($item->nextPassages, static fn (NextPassage $passage): bool => $passage->isStillExpectedAt($now)),
             ));
 
             if ([] === $passages) {
@@ -65,8 +65,8 @@ final readonly class ScreenPaginator
             routeTextColor: self::color($passage->routeTextColor),
             headsign: $passage->headsign ?? '',
             expectedAt: $passage->expectedAt,
-            // Minutes entières restantes, arrondies à l'inférieur.
-            minutes: intdiv($passage->expectedAt->getTimestamp() - $now->getTimestamp(), 60),
+            // Minutes entières restantes, arrondies à l'inférieur ; 0 pour un passage en retard.
+            minutes: max(0, intdiv($passage->expectedAt->getTimestamp() - $now->getTimestamp(), 60)),
         );
     }
 

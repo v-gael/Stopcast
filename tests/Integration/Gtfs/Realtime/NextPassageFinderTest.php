@@ -104,14 +104,89 @@ final class NextPassageFinderTest extends KernelTestCase
         self::assertSame([self::at(5), self::at(10)], $this->timestampsOf($passages));
     }
 
-    public function testPassageAlreadyGoneIsNotShown(): void
+    /**
+     * Le flux liste le quai jusqu'au départ réel du bus, souvent après l'heure
+     * annoncée : le bus n'est pas passé. Relevé du 2026-11-22 : le D1 était
+     * encore listé à PATTON 34 s après son heure annoncée, et en est parti
+     * 45 s plus tard.
+     */
+    public function testPassageOverdueButStillListedIsShown(): void
     {
         $passages = $this->passagesAtQuay([
-            $this->tripUpdate('T1', [$this->departureAt('S1', -1)]),
-            $this->tripUpdate('T2', [$this->departureAt('S1', 0)]),
+            $this->tripUpdate('T1', [$this->departureAt('S1', -4)]),
+            $this->tripUpdate('T2', [$this->departureAt('S1', 3)]),
         ]);
 
-        self::assertSame(['ZONE INDUSTRIELLE'], $this->headsignsOf($passages));
+        self::assertSame([self::at(-4), self::at(3)], $this->timestampsOf($passages));
+    }
+
+    /**
+     * Relevé du 2026-11-22 : le D1, encore listé à PATTON après son heure,
+     * n'y est plus listé au rafraîchissement suivant.
+     */
+    public function testOverduePassageLeavesWhenTheFeedNoLongerListsItsQuay(): void
+    {
+        $clock = self::fixedClock();
+        $store = new PassageIndexStore(new ArrayAdapter());
+        $refresher = $this->passageIndexRefresher(new MockHttpClient([
+            self::feedResponse([$this->tripUpdate('T1', [$this->departureAt('S1', -1, sequence: 2), $this->departureAt('S2', 2, sequence: 3)])]),
+            self::feedResponse([$this->tripUpdate('T1', [$this->departureAt('S2', 2, sequence: 3)])]),
+        ]), $store, $clock);
+        $finder = $this->passageIndexReader($store, $clock);
+
+        $refresher();
+        self::assertSame([self::at(-1)], $this->timestampsOf($finder->forQuays([$this->quay])['S1']));
+
+        $clock->sleep(20);
+        $refresher();
+        self::assertSame([], $finder->forQuays([$this->quay])['S1']);
+    }
+
+    /**
+     * Course pas encore partie, dont le bus finit sans doute la précédente :
+     * TCAT donne à ses premiers quais l'heure du flux lui-même, pas une
+     * prévision. Ses quais suivants ont de vraies heures. Relevé du
+     * 2026-11-22 : le D6 de 12 h 33 a eu cette heure sur ses 24 premiers quais
+     * pendant 11 minutes.
+     */
+    public function testProvisionalTimesAtTheHeadOfATripNotYetStartedAreIgnored(): void
+    {
+        $passages = $this->nextPassageFinder(new MockHttpClient(self::feedResponse([
+            $this->tripUpdate('T1', [
+                $this->departureAt('S2', 0, sequence: 1),
+                $this->departureAt('S3', 0, sequence: 2),
+                $this->departureAt('S1', 12, sequence: 3),
+            ]),
+        ])))->forQuays([$this->quay, $this->otherQuay]);
+
+        self::assertSame([], $passages['S2']);
+        self::assertSame([self::at(12)], $this->timestampsOf($passages['S1']));
+    }
+
+    /**
+     * Trajet revenu dans le flux avec des heures figées. Relevé du
+     * 2026-11-22 : le D5 de 12 h 23 a disparu du flux à 12 h 26, puis y est
+     * revenu à 12 h 40, annoncé à 12 h 25.
+     */
+    public function testTripBackInTheFeedWithFrozenTimesIsNotShown(): void
+    {
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T1', [$this->departureAt('S1', -15, sequence: 1), $this->departureAt('S2', -14, sequence: 2)]),
+        ]);
+
+        self::assertSame([], $passages);
+    }
+
+    /**
+     * En cours de trajet, l'heure du flux veut dire que le bus arrive.
+     */
+    public function testPassageAtTheFeedTimeOfATripUnderwayIsShown(): void
+    {
+        $passages = $this->passagesAtQuay([
+            $this->tripUpdate('T1', [$this->departureAt('S1', 0, sequence: 9), $this->departureAt('S2', 2, sequence: 10)]),
+        ]);
+
+        self::assertSame([self::at(0)], $this->timestampsOf($passages));
     }
 
     public function testDepartureWithoutTimeFallsBackToTheArrival(): void
@@ -216,7 +291,8 @@ final class NextPassageFinderTest extends KernelTestCase
     public function testCircularTripWhoseDepartureIsGoneShowsNothingAtItsTerminusQuay(): void
     {
         $passages = $this->passagesAtQuay([
-            $this->tripUpdate('T6', [$this->departureAt('S1', -1, sequence: 1), $this->departureAt('S1', 27, sequence: 19)]),
+            // Bus parti : le flux ne liste plus son départ, seulement son retour.
+            $this->tripUpdate('T6', [$this->departureAt('S1', 27, sequence: 19)]),
         ]);
 
         self::assertSame([], $passages);
@@ -361,7 +437,7 @@ final class NextPassageFinderTest extends KernelTestCase
         $index = $this->passageIndexBuilder(new MockHttpClient(self::feedResponse([
             // T3 se termine à S1 : seul son passage à S2 compte.
             $this->tripUpdate('T3', [$this->departureAt('S2', 2), $this->departureAt('S1', 6)]),
-            $this->tripUpdate('T1', [$this->departureAt('S1', 5), $skipped, $this->departureAt('S3', -5)]),
+            $this->tripUpdate('T1', [$this->departureAt('S1', 5), $skipped, $this->departureAt('S3', -6)]),
             $this->tripUpdate('T5', [$this->departureAt('S1', 8), $this->departureAt('S2', 9)]),
             $this->tripUpdate('TX', [$this->departureAt('S1', 7)], 'RX'),
             $canceled,
@@ -376,15 +452,17 @@ final class NextPassageFinderTest extends KernelTestCase
         self::assertSame([self::at(2), self::at(9)], $this->timestampsOf($index->passagesByStopId['S2']));
     }
 
-    public function testPassageGoneSinceTheRefreshLeavesItsSlotToTheNextOne(): void
+    public function testPassageOverdueBeyondTheGraceSinceTheRefreshLeavesItsSlotToTheNextOne(): void
     {
         $clock = self::fixedClock();
         $finder = $this->nextPassageFinder(new MockHttpClient(self::feedResponse([
-            $this->tripUpdate('T1', [$this->departureAt('S1', 2)]),
+            $this->tripUpdate('T1', [$this->departureAt('S1', -4)]),
             $this->tripUpdate('T2', [$this->departureAt('S1', 4)]),
         ])), limit: 1, clock: $clock);
 
-        $clock->sleep(2 * 60 + 1);
+        self::assertSame([self::at(-4)], $this->timestampsOf($finder->forQuays([$this->quay])['S1']));
+
+        $clock->sleep(60 + 1);
 
         self::assertSame([self::at(4)], $this->timestampsOf($finder->forQuays([$this->quay])['S1']));
     }
@@ -394,13 +472,13 @@ final class NextPassageFinderTest extends KernelTestCase
         $clock = self::fixedClock();
         $finder = $this->nextPassageFinder(new MockHttpClient(self::feedResponse(array_map(
             fn (int $minutes): FeedEntity => $this->tripUpdate('TX'.$minutes, [$this->departureAt('S1', $minutes)]),
-            [1, 2, 3, 4],
+            [-4, -3, -2, -1],
         ))), limit: 1, clock: $clock);
 
-        $clock->sleep(2 * 60 + 1);
-        self::assertSame([self::at(3)], $this->timestampsOf($finder->forQuays([$this->quay])['S1']));
+        $clock->sleep(60 + 1);
+        self::assertSame([self::at(-3)], $this->timestampsOf($finder->forQuays([$this->quay])['S1']));
 
-        $clock->sleep(60);
+        $clock->sleep(2 * 60);
         self::assertSame([], $finder->forQuays([$this->quay])['S1']);
     }
 

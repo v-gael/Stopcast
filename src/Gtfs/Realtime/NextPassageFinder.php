@@ -27,7 +27,8 @@ final readonly class NextPassageFinder
     }
 
     /**
-     * Prochains passages de chaque quai, dans l'ordre, sans ceux déjà partis,
+     * Prochains passages de chaque quai, dans l'ordre, sans ceux tenus pour partis
+     * (NextPassage::isStillExpectedAt()),
      * dans la limite de GTFS_REALTIME_NEXT_PASSAGES_LIMIT par quai.
      *
      * @param Quay[] $quays
@@ -50,7 +51,7 @@ final readonly class NextPassageFinder
 
         foreach ($quays as $quay) {
             $stopId = $quay->getGtfsStopId();
-            $upcoming = array_filter($index->passagesByStopId[$stopId] ?? [], static fn (NextPassage $passage): bool => $passage->expectedAt >= $now);
+            $upcoming = array_filter($index->passagesByStopId[$stopId] ?? [], static fn (NextPassage $passage): bool => $passage->isStillExpectedAt($now));
             $passagesByStopId[$stopId] = \array_slice(array_values($upcoming), 0, $this->limit);
         }
 

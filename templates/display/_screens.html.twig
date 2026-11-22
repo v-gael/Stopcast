@@ -8,7 +8,8 @@
  # vitrine).
  #
  # Chaque écran porte ses trois états : passages, « aucun passage » et
- # « indisponible ». Le contrôleur Stimulus retire les passages passés et
+ # « indisponible ». Le contrôleur Stimulus retire les passages dépassés de
+ # plus que data-overdue-grace (en secondes, NextPassage::OVERDUE_GRACE_SECONDS) et
  # choisit l'état montré (voir display_controller.js).
  #}
 {% set no_signal %}
@@ -33,7 +34,8 @@
      data-display-target="content"
      data-theme="{{ device.theme.value }}"
      data-screen-duration="{{ device.screenDuration }}"
-     data-refresh-interval="{{ device.refreshInterval }}">
+     data-refresh-interval="{{ device.refreshInterval }}"
+     data-overdue-grace="{{ constant('App\\Dto\\GtfsRt\\NextPassage::OVERDUE_GRACE_SECONDS') }}">
     {% for screen in state_message is defined and state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">

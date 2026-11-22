@@ -28,7 +28,7 @@ final class GtfsRealtimeCheckCommandTest extends KernelTestCase
     public function testAFreshFeedIsReportedOnOneLine(): void
     {
         $tester = $this->command(self::feedResponse([
-            $this->tripUpdate('T1', [-2, 3, 8]),
+            $this->tripUpdate('T1', [-6, 3, 8]),
             $this->tripUpdate('T2', [12]),
         ], self::at(0) - 32));
 
