@@ -15,7 +15,7 @@ use Symfony\Component\Clock\ClockInterface;
  * À mettre à jour à la main si les lignes changent.
  *
  * L'écran est figé à 8 h 50 du jour : les délais affichés restent ceux du
- * relevé, jamais « 0 min ».
+ * relevé, jamais le bus à quai de « 0 min ».
  */
 final readonly class ShowcaseScreens
 {

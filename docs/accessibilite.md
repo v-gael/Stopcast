@@ -54,6 +54,7 @@ Déjà conformes, sans changement : `lang="fr"`, titres de page distincts, landm
 | Texte grisé des champs désactivés (slate-500 sur slate-100, 4,35:1) | 1.4.3 | Exemption des composants inactifs. |
 | Vitrine : écrans d'exemple, appareils et barre de progression qui changent seuls, sans bouton de pause | 2.2.2 | Décoratifs : les écrans d'exemple (iframes en `aria-hidden`, résumés en texte) n'apportent rien que le texte de la page ne dise ; « Réduire les animations » coupe les transitions, pas la rotation. |
 | Vitrine : parcours « Comment ça marche » | 2.4.3, 4.1.2 | Seul le bouton qui brille est atteignable au clavier (`tabindex` passé à 0), le focus le suit d'un temps à l'autre et l'étape courante porte `aria-current="step"` ; les autres boutons de la maquette restent hors de l'ordre de tabulation. À vérifier au lecteur d'écran. |
+| Page d'affichage : pictogramme du bus à quai qui pulse sans bouton de pause | 2.2.2 | L'écran n'a ni clavier ni souris : rien ne pourrait arrêter l'animation. Elle dure le temps que le bus reste à quai, cinq minutes au plus, et ne clignote pas (pulsation lente, moins de 3 éclats par seconde). |
 | Badge « Quai disparu » de la page de modification d'un quai | 4.1.2 | L'explication est dans le `title` et en texte masqué : certains lecteurs d'écran pourraient la lire deux fois. |
 
 ## Contrastes calculés
@@ -119,6 +120,8 @@ Chaque dispositif a un thème, Sombre par défaut ou Clair, choisi dans son form
 | Heure et délais | `#005085` | `#eaf4fd` | 7,58 | 4,5 |
 | En-têtes de colonnes (gras, 20 `--u`) | blanc | `#0068a8` | 5,92 | 4,5 |
 | Pastille d'une ligne sans couleur dans les données du réseau | blanc | `#0068a8` | 5,92 | 4,5 |
+
+**Bus à quai** : à 0 min, un pictogramme de bus (`bus-front` de Lucide, `role="img"`, « À quai ») remplace le délai, dans la couleur des délais : 16,43:1 en Sombre, 7,58:1 en Clair, au-dessus du seuil de 3:1 d'un élément graphique. Il pulse lentement (opacité de 1 à 0,25, cycle de 1,4 s) tant que le bus est à quai.
 
 **Pastilles de ligne** : elles reprennent `route_color` et `route_text_color` du réseau telles quelles, comme les vrais panneaux et les plans du réseau, pour que chaque ligne se reconnaisse à sa couleur. C'est un écart assumé : calculé le 7 novembre 2026 sur les 61 lignes TCAT, en texte gras de 16 `--u` (seuil 4,5:1), 14 lignes sont en dessous, comme la ligne 1 (blanc sur `#009DE0`, 3,04:1) ou la 7 (blanc sur `#919294`, 3,11:1), et la 9A (blanc sur `#ED86A6`) descend à 2,45:1. Le numéro de ligne est aussi écrit, et la destination suit en texte contrasté sur le fond de l'écran : la couleur n'est pas le seul repère. Les pastilles sont les mêmes dans les deux thèmes, sans contour ni texte noir ou blanc choisi automatiquement, même quand leur couleur se confond avec le fond de l'écran : la fidélité au réseau l'emporte.
 

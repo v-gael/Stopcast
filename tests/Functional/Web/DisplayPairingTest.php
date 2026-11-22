@@ -287,6 +287,29 @@ final class DisplayPairingTest extends WebTestCase
         self::assertSame(['1'], $crawler->filter('.passage__route')->each(static fn ($route): string => $route->text()));
     }
 
+    /**
+     * Le bus annoncé à 5 minutes, 4 min 30 plus tard : « 0 min » laisse la
+     * place au pictogramme du bus à quai.
+     */
+    public function testPassageDueNowShowsTheBusAtStop(): void
+    {
+        $this->serveRealtimeFeed();
+        $this->pairedScreen();
+
+        $crawler = $this->client->request('GET', '/display');
+        self::assertSame('5 min', $crawler->filter('.passage__minutes')->text());
+        self::assertCount(1, $crawler->filter('.passage__at-stop[hidden]'));
+
+        $this->clock->sleep(270);
+        $crawler = $this->client->request('GET', '/display');
+
+        $minutes = $crawler->filter('.passage__minutes');
+        self::assertSame('0 min', $minutes->filter('[data-display-target="countdown"][hidden]')->text());
+        $busAtStop = $minutes->filter('.passage__at-stop:not([hidden])');
+        self::assertSame('img', $busAtStop->attr('role'));
+        self::assertSame('À quai', $busAtStop->attr('aria-label'));
+    }
+
     public function testScreensTakeTheThemeOfTheDeviceAtTheNextRefresh(): void
     {
         $this->serveRealtimeFeed();

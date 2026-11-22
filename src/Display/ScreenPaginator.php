@@ -35,7 +35,7 @@ final readonly class ScreenPaginator
         $screens = [];
 
         foreach ($items as $item) {
-            // Un passage en retard reste annoncé, à 0 min, tant qu'il est attendu.
+            // Un passage en retard reste annoncé, à 0 min (bus à quai à l'écran), tant qu'il est attendu.
             $passages = array_values(array_map(
                 static fn (NextPassage $passage): ScreenPassage => self::screenPassage($passage, $now),
                 array_filter($item->nextPassages, static fn (NextPassage $passage): bool => $passage->isStillExpectedAt($now)),
