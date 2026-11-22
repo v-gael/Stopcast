@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Gtfs\Realtime;
 
+use App\Dto\GtfsRt\NextPassage;
 use Google\Transit\Realtime\FeedMessage;
 use Google\Transit\Realtime\TripDescriptor\ScheduleRelationship as TripScheduleRelationship;
+use Google\Transit\Realtime\TripUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeEvent;
+use Google\Transit\Realtime\TripUpdate\StopTimeUpdate;
 use Google\Transit\Realtime\TripUpdate\StopTimeUpdate\ScheduleRelationship as StopScheduleRelationship;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -113,7 +116,7 @@ final readonly class TripUpdatesFeed
     /**
      * Passages à venir lus dans le flux, avant tout croisement avec la base :
      * ni trajet supprimé du service, ni arrêt sauté, ni passage dont l'heure
-     * est passée. Un même trajet ne compte qu'un passage par quai. La
+     * est dépassée de plus de NextPassage::OVERDUE_GRACE_SECONDS. Un même trajet ne compte qu'un passage par quai. La
      * stop_sequence du passage est null si le flux ne la donne pas.
      *
      * @param array<string, mixed>|null $stopIds quais demandés, en clés ; null pour tous
@@ -123,6 +126,7 @@ final readonly class TripUpdatesFeed
     public function upcomingStopTimes(FeedMessage $feed, ?array $stopIds = null): array
     {
         $now = $this->clock->now();
+        $headerTimestamp = self::timestampOf($feed);
         $stopTimes = [];
 
         foreach ($feed->getEntity() as $entity) {
@@ -150,9 +154,22 @@ final readonly class TripUpdatesFeed
             // Un même trip ne dessert un quai donné qu'une fois dans sa course :
             // un quai retenu ou sauté n'est plus examiné pour ce trip.
             $settledStopIds = [];
+            $provisional = $this->startsWithProvisionalTimes($tripUpdate, $headerTimestamp);
 
             foreach ($tripUpdate->getStopTimeUpdate() as $stopTimeUpdate) {
                 $stopTimeStopId = $stopTimeUpdate->getStopId();
+                $time = $this->timeOf($stopTimeUpdate);
+
+                // Heures provisoires en tête d'une course pas encore partie :
+                // ignorées jusqu'au premier quai qui a une autre heure, qu'il
+                // soit demandé ou non.
+                if ($provisional && $time === $headerTimestamp) {
+                    continue;
+                }
+
+                if (0 !== $time) {
+                    $provisional = false;
+                }
 
                 if ((null !== $stopIds && !\array_key_exists($stopTimeStopId, $stopIds)) || isset($settledStopIds[$stopTimeStopId])) {
                     continue;
@@ -165,17 +182,15 @@ final readonly class TripUpdatesFeed
                     continue;
                 }
 
-                // Le départ peut ne porter qu'un delay (heure à 0) : on se rabat
-                // alors sur l'arrivée.
-                $time = $this->timeOf($stopTimeUpdate->getDeparture()) ?: $this->timeOf($stopTimeUpdate->getArrival());
-
                 if (0 === $time) {
                     continue;
                 }
 
                 $expectedAt = $now->setTimestamp($time);
 
-                if ($expectedAt < $now) {
+                // Le quai encore listé n'est pas passé, même après son heure :
+                // seul un passage dépassé au-delà du délai de grâce est écarté.
+                if (!NextPassage::isStillExpected($expectedAt, $now)) {
                     continue;
                 }
 
@@ -206,7 +221,33 @@ final readonly class TripUpdatesFeed
         return $this->url;
     }
 
-    private function timeOf(?StopTimeEvent $event): int
+    /**
+     * Course pas encore partie dont le flux ne connaît pas encore les heures :
+     * son premier quai listé est son premier arrêt (stop_sequence 1), à
+     * l'heure du flux lui-même. TCAT donne alors cette heure à une série de
+     * quais de tête, dans l'attente de la vraie. En cours de trajet, l'heure du
+     * flux veut au contraire dire que le bus arrive : elle est gardée.
+     */
+    private function startsWithProvisionalTimes(TripUpdate $tripUpdate, int $headerTimestamp): bool
+    {
+        $first = $tripUpdate->getStopTimeUpdate()[0] ?? null;
+
+        return 0 !== $headerTimestamp
+            && $first instanceof StopTimeUpdate
+            && $first->hasStopSequence() && 1 === $first->getStopSequence()
+            && $headerTimestamp === $this->timeOf($first);
+    }
+
+    /**
+     * Heure du passage au quai, 0 s'il n'en a pas. Le départ peut ne porter
+     * qu'un delay (heure à 0) : on se rabat alors sur l'arrivée.
+     */
+    private function timeOf(StopTimeUpdate $stopTimeUpdate): int
+    {
+        return $this->timeOfEvent($stopTimeUpdate->getDeparture()) ?: $this->timeOfEvent($stopTimeUpdate->getArrival());
+    }
+
+    private function timeOfEvent(?StopTimeEvent $event): int
     {
         return (int) ($event?->getTime() ?? 0);
     }

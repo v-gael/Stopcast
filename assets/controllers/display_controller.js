@@ -16,8 +16,9 @@ const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
  * qui réussit. Un 401 (écran dissocié ou remplacé) recharge la page, qui
  * montre alors l'écran d'appairage.
  *
- * Chaque seconde, les délais sont recomptés depuis l'heure prévue des passages
- * et les passages passés retirés, que le flux réponde ou non. Un écran vidé
+ * Chaque seconde, les délais sont recomptés depuis l'heure prévue des passages,
+ * à 0 min une fois cette heure dépassée, et les passages dépassés de plus que
+ * le délai de grâce (« data-overdue-grace ») retirés, que le flux réponde ou non. Un écran vidé
  * montre « aucun passage » ; en panne, il montre « Horaires temps réel
  * indisponibles », comme tous les écrans 15 minutes après le dernier
  * rafraîchissement réussi. Le suivant qui réussit rétablit les passages.
@@ -162,19 +163,22 @@ export default class extends Controller {
             }
         });
 
+        const overdueGrace = this.#seconds('overdueGrace', 300) * 1000;
+
         this.passageTargets.forEach((passage) => {
             const expectedAt = Number(passage.dataset.expectedAt) * 1000;
 
-            // Passage passé retiré, comme le serveur l'écarte.
-            if (expectedAt < now) {
+            // Le flux garde le quai jusqu'au départ réel du bus, souvent après l'heure annoncée :
+            // le passage reste affiché à 0 min, et n'est retiré qu'au-delà du délai de grâce, comme le serveur l'écarte.
+            if (expectedAt + overdueGrace < now) {
                 passage.remove();
 
                 return;
             }
 
-            // Délai recompté entre deux rafraîchissements, arrondi à la minute inférieure comme côté serveur.
+            // Délai recompté entre deux rafraîchissements, arrondi à la minute inférieure comme côté serveur, jamais négatif.
             const minutes = passage.querySelector('[data-display-target="minutes"]');
-            const text = String(Math.floor((expectedAt - now) / 60000));
+            const text = String(Math.max(0, Math.floor((expectedAt - now) / 60000)));
 
             if (minutes && minutes.textContent !== text) {
                 minutes.textContent = text;
