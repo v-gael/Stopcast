@@ -7,6 +7,7 @@ namespace App\Tests\Browser;
 use App\Account\UserInviter;
 use App\Factory\UserFactory;
 use App\Tests\Support\BrowserTestTrait;
+use Facebook\WebDriver\WebDriverBy;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Panther\PantherTestCase;
@@ -115,6 +116,30 @@ final class PublicPagesTest extends PantherTestCase
         $this->visitWithCleanConsole($client, '/invitation/'.$token);
 
         self::assertSelectorTextContains('main', 'Choisissez votre mot de passe');
+    }
+
+    /**
+     * Entre deux rafraîchissements, le contrôleur recompte les délais : un
+     * passage qui arrive à son heure passe de « 2 min » au pictogramme du bus
+     * à quai. L'écran de la vitrine est figé, l'heure du premier passage y est
+     * ramenée à celle de l'écran.
+     */
+    public function testPassageReachingItsTimeSwitchesToTheBusAtStop(): void
+    {
+        $client = $this->anonymousClient();
+        $this->visitWithCleanConsole($client, '/vitrine/ecran?mode=fixe');
+        $passage = '[data-display-target="screen"]:not([hidden]) [data-display-target="passage"]:first-child';
+        $client->waitForElementToContain($passage.' .passage__minutes', '2 min');
+        self::assertFalse($client->findElement(WebDriverBy::cssSelector($passage.' .passage__bus-at-stop'))->isDisplayed());
+
+        $client->executeScript(\sprintf(
+            'document.querySelector(%s).dataset.expectedAt = document.querySelector(\'[data-controller~="display"]\').dataset.displayNowValue;',
+            json_encode($passage, \JSON_THROW_ON_ERROR),
+        ));
+
+        $client->waitForVisibility($passage.' .passage__bus-at-stop');
+        self::assertFalse($client->findElement(WebDriverBy::cssSelector($passage.' [data-display-target="countdown"]'))->isDisplayed());
+        $this->assertNoBrowserErrors($client, 'bus à quai');
     }
 
     /**

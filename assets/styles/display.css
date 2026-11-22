@@ -185,6 +185,27 @@ body {
     white-space: nowrap;
 }
 
+/* À 0 min, le bus à quai remplace le délai, en pulsation lente pour attirer l'œil sur la ligne qui part. */
+.passage__bus-at-stop {
+    display: block;
+    width: calc(30 * var(--u));
+    height: calc(30 * var(--u));
+    animation: passage-bus-at-stop 1.4s ease-in-out infinite;
+}
+
+@keyframes passage-bus-at-stop {
+    50% {
+        opacity: 0.25;
+    }
+}
+
+/* Aperçus de l'espace web et vitrine, ouverts dans un navigateur réglé pour « Réduire les animations » : le bus reste fixe. */
+@media (prefers-reduced-motion: reduce) {
+    .passage__bus-at-stop {
+        animation: none;
+    }
+}
+
 /* Destination sur deux lignes au plus, comme le client Python. */
 .passage__headsign {
     display: -webkit-box;
