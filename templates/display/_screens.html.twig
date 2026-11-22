@@ -60,9 +60,10 @@
                             <span class="passage__route" data-display-target="route"
                                   {%- if passage.routeColor %} data-route-color="#{{ passage.routeColor }}"{% endif %}
                                   {%- if passage.routeTextColor %} data-route-text-color="#{{ passage.routeTextColor }}"{% endif %}>{{ passage.routeShortName }}</span>
+                            {% set at_stop = passage.minutes == 0 %}
                             <span class="passage__minutes">
-                                <span data-display-target="countdown"{% if passage.minutes == 0 %} hidden{% endif %}><span data-display-target="minutes">{{ passage.minutes }}</span> min</span>
-                                {{- include('display/_bus_at_stop.html.twig', {hidden: passage.minutes > 0}) -}}
+                                <span data-display-target="countdown"{% if at_stop %} hidden{% endif %}><span data-display-target="minutes">{{ passage.minutes }}</span> min</span>
+                                {{- include('display/_bus_at_stop.html.twig', {at_stop: at_stop}) -}}
                             </span>
                             <span class="passage__headsign">{{ passage.headsign }}</span>
                         </li>

@@ -1,7 +1,7 @@
 {#
- # Pictogramme « bus à quai » de la colonne « Dans », à la place de « 0 min »
- # (« hidden » le cache) : icône « bus-front » de Lucide (https://lucide.dev),
- # sous licence ISC :
+ # Pictogramme « bus à quai » de la colonne « Dans », à la place de « 0 min »,
+ # caché quand « at_stop » est faux : icône « bus-front » de Lucide
+ # (https://lucide.dev), sous licence ISC :
  #
  # Copyright (c) 2026 Lucide Icons and Contributors
  #
@@ -17,7 +17,7 @@
  # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  #}
-<svg class="passage__at-stop" data-display-target="busAtStop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="À quai"{% if hidden %} hidden{% endif %}>
+<svg class="passage__bus-at-stop" data-display-target="busAtStop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="À quai"{% if not at_stop %} hidden{% endif %}>
     <path d="M4 6 2 7"/>
     <path d="M10 6h4"/>
     <path d="m22 7-2-1"/>

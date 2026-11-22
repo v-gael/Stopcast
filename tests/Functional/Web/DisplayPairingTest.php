@@ -298,14 +298,14 @@ final class DisplayPairingTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/display');
         self::assertSame('5 min', $crawler->filter('.passage__minutes')->text());
-        self::assertCount(1, $crawler->filter('.passage__at-stop[hidden]'));
+        self::assertCount(1, $crawler->filter('.passage__bus-at-stop[hidden]'));
 
         $this->clock->sleep(270);
         $crawler = $this->client->request('GET', '/display');
 
         $minutes = $crawler->filter('.passage__minutes');
         self::assertSame('0 min', $minutes->filter('[data-display-target="countdown"][hidden]')->text());
-        $busAtStop = $minutes->filter('.passage__at-stop:not([hidden])');
+        $busAtStop = $minutes->filter('.passage__bus-at-stop:not([hidden])');
         self::assertSame('img', $busAtStop->attr('role'));
         self::assertSame('À quai', $busAtStop->attr('aria-label'));
     }

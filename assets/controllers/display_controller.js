@@ -189,10 +189,12 @@ export default class extends Controller {
             // À 0 min, le pictogramme du bus à quai remplace le délai. Un <svg> n'a pas de propriété hidden : on passe par l'attribut.
             const countdown = passage.querySelector('[data-display-target="countdown"]');
             const busAtStop = passage.querySelector('[data-display-target="busAtStop"]');
+            const atStop = delay === 0;
 
-            if (countdown && busAtStop && busAtStop.hasAttribute('hidden') !== (delay > 0)) {
-                busAtStop.toggleAttribute('hidden', delay > 0);
-                countdown.toggleAttribute('hidden', delay === 0);
+            // Pictogramme caché alors que le bus est à quai, ou l'inverse : l'état change.
+            if (countdown && busAtStop && busAtStop.hasAttribute('hidden') === atStop) {
+                busAtStop.toggleAttribute('hidden', !atStop);
+                countdown.toggleAttribute('hidden', atStop);
             }
         });
 

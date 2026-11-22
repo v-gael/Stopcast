@@ -130,14 +130,14 @@ final class PublicPagesTest extends PantherTestCase
         $this->visitWithCleanConsole($client, '/vitrine/ecran?mode=fixe');
         $passage = '[data-display-target="screen"]:not([hidden]) [data-display-target="passage"]:first-child';
         $client->waitForElementToContain($passage.' .passage__minutes', '2 min');
-        self::assertFalse($client->findElement(WebDriverBy::cssSelector($passage.' .passage__at-stop'))->isDisplayed());
+        self::assertFalse($client->findElement(WebDriverBy::cssSelector($passage.' .passage__bus-at-stop'))->isDisplayed());
 
         $client->executeScript(\sprintf(
             'document.querySelector(%s).dataset.expectedAt = document.querySelector(\'[data-controller~="display"]\').dataset.displayNowValue;',
             json_encode($passage, \JSON_THROW_ON_ERROR),
         ));
 
-        $client->waitForVisibility($passage.' .passage__at-stop');
+        $client->waitForVisibility($passage.' .passage__bus-at-stop');
         self::assertFalse($client->findElement(WebDriverBy::cssSelector($passage.' [data-display-target="countdown"]'))->isDisplayed());
         $this->assertNoBrowserErrors($client, 'bus à quai');
     }

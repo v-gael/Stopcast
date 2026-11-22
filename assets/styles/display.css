@@ -186,14 +186,14 @@ body {
 }
 
 /* À 0 min, le bus à quai remplace le délai, en pulsation lente pour attirer l'œil sur la ligne qui part. */
-.passage__at-stop {
+.passage__bus-at-stop {
     display: block;
     width: calc(30 * var(--u));
     height: calc(30 * var(--u));
-    animation: passage-at-stop 1.4s ease-in-out infinite;
+    animation: passage-bus-at-stop 1.4s ease-in-out infinite;
 }
 
-@keyframes passage-at-stop {
+@keyframes passage-bus-at-stop {
     50% {
         opacity: 0.25;
     }
