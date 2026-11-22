@@ -199,6 +199,13 @@ body {
     }
 }
 
+/* Aperçus de l'espace web et vitrine, ouverts dans un navigateur réglé pour « Réduire les animations » : le bus reste fixe. */
+@media (prefers-reduced-motion: reduce) {
+    .passage__bus-at-stop {
+        animation: none;
+    }
+}
+
 /* Destination sur deux lignes au plus, comme le client Python. */
 .passage__headsign {
     display: -webkit-box;
