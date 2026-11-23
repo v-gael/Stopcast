@@ -16,8 +16,10 @@ const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
  * qui réussit. Un 401 (écran dissocié ou remplacé) recharge la page, qui
  * montre alors l'écran d'appairage.
  *
- * Chaque seconde, les délais sont recomptés depuis l'heure prévue des passages
- * et les passages passés retirés, que le flux réponde ou non. Un écran vidé
+ * Chaque seconde, les délais sont recomptés depuis l'heure prévue des passages ;
+ * à 0 min, le pictogramme du bus à quai remplace le délai, y compris une fois
+ * cette heure dépassée, et les passages dépassés de plus que
+ * le délai de grâce (« data-overdue-grace ») retirés, que le flux réponde ou non. Un écran vidé
  * montre « aucun passage » ; en panne, il montre « Horaires temps réel
  * indisponibles », comme tous les écrans 15 minutes après le dernier
  * rafraîchissement réussi. Le suivant qui réussit rétablit les passages.
@@ -28,7 +30,7 @@ const UNAVAILABLE_AFTER_MS = 15 * 60 * 1000;
  * par l'évènement « display:shown ».
  */
 export default class extends Controller {
-    static targets = ['content', 'screen', 'clock', 'minutes', 'route', 'passage', 'passages', 'noPassage', 'unavailable'];
+    static targets = ['content', 'screen', 'clock', 'countdown', 'minutes', 'busAtStop', 'route', 'passage', 'passages', 'noPassage', 'unavailable'];
 
     static values = { url: String, timeZone: String, now: Number, rotation: { type: Boolean, default: true } };
 
@@ -162,22 +164,37 @@ export default class extends Controller {
             }
         });
 
+        const overdueGrace = this.#seconds('overdueGrace', 300) * 1000;
+
         this.passageTargets.forEach((passage) => {
             const expectedAt = Number(passage.dataset.expectedAt) * 1000;
 
-            // Passage passé retiré, comme le serveur l'écarte.
-            if (expectedAt < now) {
+            // Le flux garde le quai jusqu'au départ réel du bus, souvent après l'heure annoncée :
+            // le passage reste affiché, bus à quai, et n'est retiré qu'au-delà du délai de grâce, comme le serveur l'écarte.
+            if (expectedAt + overdueGrace < now) {
                 passage.remove();
 
                 return;
             }
 
-            // Délai recompté entre deux rafraîchissements, arrondi à la minute inférieure comme côté serveur.
+            // Délai recompté entre deux rafraîchissements, arrondi à la minute inférieure comme côté serveur, jamais négatif.
+            const delay = Math.max(0, Math.floor((expectedAt - now) / 60000));
             const minutes = passage.querySelector('[data-display-target="minutes"]');
-            const text = String(Math.floor((expectedAt - now) / 60000));
+            const text = String(delay);
 
             if (minutes && minutes.textContent !== text) {
                 minutes.textContent = text;
+            }
+
+            // À 0 min, le pictogramme du bus à quai remplace le délai. Un <svg> n'a pas de propriété hidden : on passe par l'attribut.
+            const countdown = passage.querySelector('[data-display-target="countdown"]');
+            const busAtStop = passage.querySelector('[data-display-target="busAtStop"]');
+            const atStop = delay === 0;
+
+            // Pictogramme caché alors que le bus est à quai, ou l'inverse : l'état change.
+            if (countdown && busAtStop && busAtStop.hasAttribute('hidden') === atStop) {
+                busAtStop.toggleAttribute('hidden', !atStop);
+                countdown.toggleAttribute('hidden', atStop);
             }
         });
 

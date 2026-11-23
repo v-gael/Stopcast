@@ -1699,16 +1699,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "3.5.1",
+            "version": "3.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "ef2058cc884d864affa6ef7cd23a68d45e015c2f"
+                "reference": "1fa0f8319c046b7dec80030460254283d851388e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/ef2058cc884d864affa6ef7cd23a68d45e015c2f",
-                "reference": "ef2058cc884d864affa6ef7cd23a68d45e015c2f",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/1fa0f8319c046b7dec80030460254283d851388e",
+                "reference": "1fa0f8319c046b7dec80030460254283d851388e",
                 "shasum": ""
             },
             "require": {
@@ -1800,7 +1800,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/3.5.1"
+                "source": "https://github.com/guzzle/psr7/tree/3.6.0"
             },
             "funding": [
                 {
@@ -1816,7 +1816,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-11-19T20:35:18+00:00"
+            "time": "2026-11-22T00:00:35+00:00"
         },
         {
             "name": "jean85/pretty-package-versions",
@@ -2570,16 +2570,16 @@
         },
         {
             "name": "sentry/sentry-symfony",
-            "version": "5.16.0",
+            "version": "5.16.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/getsentry/sentry-symfony.git",
-                "reference": "8407d45b82a68cfae4761e2f8c35593b34cc8371"
+                "reference": "99303326c667253e09a081b31c66b1d06facab59"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/getsentry/sentry-symfony/zipball/8407d45b82a68cfae4761e2f8c35593b34cc8371",
-                "reference": "8407d45b82a68cfae4761e2f8c35593b34cc8371",
+                "url": "https://api.github.com/repos/getsentry/sentry-symfony/zipball/99303326c667253e09a081b31c66b1d06facab59",
+                "reference": "99303326c667253e09a081b31c66b1d06facab59",
                 "shasum": ""
             },
             "require": {
@@ -2656,7 +2656,7 @@
             ],
             "support": {
                 "issues": "https://github.com/getsentry/sentry-symfony/issues",
-                "source": "https://github.com/getsentry/sentry-symfony/tree/5.16.0"
+                "source": "https://github.com/getsentry/sentry-symfony/tree/5.16.1"
             },
             "funding": [
                 {
@@ -2668,7 +2668,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2026-11-11T19:16:31+00:00"
+            "time": "2026-11-18T17:26:29+00:00"
         },
         {
             "name": "symfony/asset",
@@ -9378,16 +9378,16 @@
         },
         {
             "name": "php-cs-fixer/shim",
-            "version": "v3.95.31",
+            "version": "v3.95.32",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHP-CS-Fixer/shim.git",
-                "reference": "ecc5bd6c3a8151488dc6b9a81502655726bd0f1b"
+                "reference": "c95a290fc4486d4a68fb75f88d7b166f4141686a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHP-CS-Fixer/shim/zipball/ecc5bd6c3a8151488dc6b9a81502655726bd0f1b",
-                "reference": "ecc5bd6c3a8151488dc6b9a81502655726bd0f1b",
+                "url": "https://api.github.com/repos/PHP-CS-Fixer/shim/zipball/c95a290fc4486d4a68fb75f88d7b166f4141686a",
+                "reference": "c95a290fc4486d4a68fb75f88d7b166f4141686a",
                 "shasum": ""
             },
             "require": {
@@ -9424,7 +9424,7 @@
             "description": "A tool to automatically fix PHP code style",
             "support": {
                 "issues": "https://github.com/PHP-CS-Fixer/shim/issues",
-                "source": "https://github.com/PHP-CS-Fixer/shim/tree/v3.95.31"
+                "source": "https://github.com/PHP-CS-Fixer/shim/tree/v3.95.32"
             },
             "funding": [
                 {
@@ -9432,7 +9432,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-16T21:05:48+00:00"
+            "time": "2026-11-17T18:09:48+00:00"
         },
         {
             "name": "php-webdriver/webdriver",
@@ -12211,16 +12211,16 @@
         },
         {
             "name": "zenstruck/foundry",
-            "version": "v2.16.0",
+            "version": "v2.17.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zenstruck/foundry.git",
-                "reference": "29199b9a8363af0f96daaf3ade8fff191fd63952"
+                "reference": "af9a39400231bf92ea128235b81b30c2287443ba"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zenstruck/foundry/zipball/29199b9a8363af0f96daaf3ade8fff191fd63952",
-                "reference": "29199b9a8363af0f96daaf3ade8fff191fd63952",
+                "url": "https://api.github.com/repos/zenstruck/foundry/zipball/af9a39400231bf92ea128235b81b30c2287443ba",
+                "reference": "af9a39400231bf92ea128235b81b30c2287443ba",
                 "shasum": ""
             },
             "require": {
@@ -12323,7 +12323,7 @@
             ],
             "support": {
                 "issues": "https://github.com/zenstruck/foundry/issues",
-                "source": "https://github.com/zenstruck/foundry/tree/v2.16.0"
+                "source": "https://github.com/zenstruck/foundry/tree/v2.17.0"
             },
             "funding": [
                 {
@@ -12335,7 +12335,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-09T12:40:49+00:00"
+            "time": "2026-11-18T11:18:19+00:00"
         }
     ],
     "aliases": [],

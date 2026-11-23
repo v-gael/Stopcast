@@ -7,8 +7,12 @@
  # l'écran « indisponible ». « now » fixe l'heure affichée (écran figé de la
  # vitrine).
  #
+ # À 0 min, le pictogramme du bus à quai remplace le délai ; le contrôleur
+ # bascule de l'un à l'autre quand il recompte les délais.
+ #
  # Chaque écran porte ses trois états : passages, « aucun passage » et
- # « indisponible ». Le contrôleur Stimulus retire les passages passés et
+ # « indisponible ». Le contrôleur Stimulus retire les passages dépassés de
+ # plus que data-overdue-grace (en secondes, NextPassage::OVERDUE_GRACE_SECONDS) et
  # choisit l'état montré (voir display_controller.js).
  #}
 {% set no_signal %}
@@ -33,7 +37,8 @@
      data-display-target="content"
      data-theme="{{ device.theme.value }}"
      data-screen-duration="{{ device.screenDuration }}"
-     data-refresh-interval="{{ device.refreshInterval }}">
+     data-refresh-interval="{{ device.refreshInterval }}"
+     data-overdue-grace="{{ constant('App\\Dto\\GtfsRt\\NextPassage::OVERDUE_GRACE_SECONDS') }}">
     {% for screen in state_message is defined and state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">
@@ -55,7 +60,11 @@
                             <span class="passage__route" data-display-target="route"
                                   {%- if passage.routeColor %} data-route-color="#{{ passage.routeColor }}"{% endif %}
                                   {%- if passage.routeTextColor %} data-route-text-color="#{{ passage.routeTextColor }}"{% endif %}>{{ passage.routeShortName }}</span>
-                            <span class="passage__minutes"><span data-display-target="minutes">{{ passage.minutes }}</span> min</span>
+                            {% set at_stop = passage.minutes == 0 %}
+                            <span class="passage__minutes">
+                                <span data-display-target="countdown"{% if at_stop %} hidden{% endif %}><span data-display-target="minutes">{{ passage.minutes }}</span> min</span>
+                                {{- include('display/_bus_at_stop.html.twig', {at_stop: at_stop}) -}}
+                            </span>
                             <span class="passage__headsign">{{ passage.headsign }}</span>
                         </li>
                     {% endfor %}

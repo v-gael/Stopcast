@@ -57,7 +57,7 @@ final class ScreenPaginatorTest extends TestCase
 
     public function testDeprecatedQuayWhosePassagesAreAllGoneGivesNoScreen(): void
     {
-        self::assertSame([], $this->paginate([new DisplayItem('DISPARU', [$this->passage('1', -1)], quayDeprecated: true)]));
+        self::assertSame([], $this->paginate([new DisplayItem('DISPARU', [$this->passage('1', -6)], quayDeprecated: true)]));
     }
 
     public function testDeprecatedQuayStillAnnouncedKeepsItsScreens(): void
@@ -72,11 +72,25 @@ final class ScreenPaginatorTest extends TestCase
         self::assertSame([], $this->paginate([]));
     }
 
-    public function testPassageAlreadyGoneIsNotShown(): void
+    public function testPassageOverdueWithinTheGraceIsShownAtZeroMinutes(): void
     {
         $screens = $this->paginate([new DisplayItem('GARE', [
-            $this->passage('1', -1),
-            $this->passage('2', 0),
+            $this->passage('1', -4),
+            $this->passage('2', 3),
+        ], quayDeprecated: false)]);
+
+        self::assertSame(['1' => 0, '2' => 3], array_column(
+            array_map(static fn (ScreenPassage $passage): array => [$passage->routeShortName, $passage->minutes], $screens[0]->passages),
+            1,
+            0,
+        ));
+    }
+
+    public function testPassageOverdueBeyondTheGraceIsNotShown(): void
+    {
+        $screens = $this->paginate([new DisplayItem('GARE', [
+            $this->passage('1', -6),
+            $this->passage('2', 3),
         ], quayDeprecated: false)]);
 
         self::assertSame(['2'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $screens[0]->passages));
