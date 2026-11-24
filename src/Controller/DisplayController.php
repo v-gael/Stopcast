@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Display\LiveDisplay;
+use App\Display\DisplayPage;
 use App\Display\Pairing\DisplayCookies;
 use App\Display\Pairing\PairedScreen;
 use App\Display\Pairing\PairingCode;
@@ -47,7 +47,7 @@ final class DisplayController extends AbstractController
     #[Route('/display', name: 'app_display', defaults: [FramedPageToolbarListener::WITHOUT_TOOLBAR => true], methods: ['GET'])]
     public function show(
         Request $request,
-        LiveDisplay $liveDisplay,
+        DisplayPage $displayPage,
         #[CurrentUser] ?UserInterface $user,
         #[MapQueryParameter] bool $fragment = false,
     ): Response {
@@ -59,7 +59,7 @@ final class DisplayController extends AbstractController
 
         return $this->renderLiveDisplay(
             $screen->device,
-            $liveDisplay->forDevice($screen->device),
+            $displayPage->forDevice($screen->device),
             $fragment,
             $this->generateUrl('app_display', ['fragment' => 1]),
         );
