@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Display\DisplayAssembler;
-use App\Display\LiveDisplay;
+use App\Display\DisplayPage;
 use App\Display\ScreenPaginator;
 use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\Device;
@@ -36,7 +36,7 @@ final class DisplayPreviewController extends AbstractController
     public function __construct(
         private readonly DisplayAssembler $displayAssembler,
         private readonly ScreenPaginator $screenPaginator,
-        private readonly LiveDisplay $liveDisplay,
+        private readonly DisplayPage $displayPage,
     ) {
     }
 
@@ -67,7 +67,7 @@ final class DisplayPreviewController extends AbstractController
     {
         return $this->renderLiveDisplay(
             $device,
-            $this->liveDisplay->forDevice($device),
+            $this->displayPage->forDevice($device),
             $fragment,
             $this->generateUrl('app_device_live_preview', ['id' => $device->getId(), 'fragment' => 1]),
         );

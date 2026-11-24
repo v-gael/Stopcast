@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Display\LiveDisplayState;
+use App\Display\DisplayPageState;
 use App\Entity\Device;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,23 +22,16 @@ trait LiveDisplayRendering
      * échoue répond 503 : la page garde ce qu'elle affichait. Au premier
      * chargement, l'écran « indisponible » réessaie à la cadence du dispositif.
      */
-    private function renderLiveDisplay(Device $device, LiveDisplayState $state, bool $fragment, string $refreshUrl): Response
+    private function renderLiveDisplay(Device $device, DisplayPageState $state, bool $fragment, string $refreshUrl): Response
     {
-        if ($fragment && $state->feedUnavailable) {
+        if ($fragment && $state->offline) {
             return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', [
             'device' => $device,
-            'screens' => $state->screens,
             'refresh_url' => $refreshUrl,
-            // Message vide : l'écran « indisponible » remplace les écrans.
-            'state_message' => match (true) {
-                $state->disabled => 'Écran désactivé',
-                $state->feedUnavailable => '',
-                default => null,
-            },
-            'offline' => $state->feedUnavailable,
+            ...$state->templateVariables(),
         ]);
     }
 }
