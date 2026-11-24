@@ -2,10 +2,11 @@
  # Écrans d'un dispositif, un seul visible à la fois, ses cadences (en
  # secondes) et ses couleurs (data-theme, valeur de DisplayTheme), relues à
  # chaque rafraîchissement. Rendu seul, c'est le fragment
- # que la page relit. « state_message » remplace les écrans par un écran
- # d'état (dispositif désactivé, passages illisibles) ; « offline » en fait
- # l'écran « indisponible ». « now » fixe l'heure affichée (écran figé de la
- # vitrine).
+ # que la page relit. « screens », « state_message » et « offline » viennent
+ # toujours d'un DisplayPageState (templateVariables()) : « state_message »,
+ # quand il n'est pas null, remplace les écrans par un écran d'état (dispositif
+ # désactivé, passages illisibles) ; « offline » en fait l'écran
+ # « indisponible ». « now » fixe l'heure affichée (écran figé de la vitrine).
  #
  # À 0 min, le pictogramme du bus à quai remplace le délai ; le contrôleur
  # bascule de l'un à l'autre quand il recompte les délais.
@@ -39,7 +40,7 @@
      data-screen-duration="{{ device.screenDuration }}"
      data-refresh-interval="{{ device.refreshInterval }}"
      data-overdue-grace="{{ constant('App\\Dto\\GtfsRt\\NextPassage::OVERDUE_GRACE_SECONDS') }}">
-    {% for screen in state_message is defined and state_message is not null ? [] : screens %}
+    {% for screen in state_message is not null ? [] : screens %}
         <section class="screen" data-display-target="screen"{% if not loop.first %} hidden{% endif %}>
             <div class="screen__top">
                 <h1 class="screen__stop">{{ screen.title }}</h1>
@@ -79,7 +80,7 @@
             </div>
             {{ columns }}
             <div class="screen__message">
-                {% if offline|default(false) %}
+                {% if offline %}
                     {{ unavailable }}
                 {% else %}
                     <p>{{ state_message ?? 'Aucun quai affiché' }}</p>

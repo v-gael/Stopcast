@@ -49,10 +49,8 @@ final readonly class DisplayAssembler
     }
 
     /**
-     * Écrans de forDevice, sur les passages d'exemple : pour l'aperçu, sans
-     * lire l'index temps réel. Un quai déprécié en est exclu : sur l'écran
-     * réel, il n'a en général plus de passage et sort donc de la rotation
-     * (ScreenPaginator), là où l'aperçu lui montrerait des passages d'exemple.
+     * Les configurations affichées, sur les passages d'exemple
+     * (DisplayPage::sampleForDevice()).
      *
      * @return list<DisplayItem>
      */

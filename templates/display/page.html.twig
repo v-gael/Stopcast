@@ -19,7 +19,7 @@
           data-controller="display"
           data-display-url-value="{{ refresh_url }}"
           data-display-time-zone-value="{{ 'now'|date('e') }}"
-          {%- if offline|default(false) %} data-display-offline{% endif %}>
+          {%- if offline %} data-display-offline{% endif %}>
         {{ include('display/_screens.html.twig') }}
     </body>
 </html>

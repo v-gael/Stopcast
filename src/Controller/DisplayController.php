@@ -34,7 +34,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  */
 final class DisplayController extends AbstractController
 {
-    use LiveDisplayRendering;
+    use DisplayPageRendering;
 
     public function __construct(
         private readonly ScreenPairing $screenPairing,
@@ -57,7 +57,7 @@ final class DisplayController extends AbstractController
             return $fragment ? new Response(null, Response::HTTP_UNAUTHORIZED) : $this->pairingPage($request);
         }
 
-        return $this->renderLiveDisplay(
+        return $this->renderDisplayPage(
             $screen->device,
             $displayPage->forDevice($screen->device),
             $fragment,

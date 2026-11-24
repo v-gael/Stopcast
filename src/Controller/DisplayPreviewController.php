@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Display\DisplayAssembler;
 use App\Display\DisplayPage;
-use App\Display\ScreenPaginator;
-use App\Dto\GtfsRt\DisplayItem;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\EventListener\SameOriginFramingListener;
@@ -31,26 +28,23 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  */
 final class DisplayPreviewController extends AbstractController
 {
-    use LiveDisplayRendering;
+    use DisplayPageRendering;
 
     public function __construct(
-        private readonly DisplayAssembler $displayAssembler,
-        private readonly ScreenPaginator $screenPaginator,
         private readonly DisplayPage $displayPage,
     ) {
     }
 
     /**
-     * Toute la rotation du dispositif sur les passages d'exemple : ses
-     * configurations actives, sans les quais dépréciés.
+     * Toute la rotation du dispositif sur les passages d'exemple.
      */
     #[Route('/devices/{id}/preview', name: 'app_device_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, 'device')]
     public function device(Device $device, #[MapQueryParameter] bool $fragment = false): Response
     {
-        return $this->renderDisplay(
+        return $this->renderDisplayPage(
             $device,
-            $this->displayAssembler->sampleForDevice($device),
+            $this->displayPage->sampleForDevice($device),
             $fragment,
             $this->generateUrl('app_device_preview', ['id' => $device->getId(), 'fragment' => 1]),
         );
@@ -58,14 +52,13 @@ final class DisplayPreviewController extends AbstractController
 
     /**
      * Ce que montre l'écran du dispositif, sur les passages réels : écran
-     * désactivé et flux en panne compris ; un quai déprécié n'y reste que
-     * s'il a encore des passages, comme sur l'écran (ScreenPaginator).
+     * désactivé et flux en panne compris.
      */
     #[Route('/devices/{id}/preview/live', name: 'app_device_live_preview', requirements: ['id' => Requirement::DIGITS], defaults: [SameOriginFramingListener::ATTRIBUTE => true], methods: ['GET'])]
     #[IsGranted(DeviceVoter::VIEW, 'device')]
     public function liveDevice(Device $device, #[MapQueryParameter] bool $fragment = false): Response
     {
-        return $this->renderLiveDisplay(
+        return $this->renderDisplayPage(
             $device,
             $this->displayPage->forDevice($device),
             $fragment,
@@ -80,23 +73,11 @@ final class DisplayPreviewController extends AbstractController
     #[IsGranted(DeviceVoter::VIEW, new Expression('args["configuration"].getDevice()'))]
     public function configuration(DisplayConfiguration $configuration, #[MapQueryParameter] bool $fragment = false): Response
     {
-        return $this->renderDisplay(
+        return $this->renderDisplayPage(
             $configuration->getDevice(),
-            [$this->displayAssembler->sampleForConfiguration($configuration)],
+            $this->displayPage->sampleForConfiguration($configuration),
             $fragment,
             $this->generateUrl('app_display_configuration_preview', ['id' => $configuration->getId(), 'fragment' => 1]),
         );
-    }
-
-    /**
-     * @param list<DisplayItem> $items
-     */
-    private function renderDisplay(Device $device, array $items, bool $fragment, string $refreshUrl): Response
-    {
-        return $this->render($fragment ? 'display/_screens.html.twig' : 'display/page.html.twig', [
-            'device' => $device,
-            'screens' => $this->screenPaginator->paginate($items),
-            'refresh_url' => $refreshUrl,
-        ]);
     }
 }
