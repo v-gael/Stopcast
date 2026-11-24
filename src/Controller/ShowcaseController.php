@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Display\DisplayPageState;
 use App\Display\Pairing\QrCodeSvg;
 use App\Display\Pairing\ScreenPairing;
 use App\Display\ShowcaseScreens;
@@ -41,7 +42,7 @@ final class ShowcaseController extends AbstractController
 
         return $this->render('showcase/screen.html.twig', [
             'mode' => $mode,
-            'screens' => $mode->isWalkthroughDevice() ? $this->showcaseScreens->walkthroughDevice() : $this->showcaseScreens->all(),
+            ...DisplayPageState::screens($mode->isWalkthroughDevice() ? $this->showcaseScreens->walkthroughDevice() : $this->showcaseScreens->all())->templateVariables(),
             'now' => $this->showcaseScreens->now(),
             // Pour _screens.html.twig : durée d'un écran et couleurs ; l'écran de la vitrine ne relit rien.
             'device' => ['screenDuration' => 4, 'refreshInterval' => 0, 'theme' => DisplayTheme::Dark],

@@ -26,12 +26,16 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 
 /**
- * Ce que la page d'affichage d'un dispositif montre sur les passages réels,
- * lus dans un index des passages gardé en mémoire, à une heure fixée.
+ * Ce que la page d'affichage d'un dispositif montre, sur les passages réels,
+ * lus dans un index des passages gardé en mémoire, et sur les passages
+ * d'exemple, à une heure fixée.
  */
 final class DisplayPageTest extends TestCase
 {
     private const string NOW = '2026-11-24 08:00:00';
+
+    /** Lignes des passages d'exemple (SamplePassages), dans l'ordre. */
+    private const array SAMPLE_ROUTES = ['1', '12', 'A', '5', 'N2'];
 
     /** Âge maximal du flux, en secondes (GTFS_REALTIME_MAX_AGE). */
     private const int MAX_AGE = 300;
@@ -151,6 +155,51 @@ final class DisplayPageTest extends TestCase
         );
     }
 
+    public function testSamplePreviewOfADeviceShowsTheSamplePassagesWithoutReadingTheIndex(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $this->configure($device, 'S2', label: 'Centre');
+
+        $state = $this->displayPage()->sampleForDevice($device);
+
+        self::assertSame(['Gare', 'Centre'], $this->titles($state->screens));
+        self::assertSame(self::SAMPLE_ROUTES, $this->routes($state->screens[0]));
+        self::assertNull($state->stateMessage);
+        self::assertFalse($state->offline);
+    }
+
+    public function testSamplePreviewOfADeviceLeavesOutHiddenConfigurationsAndDeprecatedQuays(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $this->configure($device, 'S2', label: 'Masquée', active: false);
+        $this->configure($device, 'S3', label: 'Disparu', deprecated: true);
+
+        self::assertSame(['Gare'], $this->titles($this->displayPage()->sampleForDevice($device)->screens));
+    }
+
+    public function testSamplePreviewOfADisabledDeviceStillShowsItsRotation(): void
+    {
+        $device = $this->device()->setActive(false);
+        $this->configure($device, 'S1', label: 'Gare');
+
+        self::assertSame(['Gare'], $this->titles($this->displayPage()->sampleForDevice($device)->screens));
+    }
+
+    public function testSamplePreviewOfAConfigurationShowsItEvenHiddenOrOnADeprecatedQuay(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $hidden = $this->configure($device, 'S2', label: 'Masquée', active: false);
+        $deprecated = $this->configure($device, 'S3', label: 'Disparu', deprecated: true);
+
+        self::assertSame(['Masquée'], $this->titles($this->displayPage()->sampleForConfiguration($hidden)->screens));
+        $state = $this->displayPage()->sampleForConfiguration($deprecated);
+        self::assertSame(['Disparu'], $this->titles($state->screens));
+        self::assertSame(self::SAMPLE_ROUTES, $this->routes($state->screens[0]));
+    }
+
     private function assertUnavailable(DisplayPageState $state): void
     {
         self::assertSame([], $state->screens);
@@ -172,7 +221,7 @@ final class DisplayPageTest extends TestCase
         return new Device(new User('lea@example.com'), 'Entrée');
     }
 
-    private function configure(Device $device, string $stopId, string $label, bool $active = true, bool $deprecated = false): void
+    private function configure(Device $device, string $stopId, string $label, bool $active = true, bool $deprecated = false): DisplayConfiguration
     {
         $quay = new Quay($stopId, 'QUAI '.$stopId, 43.6, 3.9, 'P'.$stopId);
 
@@ -180,7 +229,10 @@ final class DisplayPageTest extends TestCase
             $quay->markDeprecated();
         }
 
-        $device->appendDisplayConfiguration(new DisplayConfiguration($device, $quay)->setLabel($label)->setActive($active));
+        $configuration = new DisplayConfiguration($device, $quay)->setLabel($label)->setActive($active);
+        $device->appendDisplayConfiguration($configuration);
+
+        return $configuration;
     }
 
     /**
