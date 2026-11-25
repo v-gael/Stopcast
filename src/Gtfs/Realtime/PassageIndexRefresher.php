@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Gtfs\Realtime;
 
+use App\Display\DisplayPage;
 use App\Monitoring\HealthcheckPinger;
 use App\Monitoring\RealtimeFeedFailureLogger;
 use Psr\Clock\ClockInterface;
@@ -18,8 +19,9 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
  * jamais. Seul ce service télécharge le flux ; les écrans lisent l'index
  * (NextPassageFinder).
  *
- * L'index garde jusqu'à INDEX_DEPTH_PER_LIMIT fois GTFS_REALTIME_NEXT_PASSAGES_LIMIT
- * passages par quai : la limite reste remplie quand les premiers sont partis.
+ * L'index garde jusqu'à INDEX_DEPTH_PER_SCREEN fois les passages d'un écran
+ * (DisplayPage::PASSAGES_PER_SCREEN) par quai : l'écran reste rempli quand
+ * les premiers sont partis.
  *
  * Seul un flux qui se décode remplace l'index ; une panne le laisse en place
  * et est journalisée (RealtimeFeedFailureLogger), comme un flux périmé. Un
@@ -30,7 +32,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
 #[AsPeriodicTask(frequency: '%env(int:GTFS_REALTIME_REFRESH_INTERVAL)%', schedule: 'realtime')]
 final class PassageIndexRefresher
 {
-    public const int INDEX_DEPTH_PER_LIMIT = 3;
+    public const int INDEX_DEPTH_PER_SCREEN = 3;
 
     private const int PING_INTERVAL = 60;
 
@@ -43,10 +45,10 @@ final class PassageIndexRefresher
         private readonly RealtimeFeedFailureLogger $feedFailureLogger,
         private readonly HealthcheckPinger $pinger,
         private readonly ClockInterface $clock,
-        #[Autowire(env: 'int:GTFS_REALTIME_NEXT_PASSAGES_LIMIT')]
-        private readonly int $limit,
         #[Autowire(env: 'HEALTHCHECKS_REALTIME_URL')]
         private readonly string $healthcheckUrl,
+        /** Passages lus par quai par les écrans (NextPassageFinder). */
+        private readonly int $limit = DisplayPage::PASSAGES_PER_SCREEN,
     ) {
     }
 
@@ -60,7 +62,7 @@ final class PassageIndexRefresher
             return;
         }
 
-        $this->store->save($index->truncated(self::INDEX_DEPTH_PER_LIMIT * $this->limit));
+        $this->store->save($index->truncated(self::INDEX_DEPTH_PER_SCREEN * $this->limit));
 
         try {
             $this->tripUpdatesFeed->assertIndexFresh($index);

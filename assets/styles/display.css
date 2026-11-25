@@ -139,7 +139,7 @@ body {
     display: none;
 }
 
-/* Cinq passages par écran, quel que soit leur nombre : la hauteur ne s'étire pas avec peu de passages. */
+/* Cinq passages par écran (DisplayPage::PASSAGES_PER_SCREEN, vérifié par DisplayGridTest), quel que soit leur nombre : la hauteur ne s'étire pas avec peu de passages. */
 .screen__passages {
     display: grid;
     grid-template-rows: repeat(5, minmax(0, 1fr));

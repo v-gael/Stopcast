@@ -18,13 +18,17 @@ use Symfony\Component\Clock\ClockInterface;
  * qui passent par ici pour montrer la même chose ; sur les passages d'exemple
  * pour les autres aperçus, sans lire l'index temps réel.
  *
- * Chaque configuration donne un écran par tranche de PASSAGES_PER_SCREEN
- * passages, titré de son nom affiché (DisplayConfiguration::getDisplayName()),
- * ou un seul écran « aucun passage ». Un quai déprécié sans passage n'a pas
- * d'écran : il sort de la rotation.
+ * Chaque configuration donne un seul écran, titré de son nom affiché
+ * (DisplayConfiguration::getDisplayName()) : ses prochains passages, au plus
+ * PASSAGES_PER_SCREEN, ou l'écran « aucun passage ». Un quai déprécié sans
+ * passage n'a pas d'écran : il sort de la rotation.
  */
 final readonly class DisplayPage
 {
+    /**
+     * Passages d'un écran, et donc passages lus par quai (NextPassageFinder) :
+     * autant que de lignes de la grille de l'écran (display.css).
+     */
     public const int PASSAGES_PER_SCREEN = 5;
 
     public function __construct(
@@ -105,19 +109,12 @@ final readonly class DisplayPage
         foreach ($configurations as $configuration) {
             $passages = array_map(
                 static fn (NextPassage $passage): ScreenPassage => self::screenPassage($passage, $now),
-                array_values($passagesOf($configuration)),
+                // Pas plus de passages que de lignes dans la grille de l'écran, d'où qu'ils viennent.
+                \array_slice(array_values($passagesOf($configuration)), 0, self::PASSAGES_PER_SCREEN),
             );
 
-            if ([] === $passages) {
-                if ($configuration->getQuay()->isActive()) {
-                    $screens[] = new Screen($configuration->getDisplayName(), []);
-                }
-
-                continue;
-            }
-
-            foreach (array_chunk($passages, self::PASSAGES_PER_SCREEN) as $page) {
-                $screens[] = new Screen($configuration->getDisplayName(), $page);
+            if ([] !== $passages || $configuration->getQuay()->isActive()) {
+                $screens[] = new Screen($configuration->getDisplayName(), $passages);
             }
         }
 
