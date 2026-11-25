@@ -9,8 +9,9 @@ namespace App\Display;
  * l'ordre de rotation, ou un écran d'état à leur place.
  *
  * - « $stateMessage » remplace les écrans quand il n'est pas null : « Écran
- *   désactivé », ou un message vide pour l'écran « indisponible ».
- * - « $offline » : le flux temps réel n'a pas pu être lu.
+ *   désactivé ».
+ * - « $feedUnavailable » : le flux temps réel n'a pas pu être lu ; l'écran
+ *   « indisponible » remplace les écrans.
  */
 final readonly class DisplayPageState
 {
@@ -20,7 +21,7 @@ final readonly class DisplayPageState
     private function __construct(
         public array $screens,
         public ?string $stateMessage,
-        public bool $offline,
+        public bool $feedUnavailable,
     ) {
     }
 
@@ -29,22 +30,22 @@ final readonly class DisplayPageState
      */
     public static function screens(array $screens): self
     {
-        return new self($screens, stateMessage: null, offline: false);
+        return new self($screens, stateMessage: null, feedUnavailable: false);
     }
 
     public static function disabled(): self
     {
-        return new self([], stateMessage: 'Écran désactivé', offline: false);
+        return new self([], stateMessage: 'Écran désactivé', feedUnavailable: false);
     }
 
     public static function feedUnavailable(): self
     {
-        return new self([], stateMessage: '', offline: true);
+        return new self([], stateMessage: null, feedUnavailable: true);
     }
 
     /**
      * Les variables des gabarits de la page d'affichage qui viennent de cet
-     * état.
+     * état : « offline » y fait de l'écran d'état l'écran « indisponible ».
      *
      * @return array{screens: list<Screen>, state_message: ?string, offline: bool}
      */
@@ -53,7 +54,7 @@ final readonly class DisplayPageState
         return [
             'screens' => $this->screens,
             'state_message' => $this->stateMessage,
-            'offline' => $this->offline,
+            'offline' => $this->feedUnavailable,
         ];
     }
 }

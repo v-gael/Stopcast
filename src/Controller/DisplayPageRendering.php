@@ -24,7 +24,7 @@ trait DisplayPageRendering
      */
     private function renderDisplayPage(Device $device, DisplayPageState $state, bool $fragment, string $refreshUrl): Response
     {
-        if ($fragment && $state->offline) {
+        if ($fragment && $state->feedUnavailable) {
             return new Response(null, Response::HTTP_SERVICE_UNAVAILABLE);
         }
 

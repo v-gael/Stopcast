@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Display;
 
-use App\Display\DisplayAssembler;
 use App\Display\DisplayPage;
 use App\Display\DisplayPageState;
 use App\Display\SamplePassages;
 use App\Display\Screen;
-use App\Display\ScreenPaginator;
 use App\Display\ScreenPassage;
 use App\Dto\GtfsRt\NextPassage;
 use App\Entity\Device;
@@ -63,7 +61,7 @@ final class DisplayPageTest extends TestCase
         self::assertSame(['1', '12'], $this->routes($state->screens[0]));
         self::assertSame([3, 8], array_map(static fn (ScreenPassage $passage): int => $passage->minutes, $state->screens[0]->passages));
         self::assertNull($state->stateMessage);
-        self::assertFalse($state->offline);
+        self::assertFalse($state->feedUnavailable);
     }
 
     public function testHiddenConfigurationIsLeftOutOfTheRotation(): void
@@ -116,7 +114,7 @@ final class DisplayPageTest extends TestCase
 
         self::assertSame([], $state->screens);
         self::assertSame('Écran désactivé', $state->stateMessage);
-        self::assertFalse($state->offline);
+        self::assertFalse($state->feedUnavailable);
     }
 
     public function testMissingIndexShowsTheUnavailableScreen(): void
@@ -166,7 +164,7 @@ final class DisplayPageTest extends TestCase
         self::assertSame(['Gare', 'Centre'], $this->titles($state->screens));
         self::assertSame(self::SAMPLE_ROUTES, $this->routes($state->screens[0]));
         self::assertNull($state->stateMessage);
-        self::assertFalse($state->offline);
+        self::assertFalse($state->feedUnavailable);
     }
 
     public function testSamplePreviewOfADeviceLeavesOutHiddenConfigurationsAndDeprecatedQuays(): void
@@ -200,20 +198,119 @@ final class DisplayPageTest extends TestCase
         self::assertSame(self::SAMPLE_ROUTES, $this->routes($state->screens[0]));
     }
 
+    public function testUnavailableFeedGivesTheUnavailableScreenToTheTemplates(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+
+        self::assertSame(
+            ['screens' => [], 'state_message' => null, 'offline' => true],
+            $this->displayPage()->forDevice($device)->templateVariables(),
+        );
+    }
+
+    public function testQuayGivesOneScreenPerFivePassagesAllTitledWithItsDisplayName(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Direction travail');
+        $this->configure($device, 'S2', label: 'Gare');
+        $this->index([
+            'S1' => array_map(fn (int $i): NextPassage => $this->passage((string) $i, $i), range(1, 7)),
+            'S2' => [$this->passage('A', 2)],
+        ]);
+
+        $screens = $this->displayPage(limit: 10)->forDevice($device)->screens;
+
+        self::assertSame(['Direction travail', 'Direction travail', 'Gare'], $this->titles($screens));
+        self::assertSame(['1', '2', '3', '4', '5'], $this->routes($screens[0]));
+        self::assertSame(['6', '7'], $this->routes($screens[1]));
+    }
+
+    public function testDeviceWithoutActiveConfigurationGivesNoScreen(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Masquée', active: false);
+        $this->index(['S1' => [$this->passage('1', 3)]]);
+
+        self::assertSame([], $this->displayPage()->forDevice($device)->screens);
+    }
+
+    public function testPassageOverdueWithinTheGraceIsShownAtZeroMinutes(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        // Annoncé il y a 3 min 30 s : en retard, mais encore attendu.
+        $this->index(['S1' => [$this->passage('1', -4), $this->passage('2', 3)]]);
+
+        $passages = $this->displayPage()->forDevice($device)->screens[0]->passages;
+
+        self::assertSame(['1', '2'], array_map(static fn (ScreenPassage $passage): string => $passage->routeShortName, $passages));
+        self::assertSame([0, 3], array_map(static fn (ScreenPassage $passage): int => $passage->minutes, $passages));
+    }
+
+    public function testPassageOverdueBeyondTheGraceIsNotShown(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        // Annoncé il y a 5 min 30 s, plus que le délai de grâce de 5 min.
+        $this->index(['S1' => [$this->passage('1', -6), $this->passage('2', 3)]]);
+
+        self::assertSame(['2'], $this->routes($this->displayPage()->forDevice($device)->screens[0]));
+    }
+
+    public function testDeprecatedQuayWhosePassagesAreAllGoneLeavesTheRotation(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Disparu', deprecated: true);
+        $this->index(['S1' => [$this->passage('1', -6)]]);
+
+        self::assertSame([], $this->displayPage()->forDevice($device)->screens);
+    }
+
+    public function testMinutesAreRoundedDown(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $this->index(['S1' => [
+            new NextPassage('1', 'FF5500', 'FFFFFF', 'GARE', $this->clock->now()->modify('+59 seconds')),
+            new NextPassage('2', 'FF5500', 'FFFFFF', 'GARE', $this->clock->now()->modify('+3 minutes 55 seconds')),
+        ]]);
+
+        $passages = $this->displayPage()->forDevice($device)->screens[0]->passages;
+
+        self::assertSame([0, 3], array_map(static fn (ScreenPassage $passage): int => $passage->minutes, $passages));
+    }
+
+    public function testInvalidColorsAreLeftToTheScreenDefaults(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $this->index(['S1' => [
+            new NextPassage('1', 'a020f0', '', null, $this->clock->now()->modify('+5 minutes')),
+            new NextPassage('2', 'red', '#FFFFFF', 'GARE', $this->clock->now()->modify('+6 minutes')),
+        ]]);
+
+        [$first, $second] = $this->displayPage()->forDevice($device)->screens[0]->passages;
+
+        self::assertSame(['A020F0', null, ''], [$first->routeColor, $first->routeTextColor, $first->headsign]);
+        self::assertSame([null, null], [$second->routeColor, $second->routeTextColor]);
+    }
+
     private function assertUnavailable(DisplayPageState $state): void
     {
         self::assertSame([], $state->screens);
-        // Message vide : l'écran « indisponible » remplace les écrans.
-        self::assertSame('', $state->stateMessage);
-        self::assertTrue($state->offline);
+        self::assertTrue($state->feedUnavailable);
     }
 
-    private function displayPage(): DisplayPage
+    /**
+     * @param int $limit passages lus par quai (GTFS_REALTIME_NEXT_PASSAGES_LIMIT)
+     */
+    private function displayPage(int $limit = 5): DisplayPage
     {
         $feed = new TripUpdatesFeed(new MockHttpClient(), $this->clock, 'https://gtfs-rt.test/trip-updates', self::MAX_AGE);
-        $finder = new NextPassageFinder($this->store, $feed, $this->clock, 5);
+        $finder = new NextPassageFinder($this->store, $feed, $this->clock, $limit);
 
-        return new DisplayPage(new DisplayAssembler($finder, new SamplePassages($this->clock)), new ScreenPaginator($this->clock));
+        return new DisplayPage($finder, new SamplePassages($this->clock), $this->clock);
     }
 
     private function device(): Device

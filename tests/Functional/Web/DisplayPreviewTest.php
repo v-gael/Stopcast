@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Web;
 
-use App\Display\ScreenPaginator;
+use App\Display\DisplayPage;
 use App\Entity\Device;
 use App\Entity\DisplayConfiguration;
 use App\Entity\Quay;
@@ -61,7 +61,7 @@ final class DisplayPreviewTest extends WebTestCase
         self::assertSame(['Gare', 'CENTRE VILLE'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
         // Un seul écran visible à la fois, le premier de la rotation.
         self::assertSame([null, ''], $crawler->filter('.screen')->each(static fn (Crawler $screen): ?string => $screen->attr('hidden')));
-        self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.screen')->first()->filter('.passage'));
+        self::assertCount(DisplayPage::PASSAGES_PER_SCREEN, $crawler->filter('.screen')->first()->filter('.passage'));
         self::assertSame('display', $crawler->filter('body')->attr('data-controller'));
         self::assertSame($this->devicePreview().'?fragment=1', $crawler->filter('body')->attr('data-display-url-value'));
     }
@@ -73,7 +73,7 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', $this->devicePreview());
 
         $passages = $crawler->filter('.passage');
-        self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $passages);
+        self::assertCount(DisplayPage::PASSAGES_PER_SCREEN, $passages);
         $first = $passages->first();
         self::assertSame('1', $first->filter('.passage__route')->text());
         self::assertSame('#E2001A', $first->filter('.passage__route')->attr('data-route-color'));
@@ -120,7 +120,7 @@ final class DisplayPreviewTest extends WebTestCase
         $crawler = $this->client->request('GET', \sprintf('/display-configurations/%d/preview', $configuration->getId()));
 
         self::assertSame(['Disparu'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
-        self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
+        self::assertCount(DisplayPage::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
     }
 
     public function testConfigurationPreviewShowsThatConfigurationEvenHidden(): void
@@ -132,7 +132,7 @@ final class DisplayPreviewTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['Masquée'], $crawler->filter('.screen .screen__stop')->each(static fn (Crawler $stop): string => $stop->text()));
-        self::assertCount(ScreenPaginator::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
+        self::assertCount(DisplayPage::PASSAGES_PER_SCREEN, $crawler->filter('.passage'));
     }
 
     public function testFragmentHoldsOnlyTheScreensAndTheCurrentCadences(): void
