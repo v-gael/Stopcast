@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\DataFixtures;
 
 use App\DataFixtures\DevelopmentQuaySelection;
+use App\Display\DisplayPage;
 use App\Entity\Quay;
 use App\Entity\Route;
 use App\Entity\Trip;
@@ -123,9 +124,7 @@ final class DevelopmentQuaySelectorTest extends KernelTestCase
     public function testPassagesAreCountedBeyondWhatTheIndexKeepsPerQuay(): void
     {
         // Un et deux passages de plus que ce que l'index garde par quai.
-        $limit = $_SERVER['GTFS_REALTIME_NEXT_PASSAGES_LIMIT'];
-        self::assertIsNumeric($limit);
-        $kept = PassageIndexRefresher::INDEX_DEPTH_PER_LIMIT * (int) $limit;
+        $kept = PassageIndexRefresher::INDEX_DEPTH_PER_SCREEN * DisplayPage::PASSAGES_PER_SCREEN;
         $trips = [];
         foreach (range(1, $kept + 2) as $i) {
             $trips['TX'.$i] = $i <= $kept + 1 ? ['S1', 'S2'] : ['S2'];

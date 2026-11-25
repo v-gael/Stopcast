@@ -209,21 +209,36 @@ final class DisplayPageTest extends TestCase
         );
     }
 
-    public function testQuayGivesOneScreenPerFivePassagesAllTitledWithItsDisplayName(): void
+    public function testEachQuayGivesOneScreenOfItsFirstPassages(): void
     {
         $device = $this->device();
         $this->configure($device, 'S1', label: 'Direction travail');
         $this->configure($device, 'S2', label: 'Gare');
+        $this->configure($device, 'S3', label: 'Centre');
         $this->index([
-            'S1' => array_map(fn (int $i): NextPassage => $this->passage((string) $i, $i), range(1, 7)),
-            'S2' => [$this->passage('A', 2)],
+            'S1' => $this->passages(7),
+            'S2' => $this->passages(5),
+            'S3' => $this->passages(1),
         ]);
 
-        $screens = $this->displayPage(limit: 10)->forDevice($device)->screens;
+        $screens = $this->displayPage()->forDevice($device)->screens;
 
-        self::assertSame(['Direction travail', 'Direction travail', 'Gare'], $this->titles($screens));
+        self::assertSame(['Direction travail', 'Gare', 'Centre'], $this->titles($screens));
         self::assertSame(['1', '2', '3', '4', '5'], $this->routes($screens[0]));
-        self::assertSame(['6', '7'], $this->routes($screens[1]));
+        self::assertSame(['1', '2', '3', '4', '5'], $this->routes($screens[1]));
+        self::assertSame(['1'], $this->routes($screens[2]));
+    }
+
+    public function testScreenNeverHoldsMorePassagesThanItsGridHasRows(): void
+    {
+        $device = $this->device();
+        $this->configure($device, 'S1', label: 'Gare');
+        $this->index(['S1' => $this->passages(7)]);
+
+        $screens = $this->displayPage(passagesReadPerQuay: 10)->forDevice($device)->screens;
+
+        self::assertSame(['Gare'], $this->titles($screens));
+        self::assertSame(['1', '2', '3', '4', '5'], $this->routes($screens[0]));
     }
 
     public function testDeviceWithoutActiveConfigurationGivesNoScreen(): void
@@ -303,12 +318,12 @@ final class DisplayPageTest extends TestCase
     }
 
     /**
-     * @param int $limit passages lus par quai (GTFS_REALTIME_NEXT_PASSAGES_LIMIT)
+     * @param int $passagesReadPerQuay limite du lecteur de l'index, celle d'un écran par défaut
      */
-    private function displayPage(int $limit = 5): DisplayPage
+    private function displayPage(int $passagesReadPerQuay = DisplayPage::PASSAGES_PER_SCREEN): DisplayPage
     {
         $feed = new TripUpdatesFeed(new MockHttpClient(), $this->clock, 'https://gtfs-rt.test/trip-updates', self::MAX_AGE);
-        $finder = new NextPassageFinder($this->store, $feed, $this->clock, $limit);
+        $finder = new NextPassageFinder($this->store, $feed, $this->clock, $passagesReadPerQuay);
 
         return new DisplayPage($finder, new SamplePassages($this->clock), $this->clock);
     }
@@ -341,6 +356,14 @@ final class DisplayPageTest extends TestCase
     {
         $publishedAt = $this->clock->now()->getTimestamp() - $ageSeconds;
         $this->store->save(new PassageIndex($publishedAt, $publishedAt, $passagesByStopId));
+    }
+
+    /**
+     * @return list<NextPassage> lignes « 1 » à « $count », une minute d'écart
+     */
+    private function passages(int $count): array
+    {
+        return array_map(fn (int $i): NextPassage => $this->passage((string) $i, $i), range(1, $count));
     }
 
     /**

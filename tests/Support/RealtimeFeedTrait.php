@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Display\DisplayPage;
 use App\Dto\GtfsRt\NextPassage;
 use App\Gtfs\Realtime\NextPassageFinder;
 use App\Gtfs\Realtime\PassageIndexBuilder;
@@ -38,7 +39,7 @@ trait RealtimeFeedTrait
     /**
      * Lecteur d'un index rafraîchi une fois sur ce flux.
      */
-    private function nextPassageFinder(MockHttpClient $httpClient, int $limit = 5, ?MockClock $clock = null): NextPassageFinder
+    private function nextPassageFinder(MockHttpClient $httpClient, int $limit = DisplayPage::PASSAGES_PER_SCREEN, ?MockClock $clock = null): NextPassageFinder
     {
         $clock ??= self::fixedClock();
         $store = new PassageIndexStore(new ArrayAdapter());
@@ -48,7 +49,7 @@ trait RealtimeFeedTrait
         return $this->passageIndexReader($store, $clock, $limit);
     }
 
-    private function passageIndexReader(PassageIndexStore $store, MockClock $clock, int $limit = 5): NextPassageFinder
+    private function passageIndexReader(PassageIndexStore $store, MockClock $clock, int $limit = DisplayPage::PASSAGES_PER_SCREEN): NextPassageFinder
     {
         return new NextPassageFinder($store, self::tripUpdatesFeed(new MockHttpClient(), $clock), $clock, $limit);
     }
@@ -57,7 +58,7 @@ trait RealtimeFeedTrait
         MockHttpClient $httpClient,
         PassageIndexStore $store,
         MockClock $clock,
-        int $limit = 5,
+        int $limit = DisplayPage::PASSAGES_PER_SCREEN,
         ?LoggerInterface $logger = null,
         ?HealthcheckPinger $pinger = null,
         string $healthcheckUrl = '',
@@ -71,8 +72,8 @@ trait RealtimeFeedTrait
             feedFailureLogger: new RealtimeFeedFailureLogger($logger ?? new NullLogger(), new ArrayAdapter(), $clock),
             pinger: $pinger ?? new HealthcheckPinger(new MockHttpClient(), new NullLogger()),
             clock: $clock,
-            limit: $limit,
             healthcheckUrl: $healthcheckUrl,
+            limit: $limit,
         );
     }
 

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Gtfs\Realtime;
 
+use App\Display\DisplayPage;
 use App\Dto\GtfsRt\NextPassage;
 use App\Entity\Quay;
 use Psr\Clock\ClockInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Prochains passages aux quais, lus dans l'index que realtime-worker
@@ -21,15 +21,15 @@ final readonly class NextPassageFinder
         private PassageIndexStore $store,
         private TripUpdatesFeed $tripUpdatesFeed,
         private ClockInterface $clock,
-        #[Autowire(env: 'int:GTFS_REALTIME_NEXT_PASSAGES_LIMIT')]
-        private int $limit,
+        /** Passages lus par quai : ceux d'un écran (DisplayPage::PASSAGES_PER_SCREEN). */
+        private int $limit = DisplayPage::PASSAGES_PER_SCREEN,
     ) {
     }
 
     /**
      * Prochains passages de chaque quai, dans l'ordre, sans ceux tenus pour partis
      * (NextPassage::isStillExpectedAt()),
-     * dans la limite de GTFS_REALTIME_NEXT_PASSAGES_LIMIT par quai.
+     * dans la limite de $limit par quai.
      *
      * @param Quay[] $quays
      *
