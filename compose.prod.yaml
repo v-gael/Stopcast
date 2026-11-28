@@ -68,7 +68,10 @@ services:
       edge:
         aliases:
           - stopcast-app
+      # Réseau partagé par toutes les piles : un alias propre au projet.
       observability:
+        aliases:
+          - stopcast-app
     healthcheck:
       # /health interroge la base : app n'est healthy que si elle répond.
       test: ["CMD", "curl", "-fsS", "http://localhost/health"]
@@ -201,11 +204,15 @@ services:
   # (statistiques du serveur, aucun droit sur les tables), et lui pose le mot de
   # passe de .env.prod.local : changer POSTGRES_EXPORTER_PASSWORD puis
   # redéployer suffit à le faire tourner. Lancé avant postgres-exporter, à
-  # chaque `up`. Même image que database (digest à garder identique) : son
-  # psql. Le mot de passe passe par \getenv, jamais sur une ligne de commande.
+  # chaque `up`. Un service plutôt qu'un script : le serveur ne reçoit de
+  # l'image que bin/deploy et les fichiers Compose (docs/exploitation.md,
+  # « Script de déploiement imposé »). Même image que database, son psql
+  # (bin/check-compose vérifie qu'elles restent égales). Le mot de passe passe
+  # par \getenv, jamais sur une ligne de commande.
   exporter-role:
     image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
     logging: *logging
+    mem_limit: 64m
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
@@ -249,7 +256,11 @@ services:
     expose: ["9187"]
     labels:
       observability.metrics.port: "9187"
-    networks: [default, observability]
+    networks:
+      default:
+      observability:
+        aliases:
+          - stopcast-postgres-exporter
     depends_on:
       exporter-role:
         condition: service_completed_successfully
@@ -272,7 +283,11 @@ services:
     expose: ["9121"]
     labels:
       observability.metrics.port: "9121"
-    networks: [default, observability]
+    networks:
+      default:
+      observability:
+        aliases:
+          - stopcast-redis-exporter
     depends_on:
       redis:
         condition: service_healthy

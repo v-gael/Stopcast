@@ -166,10 +166,10 @@ remove_image() {
 # de l'appli déployée et la précédente (un retour arrière vers elle ne télécharge
 # rien), et celles de database, redis et des exporters que demandent les
 # fichiers Compose en place. Les autres étiquettes de l'appli et les anciens
-# digests des images tierces sont supprimés, une par une : jamais de `prune`, qui toucherait aux
-# images des autres piles du serveur (/srv/infra, autres sites). Appelé dans un
-# `if` : `set -e` n'y joue pas, chaque échec est donc relevé ici, et le ménage
-# va jusqu'au bout.
+# digests des images tierces sont supprimés, une par une : jamais de `prune`,
+# qui toucherait aux images des autres piles du serveur (/srv/infra, autres
+# sites). Appelé dans un `if` : `set -e` n'y joue pas, chaque échec est donc
+# relevé ici, et le ménage va jusqu'au bout.
 prune_images() {
     failed=0
 
@@ -234,8 +234,34 @@ show_disk_usage() {
     df -h "$docker_root"
 }
 
+# Réseaux externes que demandent les fichiers Compose (edge, observability),
+# un par ligne, lus dans la configuration résolue : en prod locale, aucun.
+external_networks() {
+    compose config | awk '
+        /^[^ ]/ { in_networks = ($0 == "networks:") ; next }
+        in_networks && /^    name: / { name = $2 }
+        in_networks && /^    external: true$/ { print name }
+    '
+}
+
 echo "Version déployée : $previous"
 echo "Version à déployer : $IMAGE_TAG"
+
+# Les réseaux externes viennent de la pile commune /srv/infra (README du dépôt
+# infra) : sans eux, `up app` échouerait après les migrations. Vérifiés avant de
+# toucher à quoi que ce soit.
+echo '==> Réseaux externes'
+if ! networks=$(external_networks); then
+    echo 'Impossible de lire la configuration Compose.' >&2
+    exit 1
+fi
+for network in $networks; do
+    if ! docker network inspect "$network" > /dev/null 2>&1; then
+        echo "Réseau Docker « $network » absent : démarrer ou mettre à jour la pile /srv/infra (docker compose up -d), puis relancer." >&2
+        exit 1
+    fi
+    echo "Présent : $network"
+done
 
 # Les services qui ont un build (prod locale) gardent l'image construite sur
 # place ; en prod, aucun n'en a et tout vient de GHCR. Une étiquette est le SHA
@@ -305,16 +331,23 @@ if [ "$pending" -eq 1 ]; then
     compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 fi
 
-# `--wait` refuse un service sans healthcheck : les workers, backup et les
-# exporters n'en ont pas (pas de serveur web). On attend qu'app soit healthy,
-# puis on les remplace. postgres-exporter attend exporter-role, qui crée son
-# rôle PostgreSQL ou lui repose son mot de passe.
+# `--wait` refuse un service sans healthcheck : les workers et backup n'en ont
+# pas (pas de serveur web). On attend qu'app soit healthy, puis on les remplace.
 echo '==> Mise à jour des conteneurs'
 replacing=1
 compose up -d --wait --wait-timeout 300 --remove-orphans app
-compose up -d worker realtime-worker backup postgres-exporter redis-exporter
+compose up -d worker realtime-worker backup
 
 printf '%s\n' "$IMAGE_TAG" > "$state_file"
+
+# La supervision ne fait jamais échouer un déploiement : la nouvelle version
+# est en place, un exporter arrêté se voit dans Grafana (série up à 0).
+# postgres-exporter attend exporter-role, qui crée son rôle PostgreSQL ou lui
+# repose son mot de passe.
+echo '==> Exporters de métriques'
+if ! compose up -d postgres-exporter redis-exporter; then
+    echo 'Avertissement : exporters de métriques non démarrés, le déploiement reste en place (docs/exploitation.md, « Supervision »).' >&2
+fi
 
 # Le ménage vient après un déploiement réussi et ne le fait jamais échouer : un
 # échec s'affiche, le code de sortie reste 0.
