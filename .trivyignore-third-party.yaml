@@ -1,0 +1,32 @@
+# Failles ignorées par le scan des images tierces d'audit.yml seulement (job
+# scan-third-party-image) : postgres, redis et les exporters de métriques. Le
+# scan de l'image applicative ne lit pas ce fichier. Chaque entrée donne sa
+# raison et expire à sa date de revue : le scan la signale de nouveau ensuite.
+
+vulnerabilities:
+  # libxml2 2.13.9-r2 de postgres:16-alpine, corrigée en 2.13.9-r5, que l'image
+  # du jour (Alpine 3.24.4) ne livre pas encore. PostgreSQL ne se sert de
+  # libxml2 que pour le type xml et les fonctions XML, que Stopcast n'utilise
+  # pas, et la base n'est joignable que depuis le réseau Docker de la pile.
+  # Suivi : ticket image-vulnerabilities/05 ; à retirer avec le nouveau digest.
+  - id: CVE-2026-11979
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86138
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86139
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86140
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86142
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86143
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
+  - id: CVE-2026-86144
+    statement: libxml2 de postgres, XML inutilisé (image-vulnerabilities/05)
+    expired_at: 2026-12-12
