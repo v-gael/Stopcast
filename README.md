@@ -52,6 +52,7 @@ Chaque décision structurante est consignée dans un ADR ([docs/adr/](docs/adr/)
 - [Envoi des mails par Brevo](docs/adr/0007-envoi-des-mails.md) : offre gratuite sans carte bancaire, DKIM aligné sur le domaine, DMARC.
 - [Page d'affichage HTML et appairage par code](docs/adr/0008-affichage-html-et-appairage.md) : Stopcast fait la mise en page ; l'écran l'ouvre dans un navigateur en kiosque et s'authentifie par un cookie obtenu en saisissant un code, comme une télévision (RFC 8628). Elle remplace l'API JSON et le client Python.
 - [Migrations expand/contract](docs/adr/0009-migrations-expand-contract.md) : une migration ne fait qu'ajouter, une suppression attend la release suivante, pour que l'ancien code tourne sur le nouveau schéma pendant un déploiement ou après un retour arrière.
+- [Supervision par Grafana Cloud](docs/adr/0010-supervision-grafana-cloud.md) : offre gratuite en UE, un seul agent Alloy pour tout le serveur, en sortie seulement ; métriques seulement, les logs restent sur le serveur ; UptimeRobot, Healthchecks.io et Sentry gardés.
 
 Et dans la stack :
 
