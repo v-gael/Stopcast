@@ -2,8 +2,9 @@
 # Vérifie de l'extérieur qu'une instance de Stopcast répond : la page d'accueil
 # sert le formulaire de connexion, avec la vraie clé de site Turnstile hors
 # localhost (la prod locale garde la clé de test), la page d'affichage refuse un
-# rafraîchissement sans cookie d'écran, /health dit que la base répond et
-# aucune réponse ne donne la version de PHP (en-tête X-Powered-By).
+# rafraîchissement sans cookie d'écran, /health dit que la base répond, /metrics
+# n'y est pas servi et aucune réponse ne donne la version de PHP (en-tête
+# X-Powered-By).
 # Lancé par le job `deploy` de `ci.yml` sur l'URL publique, après bin/deploy ;
 # se lance aussi à la main.
 #
@@ -104,6 +105,9 @@ case $base_url in
 esac
 check "Page d'affichage fermée sans cookie d'écran" '/display?fragment=1' 401
 check 'Base de données joignable' /health 200 '"status":"ok"'
+# Les métriques de Caddy et de FrankenPHP ne sont servies que sur le port 9180,
+# réservé à Alloy (frankenphp/Caddyfile) : jamais par le site public.
+check 'Métriques absentes du site public' /metrics 404 '' 'caddy_'
 
 # Après les contrôles retentés : le tunnel joint déjà les nouveaux conteneurs.
 # L'en-tête X-Powered-By donnerait la version exacte de PHP (expose_php,

@@ -39,7 +39,8 @@ updates:
         patterns: ['*']
         update-types: [minor, patch]
 
-  # Images tierces de compose.yaml (postgres, redis), épinglées par digest.
+  # Images tierces de compose.yaml (postgres, redis) et compose.prod.yaml
+  # (exporters de métriques, exporter-role), épinglées par digest.
   - package-ecosystem: docker-compose
     directory: /
     target-branch: develop
