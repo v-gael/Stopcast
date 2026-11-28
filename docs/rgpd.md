@@ -7,7 +7,7 @@ Registre minimal des traitements de données personnelles de Stopcast. Il est la
 - **Consentement** : aucun traitement ne repose sur le consentement ; aucun cookie ne demande d'accord (session, « se souvenir de moi », et sur un écran d'affichage le cookie de son appairage et celui de la demande d'appairage en cours, tous strictement nécessaires), il n'y a donc pas de bandeau.
 - **Droits** : accès et portabilité par l'export JSON de « Mon compte », rectification de l'email par son changement (« Mon compte »), effacement par la suppression du compte (« Mon compte »), le reste (autre rectification, opposition, limitation, accès aux logs) par email. Pour le suivi ajouté aux mails par Brevo, l'opposition passe par le moyen décrit dans « Mails transactionnels ». Réclamation possible auprès de la [CNIL](https://www.cnil.fr/fr/plaintes).
 
-Dernière mise à jour : 20 novembre 2026.
+Dernière mise à jour : 28 novembre 2026.
 
 ## Traitements
 
@@ -92,12 +92,12 @@ Dernière mise à jour : 20 novembre 2026.
 
 | | |
 |---|---|
-| Finalité | Vérifier que le service répond et que les tâches planifiées (import, purge, sauvegarde, mail de contrôle, index temps réel) tournent. |
-| Données | Aucune donnée personnelle : une sonde interroge `/health`, les tâches envoient un signal de bon fonctionnement. |
+| Finalité | Vérifier que le service répond et que les tâches planifiées (import, purge, sauvegarde, mail de contrôle, index temps réel) tournent ; suivre dans le temps l'état du serveur et des conteneurs (disque, mémoire, processeur, charge du serveur web). |
+| Données | Aucune donnée personnelle : une sonde interroge `/health`, les tâches envoient un signal de bon fonctionnement, l'agent du serveur envoie des métriques techniques (compteurs et jauges, sans adresse IP, email ni URL de requête). |
 | Personnes concernées | Aucune. |
 | Base légale | Sans objet (intérêt légitime pour le fonctionnement du service). |
-| Durée | Sans objet. |
-| Destinataires et sous-traitants | UptimeRobot, Healthchecks.io. |
+| Durée | Sans objet ; les métriques sont gardées 14 jours (offre gratuite de Grafana Cloud). |
+| Destinataires et sous-traitants | UptimeRobot, Healthchecks.io, Grafana Labs. |
 
 ### Sauvegardes et journal des suppressions
 
@@ -123,7 +123,7 @@ Dernière mise à jour : 20 novembre 2026.
 
 ## Sous-traitants
 
-Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026. Une information absente des documents publics est notée « non précisé ».
+Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026, Grafana Labs le 28 novembre 2026. Une information absente des documents publics est notée « non précisé ».
 
 | Service | Rôle | Données reçues | Pays de stockage | Transfert hors UE | Source |
 |---|---|---|---|---|---|
@@ -133,6 +133,7 @@ Relevé le 31 octobre 2026 ; hébergeur relevé le 1er novembre 2026. Une inform
 | Sentry | Suivi des erreurs | Erreurs sans IP ni email | Allemagne (Francfort) pour les événements ; États-Unis pour les données du compte Sentry | EU-U.S. Data Privacy Framework, clauses contractuelles types à défaut | [Data storage location](https://docs.sentry.io/organization/data-storage-location/), [DPA](https://sentry.io/legal/dpa/) |
 | UptimeRobot s. r. o. | Sonde de disponibilité | Aucune donnée personnelle | UE en principal, États-Unis en secondaire | Clauses contractuelles types | [DPA](https://uptimerobot.com/dpa/) |
 | SIA Monkey See Monkey Do (Healthchecks.io) | Surveillance des tâches planifiées | Aucune donnée personnelle | Non précisé (hébergé chez Hetzner, sauvegardes chez AWS) | Non précisé | [Privacy Policy](https://healthchecks.io/privacy/) |
+| Grafana Labs | Supervision du serveur et des conteneurs : stockage des métriques, tableaux de bord, alertes | Métriques techniques, aucune donnée personnelle | Allemagne (région « EU Germany », AWS `eu-central-1`) pour les métriques ; non précisé pour les données du compte Grafana | EU-U.S. Data Privacy Framework ; clauses contractuelles types pour ses propres sous-traitants | [Regional availability](https://grafana.com/docs/grafana-cloud/security-and-account-management/regional-availability/), [DPA](https://grafana.com/legal/data-processing-agreement/), [Data Privacy Framework](https://grafana.com/legal/eu-privacy-framework/), [Sous-traitants](https://grafana.com/legal/list-of-subprocessors/) |
 
 ## Service tiers
 

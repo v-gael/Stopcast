@@ -50,7 +50,7 @@ final class LegalPrivacyTest extends WebTestCase
 
         $client->request('GET', '/confidentialite');
 
-        foreach (['OVH', 'Cloudflare', 'Brevo', 'Sentry', 'UptimeRobot', 'Healthchecks.io', 'Have I Been Pwned'] as $service) {
+        foreach (['OVH', 'Cloudflare', 'Brevo', 'Sentry', 'UptimeRobot', 'Healthchecks.io', 'Grafana Labs', 'Have I Been Pwned'] as $service) {
             self::assertSelectorTextContains('main', $service);
         }
     }
