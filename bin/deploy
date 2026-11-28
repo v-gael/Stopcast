@@ -1,12 +1,12 @@
 #!/bin/sh
 # Déploie l'image ghcr.io/v-gael/stopcast:<IMAGE_TAG> : tire les images (celle
-# de l'appli et celles, épinglées, de database et redis), recrée database si son
-# image a changé (après un dump), passe les migrations Doctrine avec la nouvelle
-# image (après un dump de la base s'il y en a en attente), puis remplace les
-# conteneurs, attend qu'ils soient prêts et supprime les images qui ne servent
-# plus (prune_images). Lancé sur le serveur, dans ~/stopcast/, par
-# ops/ci-deploy (le script imposé à la clé de la CI), qui l'extrait de l'image à
-# déployer avec compose.yaml et compose.prod.yaml.
+# de l'appli et celles, épinglées, de database, redis et des exporters de
+# métriques), recrée database si son image a changé (après un dump), passe les
+# migrations Doctrine avec la nouvelle image (après un dump de la base s'il y en
+# a en attente), puis remplace les conteneurs, attend qu'ils soient prêts et
+# supprime les images qui ne servent plus (prune_images). Lancé sur le serveur,
+# dans ~/stopcast/, par ops/ci-deploy (le script imposé à la clé de la CI), qui
+# l'extrait de l'image à déployer avec compose.yaml et compose.prod.yaml.
 #
 #   IMAGE_TAG=<sha> bin/deploy [--skip-migrations]
 #
@@ -164,9 +164,9 @@ remove_image() {
 
 # Ne garde, après un déploiement réussi, que les images utiles à la pile : celle
 # de l'appli déployée et la précédente (un retour arrière vers elle ne télécharge
-# rien), et celles de database et redis que demandent les fichiers Compose en
-# place. Les autres étiquettes de l'appli et les anciens digests de postgres et
-# redis sont supprimés, une par une : jamais de `prune`, qui toucherait aux
+# rien), et celles de database, redis et des exporters que demandent les
+# fichiers Compose en place. Les autres étiquettes de l'appli et les anciens
+# digests des images tierces sont supprimés, une par une : jamais de `prune`, qui toucherait aux
 # images des autres piles du serveur (/srv/infra, autres sites). Appelé dans un
 # `if` : `set -e` n'y joue pas, chaque échec est donc relevé ici, et le ménage
 # va jusqu'au bout.
@@ -186,24 +186,25 @@ prune_images() {
         failed=1
     fi
 
-    # database et redis : par identifiant, une image épinglée par digest n'ayant
+    # Images tierces : par identifiant, une image épinglée par digest n'ayant
     # pas d'étiquette. Rien n'est supprimé si les images à garder sont
-    # illisibles.
-    if ! wanted_images=$(compose config --images database redis); then
-        echo 'Impossible de lire les images de database et redis.' >&2
+    # illisibles. exporter-role a l'image de database.
+    if ! wanted_images=$(compose config --images database redis postgres-exporter redis-exporter); then
+        echo 'Impossible de lire les images tierces de la pile.' >&2
         return 1
     fi
     keep_ids=''
     for image in $wanted_images; do
         if ! image_id=$(docker image inspect --format '{{.Id}}' "$image"); then
-            echo "Image introuvable : $image ; anciennes images de database et redis gardées." >&2
+            echo "Image introuvable : $image ; anciennes images tierces gardées." >&2
             return 1
         fi
         keep_ids="$keep_ids $image_id"
     done
     for image in $wanted_images; do
-        # postgres:16-alpine@sha256:… → postgres (images du Docker Hub, sans
-        # port de registre dans le nom).
+        # postgres:16-alpine@sha256:… → postgres,
+        # quay.io/…/postgres-exporter:v0.21.1@sha256:… → quay.io/…/postgres-exporter
+        # (registres sans port dans le nom).
         repository=${image%%@*}
         repository=${repository%:*}
         # Un identifiant par étiquette : dédoublonné après coup, pour que
@@ -239,11 +240,12 @@ echo "Version à déployer : $IMAGE_TAG"
 # Les services qui ont un build (prod locale) gardent l'image construite sur
 # place ; en prod, aucun n'en a et tout vient de GHCR. Une étiquette est le SHA
 # d'un commit et ne change jamais : une image déjà là n'est pas retéléchargée
-# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée). Les images de
-# database et redis, épinglées par digest dans compose.yaml, ne changent pas
-# non plus : seul un nouveau digest (PR de Dependabot) est téléchargé.
+# (ops/ci-deploy l'a tirée, ou un test local l'a étiquetée). Les images
+# tierces, épinglées par digest dans compose.yaml et compose.prod.yaml, ne
+# changent pas non plus : seul un nouveau digest (PR de Dependabot) est
+# téléchargé.
 echo '==> Téléchargement des images'
-compose pull --policy missing --ignore-buildable app worker realtime-worker database redis
+compose pull --policy missing --ignore-buildable app worker realtime-worker database redis postgres-exporter redis-exporter
 
 # Redis démarre avant app, qui en dépend. `up` ne le recrée que si son image ou
 # sa configuration change : un déploiement qui ne change que l'image de l'appli
@@ -303,12 +305,14 @@ if [ "$pending" -eq 1 ]; then
     compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 fi
 
-# `--wait` refuse un service sans healthcheck : les workers et backup n'en ont pas
-# (pas de serveur web). On attend qu'app soit healthy, puis on les remplace.
+# `--wait` refuse un service sans healthcheck : les workers, backup et les
+# exporters n'en ont pas (pas de serveur web). On attend qu'app soit healthy,
+# puis on les remplace. postgres-exporter attend exporter-role, qui crée son
+# rôle PostgreSQL ou lui repose son mot de passe.
 echo '==> Mise à jour des conteneurs'
 replacing=1
 compose up -d --wait --wait-timeout 300 --remove-orphans app
-compose up -d worker realtime-worker backup
+compose up -d worker realtime-worker backup postgres-exporter redis-exporter
 
 printf '%s\n' "$IMAGE_TAG" > "$state_file"
 

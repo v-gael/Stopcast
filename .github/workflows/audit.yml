@@ -2,8 +2,8 @@ name: Audit
 
 # Une faille n'apparaît qu'avec un changement des dépendances, que la PR qui le
 # porte fait auditer, ou avec une nouvelle alerte, que couvre le passage
-# quotidien. Une PR qui change compose.yaml (nouveau digest de Dependabot) fait
-# scanner ses images tierces. Filtré par chemins, ce check ne tourne pas sur les
+# quotidien. Une PR qui change compose.yaml ou compose.prod.yaml (nouveau digest
+# de Dependabot) fait scanner ses images tierces. Filtré par chemins, ce check ne tourne pas sur les
 # autres PR : il ne doit jamais être requis par le ruleset, sinon il bloquerait
 # leur merge.
 on:
@@ -13,6 +13,7 @@ on:
       - composer.lock
       - importmap.php
       - compose.yaml
+      - compose.prod.yaml
       - bin/audit
       - .github/workflows/audit.yml
   schedule:
@@ -106,11 +107,12 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
 
-  # Images tierces de compose.yaml (postgres, redis), que bin/deploy tire telles
-  # quelles : épinglées par digest, elles sont celles qui tournent en prod. Au
-  # passage quotidien, lues dans main (déployée) ; sur une PR, dans son code.
+  # Images tierces de compose.yaml et compose.prod.yaml (postgres, redis, les
+  # exporters de métriques), que bin/deploy tire telles quelles : épinglées par
+  # digest, elles sont celles qui tournent en prod. Au passage quotidien, lues
+  # dans main (déployée) ; sur une PR, dans son code.
   list-third-party-images:
-    name: Images tierces de compose.yaml
+    name: Images tierces de la prod
     runs-on: ubuntu-latest
     outputs:
       images: ${{ steps.list.outputs.images }}
@@ -119,13 +121,17 @@ jobs:
         with:
           persist-credentials: false
 
-      # Les images qui ne se construisent pas, avec leur nom sans digest pour
-      # le titre du job.
+      # Les images tierces, une fois chacune, avec leur nom sans digest pour le
+      # titre du job ; l'image de l'appli a son propre scan. Le modèle
+      # .env.prod.local.example remplit les variables que compose.prod.yaml
+      # exige, IMAGE_TAG une valeur factice.
       - name: Lister les images
         id: list
+        env:
+          IMAGE_TAG: ci
         run: |
-          images=$(docker compose -f compose.yaml config --format json \
-            | jq -c '[.services[] | select(.build == null) | {ref: .image, name: (.image | split("@")[0])}]')
+          images=$(docker compose --env-file .env.prod.local.example -f compose.yaml -f compose.prod.yaml config --format json \
+            | jq -c '[.services[] | .image | select(startswith("ghcr.io/v-gael/stopcast") | not)] | unique | map({ref: ., name: split("@")[0]})')
           echo "$images"
           echo "images=$images" >> "$GITHUB_OUTPUT"
 

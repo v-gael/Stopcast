@@ -51,11 +51,13 @@ services:
   # d'effacer un compteur de limiter sans bruit.
   # Le mot de passe passe par l'entrée standard de redis-server et par
   # REDISCLI_AUTH (lu par redis-cli), jamais sur une ligne de commande visible
-  # dans `ps`.
+  # dans `ps`. L'utilisateur exporter (redis-exporter, compose.prod.yaml) ne
+  # lit que l'état du serveur : aucune clé, aucun canal, aucune écriture.
   redis:
     image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-!ChangeMe!}
+      REDIS_EXPORTER_PASSWORD: ${REDIS_EXPORTER_PASSWORD:-!ChangeMe!}
     # exec : redis-server devient le processus 1 et reçoit le SIGTERM de Docker.
     command:
       - sh
@@ -63,6 +65,7 @@ services:
       - |
         exec redis-server - --save '' --appendonly no --maxmemory 64mb --maxmemory-policy noeviction <<EOF
         requirepass "$$REDISCLI_AUTH"
+        user exporter on ">$$REDIS_EXPORTER_PASSWORD" resetkeys resetchannels -@all +ping +info +config|get +client|setname +latency|latest +latency|histogram
         EOF
     # Un peu au-dessus de maxmemory : Redis lui-même et sa fragmentation.
     mem_limit: 96m

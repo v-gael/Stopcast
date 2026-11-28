@@ -57,11 +57,18 @@ services:
     security_opt: ["no-new-privileges:true"]
     sysctls:
       net.ipv4.ip_unprivileged_port_start: 0
+    # Métriques de Caddy et de FrankenPHP (frankenphp/Caddyfile), lues par
+    # Alloy sur observability, jamais sur edge (README du dépôt infra,
+    # « Convention des projets »).
+    expose: ["9180"]
+    labels:
+      observability.metrics.port: "9180"
     networks:
       default:
       edge:
         aliases:
           - stopcast-app
+      observability:
     healthcheck:
       # /health interroge la base : app n'est healthy que si elle répond.
       test: ["CMD", "curl", "-fsS", "http://localhost/health"]
@@ -182,12 +189,93 @@ services:
     logging: *logging
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD est requis}
+      REDIS_EXPORTER_PASSWORD: ${REDIS_EXPORTER_PASSWORD:?REDIS_EXPORTER_PASSWORD est requis}
 
   database:
     restart: unless-stopped
     logging: *logging
     volumes:
       - database_data_prod:/var/lib/postgresql/data:rw
+
+  # Crée le rôle stopcast_exporter s'il manque, membre de pg_monitor seulement
+  # (statistiques du serveur, aucun droit sur les tables), et lui pose le mot de
+  # passe de .env.prod.local : changer POSTGRES_EXPORTER_PASSWORD puis
+  # redéployer suffit à le faire tourner. Lancé avant postgres-exporter, à
+  # chaque `up`. Même image que database (digest à garder identique) : son
+  # psql. Le mot de passe passe par \getenv, jamais sur une ligne de commande.
+  exporter-role:
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
+    logging: *logging
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      POSTGRES_EXPORTER_PASSWORD: ${POSTGRES_EXPORTER_PASSWORD:?POSTGRES_EXPORTER_PASSWORD est requis}
+    command:
+      - sh
+      - -c
+      - |
+        exec psql -v ON_ERROR_STOP=1 -q <<'SQL'
+        \getenv password POSTGRES_EXPORTER_PASSWORD
+        SELECT 'CREATE ROLE stopcast_exporter' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'stopcast_exporter') \gexec
+        ALTER ROLE stopcast_exporter WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 3 PASSWORD :'password';
+        GRANT pg_monitor TO stopcast_exporter;
+        SQL
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      database:
+        condition: service_healthy
+
+  # Métriques de PostgreSQL (connexions, verrous, taille, activité) pour Alloy,
+  # sous le rôle stopcast_exporter. Identifiants à part de l'adresse : ils
+  # n'apparaissent pas dans ses logs.
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1@sha256:a88794758ad461c75f3825b51cde4bde730bdff04b3b24d00efe14217e41f615
+    restart: unless-stopped
+    logging: *logging
+    # Sans fichier de configuration : l'avertissement « Error loading config »
+    # au démarrage est attendu.
+    command: ["--datasource.uri=database:5432/${POSTGRES_DB}?sslmode=disable"]
+    environment:
+      DATA_SOURCE_USER: stopcast_exporter
+      DATA_SOURCE_PASS: ${POSTGRES_EXPORTER_PASSWORD:?POSTGRES_EXPORTER_PASSWORD est requis}
+    mem_limit: 64m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    expose: ["9187"]
+    labels:
+      observability.metrics.port: "9187"
+    networks: [default, observability]
+    depends_on:
+      exporter-role:
+        condition: service_completed_successfully
+
+  # Métriques de Redis (mémoire face à maxmemory, clés, commandes refusées) pour
+  # Alloy, sous l'utilisateur exporter de Redis (compose.yaml), qui ne lit aucune
+  # clé.
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.99.0@sha256:2c0cdc2452096b5af460d870e72fa6ee2ebb971780f443a616885685d2c0ebad
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_USER: exporter
+      REDIS_PASSWORD: ${REDIS_EXPORTER_PASSWORD:?REDIS_EXPORTER_PASSWORD est requis}
+    mem_limit: 64m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    expose: ["9121"]
+    labels:
+      observability.metrics.port: "9121"
+    networks: [default, observability]
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   database_data_prod:
@@ -197,3 +285,7 @@ networks:
   edge:
     external: true
     name: edge
+  # Créé par la pile infra (Alloy) : elle démarre avant celle-ci.
+  observability:
+    external: true
+    name: observability

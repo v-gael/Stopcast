@@ -5,6 +5,20 @@
 		{$FRANKENPHP_CONFIG}
 	}
 	order php_server before file_server
+	# Métriques HTTP de Caddy et de FrankenPHP (threads, workers), servies
+	# par le site :9180 ci-dessous, lu par Alloy sur le réseau observability
+	# (docs/exploitation.md, « Supervision »).
+	metrics
+}
+
+# Seul site qui sert les métriques. Jamais le site principal : :80 est routé
+# par cloudflared depuis Internet. L'API d'admin de Caddy (:2019) reste en
+# écoute locale au conteneur.
+:9180 {
+	handle /metrics {
+		metrics
+	}
+	respond 404
 }
 
 {$SERVER_NAME:localhost} {
