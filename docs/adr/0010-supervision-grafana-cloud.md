@@ -4,15 +4,15 @@ Statut : accepté.
 
 La supervision en place prévient quand quelque chose casse : UptimeRobot appelle `/health`, Healthchecks.io attend le signal des tâches planifiées, Sentry reçoit les erreurs ([docs/exploitation.md](../exploitation.md#alertes)). Rien ne montre l'état du serveur et des conteneurs dans le temps : disque, mémoire, saturation de FrankenPHP, Redis face à sa limite. Le disque était à 82 % le 19 novembre 2026 sans qu'aucune alerte ne parte. Le serveur héberge plusieurs sites ([ADR 0006](0006-hebergement.md)) : le disque et la mémoire sont partagés, et chaque projet ne doit pas réinventer sa supervision. Le budget n'admet aucun service payant.
 
-Nous envoyons les métriques du serveur à **Grafana Cloud**, sur l'offre gratuite, dans une pile créée en région **EU Germany** (AWS `eu-central-1`).
+Nous envoyons les métriques du serveur à **Grafana Cloud**, sur l'offre gratuite, dans une pile créée en région **EU Germany** (AWS `eu-central-1`, grappe `prod-eu-west-4`). La pile et son jeton existent ; l'agent, les métriques de Stopcast et les alertes se mettent en place ensuite, comme suit.
 
-- **Un seul agent pour tout le serveur** : Grafana Alloy tourne dans `/srv/infra` (repo privé `v-gael/infra`), à côté de `cloudflared`. Il collecte les métriques de l'hôte et des conteneurs et les envoie par `remote_write`, en connexions sortantes seulement : aucun port ouvert, rien sur le tunnel.
-- **Découverte par labels Docker** : un service qui expose des métriques porte le label `observability.metrics.port` et rejoint le réseau Docker interne `observability`, distinct de `edge`. Un port de métriques n'est donc jamais joignable par `cloudflared`. Stopcast expose celles de Caddy et FrankenPHP sur un port interne `:9180`, jamais sur `:80`. La convention pour les projets suivants (labels, réseau, port interne, préfixe `app_` des métriques propres à une application) est écrite dans le README du repo `infra`.
-- **Pas de socket Docker dans Alloy** : il interroge un `docker-socket-proxy` en lecture seule, limité aux conteneurs et sans `POST`. Le socket donne l'équivalent d'un accès root.
-- **cAdvisor** mesure la mémoire et le processeur de chaque conteneur. Il lit les cgroups et le dossier de Docker de l'hôte, en lecture seule : un accès large, accepté parce que c'est la seule mesure par conteneur, et que cAdvisor ne publie aucun port et n'est joignable que par Alloy.
+- **Un seul agent pour tout le serveur** : Grafana Alloy tournera dans `/srv/infra` (repo privé `v-gael/infra`), à côté de `cloudflared`. Il collectera les métriques de l'hôte et des conteneurs et les enverra par `remote_write`, en connexions sortantes seulement : aucun port ouvert, rien sur le tunnel.
+- **Découverte par labels Docker** : un service qui expose des métriques porte le label `observability.metrics.port` et rejoint le réseau Docker interne `observability`, distinct de `edge`. Un port de métriques n'est donc jamais joignable par `cloudflared`. Stopcast exposera celles de Caddy et FrankenPHP sur un port interne `:9180`, jamais sur `:80`. La convention pour les projets suivants (labels, réseau, port interne, préfixe `app_` des métriques propres à une application) sera écrite dans le README du repo `infra`.
+- **Pas de socket Docker dans Alloy** : il interrogera un `docker-socket-proxy` en lecture seule, limité aux conteneurs et sans `POST`. Le socket donne l'équivalent d'un accès root.
+- **cAdvisor** mesurera la mémoire et le processeur de chaque conteneur. Il lit les cgroups et le dossier de Docker de l'hôte, en lecture seule : un accès large, accepté parce que c'est la seule mesure par conteneur, et que cAdvisor ne publiera aucun port et ne sera joignable que par Alloy.
 - **Métriques seulement** : les logs restent sur le serveur, avec leur rétention actuelle ([docs/exploitation.md](../exploitation.md#rétention)).
 - **Jeton en écriture seule** : l'access policy n'a que le scope `metrics:write`. Le jeton vit dans `/srv/infra/.env` ([docs/exploitation.md](../exploitation.md#jeton-grafana-cloud-grafana_cloud_token)).
-- **Alertes par email** au mainteneur, depuis Grafana : disque plein, mémoire disponible basse, conteneur qui redémarre en boucle, serveur muet, FrankenPHP saturé.
+- **Alertes par email** au mainteneur, depuis Grafana, à définir avec les tableaux de bord : disque plein, mémoire disponible basse, conteneur qui redémarre en boucle, serveur muet, FrankenPHP saturé.
 - **UptimeRobot, Healthchecks.io et Sentry restent en place** : Grafana alerte sur ce qui se dégrade, eux sur ce qui est cassé, et UptimeRobot voit le site de l'extérieur, à travers Cloudflare.
 
 L'offre gratuite ne coûte rien : le budget de l'[ADR 0006](0006-hebergement.md) ne change pas. Quotas relevés le 28 novembre 2026 :
@@ -39,9 +39,9 @@ L'offre gratuite ne coûte rien : le budget de l'[ADR 0006](0006-hebergement.md)
 
 - Grafana Labs est un sous-traitant, sans donnée personnelle, listé dans [docs/rgpd.md](../rgpd.md#sous-traitants).
 - La supervision survit à une panne du serveur : son silence devient lui-même une alerte.
-- Le quota de 10 000 séries actives se surveille : Alloy filtre les noms de métriques envoyés, et l'usage se lit dans le portail grafana.com (Cost management). La documentation publique ne dit pas ce qui arrive au-delà : la consommation réelle est relevée à la mise en route.
+- Le quota de 10 000 séries actives se surveille : Alloy filtrera les noms de métriques envoyés, et l'usage se lit dans le portail grafana.com (Cost management). La documentation publique ne dit pas ce qui arrive au-delà : la consommation réelle est relevée à la mise en route.
 - 14 jours de rétention : pas de tendance plus longue, par exemple sur la croissance du disque au fil des mois.
-- Un secret de plus, le seul à expirer : le jeton est changé chaque année ([docs/exploitation.md](../exploitation.md#jeton-grafana-cloud-grafana_cloud_token)).
+- Un secret de plus, le seul à expiration fixe : le jeton est changé chaque année ([docs/exploitation.md](../exploitation.md#jeton-grafana-cloud-grafana_cloud_token)).
 - Un projet ajouté au serveur se fait superviser en suivant la convention du repo `infra`, sans toucher à Alloy.
 - La supervision dépend de la pérennité de l'offre gratuite de Grafana Cloud et de ses quotas.
 
