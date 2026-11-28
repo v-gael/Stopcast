@@ -49,7 +49,7 @@
         "symfony/yaml": "8.1.*",
         "symfonycasts/reset-password-bundle": "^1.25",
         "symfonycasts/tailwind-bundle": "^1.0",
-        "twig/twig": "^2.12|^3.0"
+        "twig/twig": "^2.12|^3.31.1"
     },
     "config": {
         "allow-plugins": {
